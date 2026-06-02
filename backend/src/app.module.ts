@@ -45,6 +45,12 @@ import { Prescription } from './prescription/prescription.entity';
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
 
+   ssl:
+  process.env.DB_SSL === 'true'
+    ? { rejectUnauthorized: false }
+    : false,
+
+
       entities: [
         Hospital,
         Doctor,
