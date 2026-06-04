@@ -6,6 +6,7 @@ import {
 } from 'typeorm';
 
 import { Doctor } from '../doctor/doctor.entity';
+import { Exclude } from 'class-transformer';
 
 @Entity('hospital')
 export class Hospital {
@@ -19,7 +20,8 @@ export class Hospital {
   email: string;
 
   @Column()
-  password: string;
+@Exclude()
+password: string;
 
   @Column()
   mobile: string;
