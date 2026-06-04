@@ -17,6 +17,9 @@ import HospitalDoctors from "./pages/HospitalDoctors";
 import HospitalAvailability from "./pages/HospitalAvailability";
 import HospitalAppointments from "./pages/HospitalAppointments";
 import MyPrescriptions from "./pages/MyPrescriptions";
+import DoctorLogin from "./pages/DoctorLogin";
+import DoctorDashboard from "./pages/DoctorDashboard";
+import DoctorProtectedRoute from "./components/DoctorProtectedRoute";
 
 function App() {
   return (
@@ -61,6 +64,20 @@ function App() {
     <ProtectedRoute>
       <HospitalDoctors />
     </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/doctor/login"
+  element={<DoctorLogin />}
+/>
+
+<Route
+  path="/doctor/dashboard"
+  element={
+    <DoctorProtectedRoute>
+      <DoctorDashboard />
+    </DoctorProtectedRoute>
   }
 />
         <Route
