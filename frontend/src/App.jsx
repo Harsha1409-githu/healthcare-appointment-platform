@@ -20,6 +20,12 @@ import MyPrescriptions from "./pages/MyPrescriptions";
 import DoctorLogin from "./pages/DoctorLogin";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import DoctorProtectedRoute from "./components/DoctorProtectedRoute";
+import AdminLogin from "./pages/AdminLogin";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminHospitals from "./pages/AdminHospitals";
+import AdminProtectedRoute from "./components/AdminProtectedRoute";
+import AdminDoctors from "./pages/AdminDoctors";
+import HospitalLogin from "./pages/HospitalLogin";
 
 function App() {
   return (
@@ -93,7 +99,38 @@ function App() {
     </ProtectedRoute>
   }
 />
+<Route path="/admin/login" element={<AdminLogin />} />
 
+<Route
+  path="/admin/dashboard"
+  element={
+    <AdminProtectedRoute>
+      <AdminDashboard />
+    </AdminProtectedRoute>
+  }
+/>
+
+<Route
+  path="/admin/doctors"
+  element={
+    <AdminProtectedRoute>
+      <AdminDoctors />
+    </AdminProtectedRoute>
+  }
+/>
+<Route
+  path="/admin/hospitals"
+  element={
+    <AdminProtectedRoute>
+      <AdminHospitals />
+    </AdminProtectedRoute>
+  }
+/>
+
+<Route
+  path="/hospital/login"
+  element={<HospitalLogin />}
+/>
 <Route
   path="/hospital/appointments"
   element={

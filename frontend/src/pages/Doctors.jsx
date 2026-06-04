@@ -1,13 +1,28 @@
-
 import { useEffect, useState } from "react";
-import api from "../api/axios";
 import { Link, useSearchParams } from "react-router-dom";
+import {
+  Search,
+  MapPin,
+  Stethoscope,
+  Star,
+  IndianRupee,
+  BadgeCheck,
+  CalendarCheck,
+  ArrowRight,
+  SlidersHorizontal,
+} from "lucide-react";
+
+import api from "../api/axios";
 
 function useDebounce(value, delay = 500) {
   const [debounced, setDebounced] = useState(value);
 
   useEffect(() => {
-    const handler = setTimeout(() => setDebounced(value), delay);
+    const handler = setTimeout(
+      () => setDebounced(value),
+      delay
+    );
+
     return () => clearTimeout(handler);
   }, [value, delay]);
 
@@ -17,33 +32,50 @@ function useDebounce(value, delay = 500) {
 export default function Doctors() {
   const [searchParams] = useSearchParams();
 
-  const city = searchParams.get("city") || "Chennai";
+  const urlCity = searchParams.get("city") || "Chennai";
+  const urlSpecialization =
+    searchParams.get("specialization") || "All";
 
+  const [city, setCity] = useState(urlCity);
   const [doctors, setDoctors] = useState([]);
   const [filtered, setFiltered] = useState([]);
 
   const [search, setSearch] = useState("");
-  const [specialization, setSpecialization] = useState("All");
+  const [specialization, setSpecialization] =
+    useState(urlSpecialization);
 
   const debouncedSearch = useDebounce(search);
 
   useEffect(() => {
+    setCity(urlCity);
+    setSpecialization(urlSpecialization);
+  }, [urlCity, urlSpecialization]);
+
+  useEffect(() => {
     api
-      .get(`/doctor/search?city=${city}`)
+      .get(
+        `/doctor/search?city=${encodeURIComponent(
+          city
+        )}`
+      )
       .then((res) => {
         const data = res.data?.data || [];
         setDoctors(data);
         setFiltered(data);
       })
-      .catch((err) => console.error("API ERROR:", err));
+      .catch((err) =>
+        console.error("API ERROR:", err)
+      );
   }, [city]);
 
   useEffect(() => {
     let result = [...doctors];
 
+    result = result.filter((d) => d.isActive);
+
     if (debouncedSearch) {
       result = result.filter((d) =>
-        d.doctorName
+        `${d.doctorName} ${d.specialization} ${d.hospital?.hospitalName || ""}`
           .toLowerCase()
           .includes(debouncedSearch.toLowerCase())
       );
@@ -67,190 +99,272 @@ export default function Doctors() {
     ),
   ];
 
+  const cities = [
+    "Chennai",
+    "Mumbai",
+    "Delhi",
+    "Bangalore",
+    "Hyderabad",
+  ];
+
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="relative bg-slate-50 min-h-screen overflow-hidden">
+      <div className="absolute top-0 left-0 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl" />
+      <div className="absolute top-40 right-0 w-96 h-96 bg-cyan-300/20 rounded-full blur-3xl" />
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white">
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <h1 className="text-4xl font-bold">
-            Find Doctors in {city}
+      <div className="relative bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-900 text-white overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute -top-24 -left-24 w-80 h-80 bg-cyan-400/20 rounded-full blur-3xl" />
+          <div className="absolute right-10 top-10 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" />
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-6 py-16">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur mb-6">
+            <Stethoscope size={18} className="text-cyan-300" />
+            <span className="text-sm font-semibold">
+              Verified healthcare specialists
+            </span>
+          </div>
+
+          <h1 className="text-4xl md:text-6xl font-black tracking-tight">
+            Find Doctors in{" "}
+            <span className="bg-gradient-to-r from-cyan-300 to-emerald-300 bg-clip-text text-transparent">
+              {city}
+            </span>
           </h1>
 
-          <p className="mt-2 text-blue-100">
-            Search and book appointments with trusted doctors
+          <p className="mt-4 text-blue-100 text-lg max-w-2xl">
+            Search, compare and book appointments with trusted doctors by
+            specialty, city, hospital and consultation fee.
           </p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="max-w-7xl mx-auto px-6 -mt-6">
-        <div className="bg-white rounded-xl shadow-lg p-5">
+      <div className="relative max-w-7xl mx-auto px-6 -mt-10 z-10">
+        <div className="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white p-5 md:p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg">
+              <SlidersHorizontal className="text-white" size={21} />
+            </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <h2 className="font-black text-xl text-slate-900">
+                Smart Doctor Search
+              </h2>
+              <p className="text-sm text-slate-500">
+                Refine results by name, city and specialization
+              </p>
+            </div>
+          </div>
 
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search doctor name..."
-              className="border rounded-lg px-4 py-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-500 transition">
+              <Search className="text-slate-400" size={21} />
+              <input
+                value={search}
+                onChange={(e) =>
+                  setSearch(e.target.value)
+                }
+                placeholder="Search doctor, specialty, hospital..."
+                className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
+              />
+            </div>
 
-            <select
-              value={specialization}
-              onChange={(e) =>
-                setSpecialization(e.target.value)
-              }
-              className="border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {specs.map((s, i) => (
-                <option key={i} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
+              <MapPin className="text-blue-600" size={21} />
 
+              <select
+                value={city}
+                onChange={(e) =>
+                  setCity(e.target.value)
+                }
+                className="w-full bg-transparent outline-none text-slate-800"
+              >
+                {cities.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
+              <Stethoscope
+                className="text-emerald-600"
+                size={21}
+              />
+
+              <select
+                value={specialization}
+                onChange={(e) =>
+                  setSpecialization(e.target.value)
+                }
+                className="w-full bg-transparent outline-none text-slate-800"
+              >
+                {specs.map((s, i) => (
+                  <option key={i} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Doctors Grid */}
-      <div className="max-w-7xl mx-auto px-6 py-10">
+      <div className="relative max-w-7xl mx-auto px-6 py-12">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-7">
+          <div>
+            <h2 className="text-2xl font-black text-slate-900">
+              {filtered.length} Doctors Found
+            </h2>
 
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold">
-            {filtered.length} Doctors Found
-          </h2>
+            <p className="text-slate-500">
+              Showing active doctors matching your search
+            </p>
+          </div>
+
+          {specialization !== "All" && (
+            <span className="inline-flex w-fit px-4 py-2 rounded-full bg-blue-100 text-blue-700 font-bold">
+              {specialization}
+            </span>
+          )}
         </div>
 
         {filtered.length === 0 ? (
-          <div className="bg-white rounded-xl p-10 text-center shadow">
-            <h3 className="text-lg font-semibold">
+          <div className="bg-white rounded-[2rem] p-12 text-center shadow-xl border">
+            <div className="w-20 h-20 rounded-3xl bg-blue-50 flex items-center justify-center mx-auto mb-5">
+              <Search className="text-blue-600" size={34} />
+            </div>
+
+            <h3 className="text-2xl font-black text-slate-900">
               No Doctors Found
             </h3>
 
-            <p className="text-gray-500 mt-2">
-              Try changing search keywords or filters.
+            <p className="text-slate-500 mt-2">
+              Try changing search keywords, city or specialization.
             </p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((doc, index) => (
+              <div key={doc.id} className="group relative">
+                <div className="absolute -inset-0.5 rounded-[2rem] bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400 opacity-0 group-hover:opacity-60 blur transition duration-500" />
 
-            {filtered.map((doc) => (
-              <div
-                key={doc.id}
-                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6"
-              >
-                {/* Doctor Info */}
-                <div className="flex items-center gap-4">
+                <div className="relative h-full bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden group-hover:-translate-y-2 transition duration-500">
+                  <div className="relative p-6 bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-900 text-white">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-400/20 rounded-full blur-2xl" />
 
-                  <img
-                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                      doc.doctorName
-                    )}&background=2563eb&color=fff`}
-                    alt={doc.doctorName}
-                    className="w-16 h-16 rounded-full"
-                  />
+                    <div className="relative flex items-center gap-4">
+                      <img
+                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
+                          doc.doctorName
+                        )}&background=0f172a&color=fff&bold=true`}
+                        alt={doc.doctorName}
+                        className="w-20 h-20 rounded-3xl border-4 border-white/20 shadow-xl"
+                      />
 
-                  <div>
-                    <h3 className="text-lg font-bold">
-                      {doc.doctorName}
-                    </h3>
+                      <div>
+                        <h3 className="text-2xl font-black">
+                          {doc.doctorName}
+                        </h3>
 
-                    <p className="text-blue-600 font-medium">
-                      {doc.specialization}
-                    </p>
+                        <p className="text-cyan-200 font-semibold">
+                          {doc.specialization}
+                        </p>
+
+                        <div className="mt-2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-400 text-slate-950 text-sm font-bold">
+                          <Star
+                            size={14}
+                            className="fill-slate-950"
+                          />
+                          4.{9 - (index % 2)}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                </div>
+                  <div className="p-6">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-blue-50 rounded-2xl p-4">
+                        <div className="flex items-center gap-2 text-blue-700 font-bold text-sm">
+                          <BadgeCheck size={17} />
+                          Experience
+                        </div>
 
-                {/* Rating */}
-                <div className="flex items-center gap-2 mt-4">
+                        <p className="text-2xl font-black mt-2 text-slate-900">
+                          {doc.experience}+ yrs
+                        </p>
+                      </div>
 
-                  <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-sm font-medium">
-                    ⭐ 4.8
-                  </span>
+                      <div className="bg-emerald-50 rounded-2xl p-4">
+                        <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
+                          <IndianRupee size={17} />
+                          Fee
+                        </div>
 
-                  <span className="text-gray-500 text-sm">
-                    120 Reviews
-                  </span>
+                        <p className="text-2xl font-black mt-2 text-slate-900">
+                          ₹{doc.consultationFee}
+                        </p>
+                      </div>
+                    </div>
 
-                </div>
+                    <div className="mt-5 space-y-3">
+                      <div className="flex items-center gap-3 text-slate-600">
+                        <Stethoscope
+                          size={18}
+                          className="text-blue-600"
+                        />
+                        <span>
+                          {doc.hospital?.hospitalName ||
+                            "Hospital Not Available"}
+                        </span>
+                      </div>
 
-                {/* Experience & Fee */}
-                <div className="grid grid-cols-2 gap-3 mt-5">
+                      <div className="flex items-center gap-3 text-slate-600">
+                        <MapPin
+                          size={18}
+                          className="text-emerald-600"
+                        />
+                        <span>{doc.city}</span>
+                      </div>
 
-                  <div className="bg-blue-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">
-                      Experience
-                    </p>
+                      <div className="flex items-center gap-3 text-emerald-700 font-semibold">
+                        <CalendarCheck size={18} />
+                        <span>Available Today</span>
+                      </div>
+                    </div>
 
-                    <p className="font-semibold">
-                      {doc.experience} Years
-                    </p>
+                    <div className="flex gap-3 mt-6">
+                      <Link
+                        to={`/doctor/${doc.id}`}
+                        className="flex-1"
+                      >
+                        <button className="w-full border border-blue-600 text-blue-600 py-3 rounded-2xl font-bold hover:bg-blue-50 transition">
+                          Profile
+                        </button>
+                      </Link>
+
+                      <Link
+                        to={`/doctor/${doc.id}`}
+                        className="flex-1"
+                      >
+                        <button className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white py-3 rounded-2xl font-bold shadow-lg shadow-blue-100 hover:scale-[1.02] transition flex items-center justify-center gap-2">
+                          Book
+                          <ArrowRight size={18} />
+                        </button>
+                      </Link>
+                    </div>
                   </div>
-
-                  <div className="bg-green-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">
-                      Fee
-                    </p>
-
-                    <p className="font-semibold">
-                      ₹{doc.consultationFee}
-                    </p>
-                  </div>
-
                 </div>
-
-                {/* Hospital */}
-                <div className="mt-4 text-sm text-gray-600">
-                  🏥{" "}
-                  {doc.hospital?.hospitalName ||
-                    "Hospital Not Available"}
-                </div>
-
-                {/* Location */}
-                <div className="mt-2 text-sm text-gray-600">
-                  📍 {doc.city}
-                </div>
-
-                {/* Availability */}
-                <div className="mt-4">
-                  <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">
-                    Available Today
-                  </span>
-                </div>
-
-                {/* Buttons */}
-                <div className="flex gap-3 mt-6">
-
-                  <Link
-                    to={`/doctor/${doc.id}`}
-                    className="flex-1"
-                  >
-                    <button className="w-full border border-blue-600 text-blue-600 py-2 rounded-lg hover:bg-blue-50">
-                      Profile
-                    </button>
-                  </Link>
-
-                  <Link
-                    to={`/doctor/${doc.id}`}
-                    className="flex-1"
-                  >
-                    <button className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
-                      Book Now
-                    </button>
-                  </Link>
-
-                </div>
-
               </div>
             ))}
-
           </div>
         )}
       </div>
     </div>
   );
 }
-
