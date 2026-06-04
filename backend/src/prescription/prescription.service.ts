@@ -52,6 +52,21 @@ export class PrescriptionService {
       );
     }
 
+    const existingPrescription =
+  await this.prescriptionRepo.findOne({
+    where: {
+      appointment: {
+        id: dto.appointmentId,
+      },
+    },
+  });
+
+if (existingPrescription) {
+  throw new BadRequestException(
+    'Prescription already exists for this appointment',
+  );
+}
+
     const prescription = this.prescriptionRepo.create({
       appointment,
       doctor: appointment.doctor,

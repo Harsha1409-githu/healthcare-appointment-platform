@@ -2,11 +2,13 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
 
 import { Doctor } from './doctor.entity';
 import { Hospital } from '../hospital/hospital.entity';
@@ -24,10 +26,13 @@ export class DoctorService {
     private readonly jwtService: JwtService,
   ) {}
 
-  // =========================
-  // DOCTOR LOGIN
-  // =========================
-  async doctorLogin(email: string) {
+  async doctorLogin(email: string, password: string) {
+    if (!email || !password) {
+      throw new BadRequestException(
+        'Email and password are required',
+      );
+    }
+
     const doctor = await this.doctorRepository.findOne({
       where: {
         email,
@@ -38,7 +43,18 @@ export class DoctorService {
       },
     });
 
-    if (!doctor) {
+    if (!doctor || !doctor.password) {
+      throw new UnauthorizedException(
+        'Invalid doctor credentials',
+      );
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      doctor.password,
+    );
+
+    if (!isPasswordValid) {
       throw new UnauthorizedException(
         'Invalid doctor credentials',
       );
@@ -63,9 +79,6 @@ export class DoctorService {
     };
   }
 
-  // =========================
-  // CREATE DOCTOR
-  // =========================
   async createDoctor(data: any) {
     const hospital = await this.hospitalRepository.findOne({
       where: { id: data.hospitalId },
@@ -75,6 +88,28 @@ export class DoctorService {
       throw new NotFoundException('Hospital not found');
     }
 
+    if (!data.password) {
+      throw new BadRequestException(
+        'Doctor password is required',
+      );
+    }
+
+    const existingDoctor =
+      await this.doctorRepository.findOne({
+        where: { email: data.email },
+      });
+
+    if (existingDoctor) {
+      throw new BadRequestException(
+        'Doctor already exists with this email',
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      data.password,
+      10,
+    );
+
     const doctor = this.doctorRepository.create({
       doctorName: data.doctorName,
       specialization: data.specialization,
@@ -83,6 +118,7 @@ export class DoctorService {
       consultationFee: data.consultationFee,
       mobile: data.mobile,
       email: data.email,
+      password: hashedPassword,
       city: data.city || hospital.city,
       state: data.state || hospital.state,
       hospital,
@@ -91,9 +127,6 @@ export class DoctorService {
     return this.doctorRepository.save(doctor);
   }
 
-  // =========================
-  // GET ALL DOCTORS
-  // =========================
   async getDoctors() {
     return this.doctorRepository.find({
       relations: {
@@ -102,9 +135,6 @@ export class DoctorService {
     });
   }
 
-  // =========================
-  // GET DOCTOR BY ID
-  // =========================
   async getDoctorById(id: string) {
     const doctor = await this.doctorRepository.findOne({
       where: { id },
@@ -120,9 +150,6 @@ export class DoctorService {
     return doctor;
   }
 
-  // =========================
-  // SOFT DELETE DOCTOR
-  // =========================
   async deleteDoctor(id: string) {
     const doctor = await this.doctorRepository.findOne({
       where: { id },
@@ -141,9 +168,6 @@ export class DoctorService {
     };
   }
 
-  // =========================
-  // REACTIVATE DOCTOR
-  // =========================
   async reactivateDoctor(id: string) {
     const doctor = await this.doctorRepository.findOne({
       where: { id },
@@ -162,9 +186,6 @@ export class DoctorService {
     };
   }
 
-  // =========================
-  // SEARCH DOCTORS
-  // =========================
   async searchDoctors(query: SearchDoctorDto) {
     const qb =
       this.doctorRepository.createQueryBuilder('doctor');

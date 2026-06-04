@@ -6,6 +6,8 @@ import {
   OneToMany,
 } from 'typeorm';
 
+import { Exclude } from 'class-transformer';
+
 import { Hospital } from '../hospital/hospital.entity';
 import { Slot } from '../slot/slot.entity';
 
@@ -32,8 +34,12 @@ export class Doctor {
   @Column()
   mobile: string;
 
-  @Column()
+  @Column({ unique: true })
   email: string;
+
+  @Column({ nullable: true })
+  @Exclude()
+  password: string;
 
   @Column({ default: true })
   isActive: boolean;
@@ -45,8 +51,8 @@ export class Doctor {
   slots: Slot[];
 
   @Column({ nullable: true })
-city: string;
+  city: string;
 
-@Column({ nullable: true })
-state: string;
+  @Column({ nullable: true })
+  state: string;
 }

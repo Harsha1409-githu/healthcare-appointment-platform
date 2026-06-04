@@ -19,14 +19,18 @@ export class DoctorController {
   ) {}
 
   @Post('login')
-  doctorLogin(
-    @Body()
-    body: {
-      email: string;
-    },
-  ) {
-    return this.doctorService.doctorLogin(body.email);
-  }
+doctorLogin(
+  @Body()
+  body: {
+    email: string;
+    password: string;
+  },
+) {
+  return this.doctorService.doctorLogin(
+    body.email,
+    body.password,
+  );
+}
 
   @Get('search')
   searchDoctors(@Query() query: SearchDoctorDto) {
