@@ -30,6 +30,7 @@ import { PaymentModule } from './payment/payment.module';
 import { MailModule } from './mail/mail.module';
 import { PrescriptionModule } from './prescription/prescription.module';
 import { Prescription } from './prescription/prescription.entity';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { Prescription } from './prescription/prescription.entity';
     PaymentModule,
     MailModule,
     PrescriptionModule,
+    AdminModule,
   ],
 
   controllers: [AppController],  // ✅ FIX

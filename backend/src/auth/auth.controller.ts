@@ -7,6 +7,20 @@ export class AuthController {
     private readonly authService: AuthService,
   ) {}
 
+  @Post('hospital/login')
+hospitalLogin(
+  @Body()
+  body: {
+    email: string;
+    password: string;
+  },
+) {
+  return this.authService.hospitalLogin(
+    body.email,
+    body.password,
+  );
+}
+
   @Post('register')
   register(
     @Body()

@@ -5,10 +5,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { Patient } from '../patient/patient.entity';
+import { Hospital } from '../hospital/hospital.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Patient]),
+    TypeOrmModule.forFeature([
+  Patient,
+  Hospital,
+]),
 
     JwtModule.register({
       secret: 'doctor-platform-secret',
