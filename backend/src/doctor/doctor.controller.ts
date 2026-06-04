@@ -6,6 +6,7 @@ import {
   Query,
   Param,
   Delete,
+  Patch,
 } from '@nestjs/common';
 
 import { DoctorService } from './doctor.service';
@@ -16,6 +17,16 @@ export class DoctorController {
   constructor(
     private readonly doctorService: DoctorService,
   ) {}
+
+  @Post('login')
+  doctorLogin(
+    @Body()
+    body: {
+      email: string;
+    },
+  ) {
+    return this.doctorService.doctorLogin(body.email);
+  }
 
   @Get('search')
   searchDoctors(@Query() query: SearchDoctorDto) {
@@ -40,5 +51,10 @@ export class DoctorController {
   @Delete(':id')
   deleteDoctor(@Param('id') id: string) {
     return this.doctorService.deleteDoctor(id);
+  }
+
+  @Patch(':id/reactivate')
+  reactivateDoctor(@Param('id') id: string) {
+    return this.doctorService.reactivateDoctor(id);
   }
 }

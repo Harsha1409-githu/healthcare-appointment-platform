@@ -1,10 +1,12 @@
 import {
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { JwtService } from '@nestjs/jwt';
 
 import { Doctor } from './doctor.entity';
 import { Hospital } from '../hospital/hospital.entity';
@@ -19,8 +21,47 @@ export class DoctorService {
     @InjectRepository(Hospital)
     private hospitalRepository: Repository<Hospital>,
 
-    
+    private readonly jwtService: JwtService,
   ) {}
+
+  // =========================
+  // DOCTOR LOGIN
+  // =========================
+  async doctorLogin(email: string) {
+    const doctor = await this.doctorRepository.findOne({
+      where: {
+        email,
+        isActive: true,
+      },
+      relations: {
+        hospital: true,
+      },
+    });
+
+    if (!doctor) {
+      throw new UnauthorizedException(
+        'Invalid doctor credentials',
+      );
+    }
+
+    const payload = {
+      sub: doctor.id,
+      email: doctor.email,
+      role: 'doctor',
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: doctor.id,
+        doctorName: doctor.doctorName,
+        email: doctor.email,
+        role: 'doctor',
+        specialization: doctor.specialization,
+        hospitalName: doctor.hospital?.hospitalName,
+      },
+    };
+  }
 
   // =========================
   // CREATE DOCTOR
@@ -78,36 +119,63 @@ export class DoctorService {
 
     return doctor;
   }
-// =========================
-// SOFT DELETE DOCTOR
-// =========================
-async deleteDoctor(id: string) {
-  const doctor = await this.doctorRepository.findOne({
-    where: { id },
-  });
 
-  if (!doctor) {
-    throw new NotFoundException('Doctor not found');
+  // =========================
+  // SOFT DELETE DOCTOR
+  // =========================
+  async deleteDoctor(id: string) {
+    const doctor = await this.doctorRepository.findOne({
+      where: { id },
+    });
+
+    if (!doctor) {
+      throw new NotFoundException('Doctor not found');
+    }
+
+    doctor.isActive = false;
+
+    await this.doctorRepository.save(doctor);
+
+    return {
+      message: 'Doctor deactivated successfully',
+    };
   }
 
-  doctor.isActive = false;
-
-  await this.doctorRepository.save(doctor);
-
-  return {
-    message: 'Doctor deactivated successfully',
-  };
-}
   // =========================
-  // SEARCH DOCTORS (PRACTO STYLE)
+  // REACTIVATE DOCTOR
+  // =========================
+  async reactivateDoctor(id: string) {
+    const doctor = await this.doctorRepository.findOne({
+      where: { id },
+    });
+
+    if (!doctor) {
+      throw new NotFoundException('Doctor not found');
+    }
+
+    doctor.isActive = true;
+
+    await this.doctorRepository.save(doctor);
+
+    return {
+      message: 'Doctor reactivated successfully',
+    };
+  }
+
+  // =========================
+  // SEARCH DOCTORS
   // =========================
   async searchDoctors(query: SearchDoctorDto) {
-    const qb = this.doctorRepository.createQueryBuilder('doctor');
+    const qb =
+      this.doctorRepository.createQueryBuilder('doctor');
 
     if (query.city) {
-      qb.andWhere('LOWER(doctor.city) LIKE LOWER(:city)', {
-        city: `%${query.city}%`,
-      });
+      qb.andWhere(
+        'LOWER(doctor.city) LIKE LOWER(:city)',
+        {
+          city: `%${query.city}%`,
+        },
+      );
     }
 
     if (query.specialization) {
