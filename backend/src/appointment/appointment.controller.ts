@@ -15,7 +15,9 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('appointment')
 export class AppointmentController {
-  constructor(private readonly appointmentService: AppointmentService) {}
+  constructor(
+    private readonly appointmentService: AppointmentService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -34,12 +36,24 @@ export class AppointmentController {
   @UseGuards(JwtAuthGuard)
   @Get('my')
   getMyAppointments(@Req() req: any) {
-    return this.appointmentService.getMyAppointments(req.user.sub);
+    return this.appointmentService.getMyAppointments(
+      req.user.sub,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('hospital/my')
+  getHospitalAppointments(@Req() req: any) {
+    return this.appointmentService.getAppointmentsByHospital(
+      req.user.sub,
+    );
   }
 
   @Get('doctor/:doctorId')
   getByDoctor(@Param('doctorId') doctorId: string) {
-    return this.appointmentService.getAppointmentsByDoctor(doctorId);
+    return this.appointmentService.getAppointmentsByDoctor(
+      doctorId,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -48,10 +62,14 @@ export class AppointmentController {
     return this.appointmentService.cancelAppointment(
       Number(id),
       req.user.sub,
+      req.user.role,
     );
   }
+
   @Patch(':id/complete')
-complete(@Param('id') id: string) {
-  return this.appointmentService.completeAppointment(Number(id));
-}
+  complete(@Param('id') id: string) {
+    return this.appointmentService.completeAppointment(
+      Number(id),
+    );
+  }
 }

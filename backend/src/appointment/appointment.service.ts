@@ -4,10 +4,15 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 
-import { Appointment, AppointmentStatus } from './appointment.entity';
+import {
+  Appointment,
+  AppointmentStatus,
+} from './appointment.entity';
+
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { Doctor } from '../doctor/doctor.entity';
 import { Slot } from '../slot/slot.entity';
@@ -38,20 +43,25 @@ export class AppointmentService {
     dto: CreateAppointmentDto,
     patientId: string,
   ) {
-    if (!dto?.doctorId)
+    if (!dto?.doctorId) {
       throw new BadRequestException('doctorId is required');
+    }
 
-    if (!dto?.slotId)
+    if (!dto?.slotId) {
       throw new BadRequestException('slotId is required');
+    }
 
-    if (!dto?.patientName)
+    if (!dto?.patientName) {
       throw new BadRequestException('patientName is required');
+    }
 
-    if (!dto?.patientPhone)
+    if (!dto?.patientPhone) {
       throw new BadRequestException('patientPhone is required');
+    }
 
-    if (!patientId)
+    if (!patientId) {
       throw new BadRequestException('patientId is required');
+    }
 
     return await this.dataSource.transaction(async (manager) => {
       const doctor = await manager.findOne(Doctor, {
@@ -87,6 +97,7 @@ export class AppointmentService {
       }
 
       slot.isAvailable = false;
+
       await manager.save(Slot, slot);
 
       const appointment = manager.create(Appointment, {
@@ -104,30 +115,33 @@ export class AppointmentService {
       );
 
       try {
-  await this.mailService.sendAppointmentConfirmation({
-    to: patient.email,
-    patientName: patient.fullName,
-    doctorName: doctor.doctorName,
-    specialization: doctor.specialization,
-    date: slot.date,
-    startTime: slot.startTime,
-    endTime: slot.endTime,
-    hospitalName:
-      doctor.hospital?.hospitalName || 'MediCare Hospital',
-    fee: doctor.consultationFee,
-  });
-} catch (mailError) {
-  console.error('Email sending failed:', mailError);
-}
+        await this.mailService.sendAppointmentConfirmation({
+          to: patient.email,
+          patientName: patient.fullName,
+          doctorName: doctor.doctorName,
+          specialization: doctor.specialization,
+          date: slot.date,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          hospitalName:
+            doctor.hospital?.hospitalName ||
+            'MediCare Hospital',
+          fee: doctor.consultationFee,
+        });
+      } catch (mailError) {
+        console.error('Email sending failed:', mailError);
+      }
 
-return savedAppointment;
+      return savedAppointment;
     });
   }
 
   async getAllAppointments() {
     return this.appointmentRepo.find({
       relations: {
-        doctor: true,
+        doctor: {
+          hospital: true,
+        },
         slot: true,
         patient: true,
       },
@@ -149,7 +163,35 @@ return savedAppointment;
         },
       },
       relations: {
-        doctor: true,
+        doctor: {
+          hospital: true,
+        },
+        slot: true,
+        patient: true,
+      },
+      order: {
+        id: 'DESC',
+      },
+    });
+  }
+
+  async getAppointmentsByHospital(hospitalId: string) {
+    if (!hospitalId) {
+      throw new BadRequestException('hospitalId is required');
+    }
+
+    return this.appointmentRepo.find({
+      where: {
+        doctor: {
+          hospital: {
+            id: hospitalId,
+          },
+        },
+      },
+      relations: {
+        doctor: {
+          hospital: true,
+        },
         slot: true,
         patient: true,
       },
@@ -166,10 +208,14 @@ return savedAppointment;
 
     return this.appointmentRepo.find({
       where: {
-        doctor: { id: doctorId },
+        doctor: {
+          id: doctorId,
+        },
       },
       relations: {
-        doctor: true,
+        doctor: {
+          hospital: true,
+        },
         slot: true,
         patient: true,
       },
@@ -179,13 +225,20 @@ return savedAppointment;
     });
   }
 
-  async cancelAppointment(id: number, patientId: string) {
+  async cancelAppointment(
+    id: number,
+    userId: string,
+    role?: string,
+  ) {
     return await this.dataSource.transaction(async (manager) => {
       const appointment = await manager.findOne(Appointment, {
         where: { id },
         relations: {
           slot: true,
           patient: true,
+          doctor: {
+            hospital: true,
+          },
         },
       });
 
@@ -193,9 +246,19 @@ return savedAppointment;
         throw new NotFoundException('Appointment not found');
       }
 
-      if (appointment.patient?.id !== patientId) {
+      const isPatient =
+        role === 'patient' &&
+        appointment.patient?.id === userId;
+
+      const isHospital =
+        role === 'hospital' &&
+        appointment.doctor?.hospital?.id === userId;
+
+      const isAdmin = role === 'admin';
+
+      if (!isPatient && !isHospital && !isAdmin) {
         throw new ForbiddenException(
-          'You can cancel only your own appointment',
+          'You are not allowed to cancel this appointment',
         );
       }
 
@@ -205,10 +268,18 @@ return savedAppointment;
         );
       }
 
+      if (appointment.status === AppointmentStatus.COMPLETED) {
+        throw new BadRequestException(
+          'Completed appointment cannot be cancelled',
+        );
+      }
+
       appointment.status = AppointmentStatus.CANCELLED;
 
-      appointment.slot.isAvailable = true;
-      await manager.save(Slot, appointment.slot);
+      if (appointment.slot) {
+        appointment.slot.isAvailable = true;
+        await manager.save(Slot, appointment.slot);
+      }
 
       return await manager.save(Appointment, appointment);
     });
@@ -218,7 +289,9 @@ return savedAppointment;
     const appointment = await this.appointmentRepo.findOne({
       where: { id },
       relations: {
-        doctor: true,
+        doctor: {
+          hospital: true,
+        },
         slot: true,
         patient: true,
       },
@@ -231,6 +304,12 @@ return savedAppointment;
     if (appointment.status === AppointmentStatus.CANCELLED) {
       throw new BadRequestException(
         'Cancelled appointment cannot be completed',
+      );
+    }
+
+    if (appointment.status === AppointmentStatus.COMPLETED) {
+      throw new BadRequestException(
+        'Appointment already completed',
       );
     }
 
