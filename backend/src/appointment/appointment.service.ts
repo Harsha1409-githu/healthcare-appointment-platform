@@ -151,6 +151,98 @@ export class AppointmentService {
     });
   }
 
+  async getAnalytics() {
+    const appointments = await this.appointmentRepo.find({
+      relations: {
+        doctor: {
+          hospital: true,
+        },
+        slot: true,
+        patient: true,
+      },
+    });
+
+    const total = appointments.length;
+
+    const booked = appointments.filter(
+      (appointment) =>
+        appointment.status === AppointmentStatus.BOOKED,
+    ).length;
+
+    const completed = appointments.filter(
+      (appointment) =>
+        appointment.status === AppointmentStatus.COMPLETED,
+    ).length;
+
+    const cancelled = appointments.filter(
+      (appointment) =>
+        appointment.status === AppointmentStatus.CANCELLED,
+    ).length;
+
+    const revenue = appointments
+      .filter(
+        (appointment) =>
+          appointment.status === AppointmentStatus.COMPLETED,
+      )
+      .reduce(
+        (sum, appointment) =>
+          sum +
+          Number(
+            appointment.doctor?.consultationFee || 0,
+          ),
+        0,
+      );
+
+    const hospitalRevenueMap = new Map<string, number>();
+    const specializationMap = new Map<string, number>();
+
+    appointments.forEach((appointment) => {
+      if (appointment.status === AppointmentStatus.COMPLETED) {
+        const hospitalName =
+          appointment.doctor?.hospital?.hospitalName ||
+          'Unknown Hospital';
+
+        hospitalRevenueMap.set(
+          hospitalName,
+          (hospitalRevenueMap.get(hospitalName) || 0) +
+            Number(appointment.doctor?.consultationFee || 0),
+        );
+      }
+
+      const specialization =
+        appointment.doctor?.specialization || 'Unknown';
+
+      specializationMap.set(
+        specialization,
+        (specializationMap.get(specialization) || 0) + 1,
+      );
+    });
+
+    const hospitalRevenue = Array.from(
+      hospitalRevenueMap.entries(),
+    ).map(([name, value]) => ({
+      name,
+      value,
+    }));
+
+    const specializationStats = Array.from(
+      specializationMap.entries(),
+    ).map(([name, value]) => ({
+      name,
+      value,
+    }));
+
+    return {
+      total,
+      booked,
+      completed,
+      cancelled,
+      revenue,
+      hospitalRevenue,
+      specializationStats,
+    };
+  }
+
   async getMyAppointments(patientId: string) {
     if (!patientId) {
       throw new BadRequestException('patientId is required');

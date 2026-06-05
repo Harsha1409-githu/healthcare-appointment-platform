@@ -33,6 +33,11 @@ export class AppointmentController {
     return this.appointmentService.getAllAppointments();
   }
 
+  @Get('analytics')
+  getAnalytics() {
+    return this.appointmentService.getAnalytics();
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('my')
   getMyAppointments(@Req() req: any) {
