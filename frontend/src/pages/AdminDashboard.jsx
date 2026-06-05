@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  Building2,
+  Stethoscope,
+  Users,
+  CalendarCheck,
+  LogOut,
+  ShieldCheck,
+  BarChart3,
+} from "lucide-react";
 import api from "../api/axios";
 
 export default function AdminDashboard() {
@@ -26,79 +35,137 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen py-10">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="flex justify-between items-center mb-8">
+    <div className="w-full">
+      <div className="w-full max-w-[1500px] mx-auto">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-            <p className="text-gray-500">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 text-blue-700 font-bold mb-4">
+              <ShieldCheck size={18} />
+              Admin Control Center
+            </div>
+
+            <h1 className="text-4xl font-black text-slate-900">
+              Admin Dashboard
+            </h1>
+
+            <p className="text-slate-500 mt-2">
               Platform overview and management
             </p>
           </div>
 
           <button
             onClick={logout}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg"
+            className="flex items-center gap-2 bg-red-600 text-white px-5 py-3 rounded-2xl font-bold hover:bg-red-700"
           >
+            <LogOut size={18} />
             Logout
           </button>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-5">
-          <div className="bg-white p-6 rounded-2xl shadow">
-            <p className="text-gray-500">Hospitals</p>
-            <h2 className="text-3xl font-bold mt-2">
-              {stats?.hospitals || 0}
-            </h2>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          <StatCard
+            icon={Building2}
+            title="Hospitals"
+            value={stats?.hospitals || 0}
+            gradient="from-blue-600 to-cyan-500"
+          />
 
-          <div className="bg-white p-6 rounded-2xl shadow">
-            <p className="text-gray-500">Doctors</p>
-            <h2 className="text-3xl font-bold mt-2">
-              {stats?.doctors || 0}
-            </h2>
-          </div>
+          <StatCard
+            icon={Stethoscope}
+            title="Doctors"
+            value={stats?.doctors || 0}
+            gradient="from-emerald-600 to-teal-500"
+          />
 
-          <div className="bg-white p-6 rounded-2xl shadow">
-            <p className="text-gray-500">Patients</p>
-            <h2 className="text-3xl font-bold mt-2">
-              {stats?.patients || 0}
-            </h2>
-          </div>
+          <StatCard
+            icon={Users}
+            title="Patients"
+            value={stats?.patients || 0}
+            gradient="from-purple-600 to-fuchsia-500"
+          />
 
-          <div className="bg-white p-6 rounded-2xl shadow">
-            <p className="text-gray-500">Appointments</p>
-            <h2 className="text-3xl font-bold mt-2">
-              {stats?.appointments || 0}
-            </h2>
-          </div>
+          <StatCard
+            icon={CalendarCheck}
+            title="Appointments"
+            value={stats?.appointments || 0}
+            gradient="from-orange-500 to-amber-500"
+          />
         </div>
 
-        <div className="mt-8 grid md:grid-cols-2 gap-5">
-          <Link
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <ActionCard
             to="/admin/hospitals"
-            className="bg-white p-6 rounded-2xl shadow hover:shadow-lg"
-          >
-            <h2 className="text-xl font-bold">Manage Hospitals</h2>
-            <p className="text-gray-500 mt-2">
-              Approve or reject registered hospitals.
-            </p>
-          </Link>
+            icon={Building2}
+            title="Manage Hospitals"
+            desc="Approve or reject registered hospitals."
+            gradient="from-blue-600 to-cyan-500"
+          />
+
+          <ActionCard
+            to="/admin/doctors"
+            icon={Stethoscope}
+            title="Manage Doctors"
+            desc="Activate or deactivate doctors."
+            gradient="from-emerald-600 to-teal-500"
+          />
+
+          <ActionCard
+            to="/admin/analytics"
+            icon={BarChart3}
+            title="Analytics"
+            desc="View revenue, appointments and platform performance."
+            gradient="from-purple-600 to-fuchsia-500"
+          />
         </div>
-
-        <Link
-  to="/admin/doctors"
-  className="bg-white p-6 rounded-2xl shadow hover:shadow-lg"
->
-  <h2 className="text-xl font-bold">
-    Manage Doctors
-  </h2>
-
-  <p className="text-gray-500 mt-2">
-    Activate or deactivate doctors.
-  </p>
-</Link>
       </div>
     </div>
+  );
+}
+
+function StatCard({ icon: Icon, title, value, gradient }) {
+  return (
+    <div className="group relative">
+      <div
+        className={`absolute -inset-0.5 rounded-[2rem] bg-gradient-to-r ${gradient} opacity-0 group-hover:opacity-40 blur transition duration-500`}
+      />
+
+      <div className="relative bg-white p-6 rounded-[2rem] shadow-xl border border-white group-hover:-translate-y-1 transition duration-500">
+        <div
+          className={`w-14 h-14 rounded-2xl bg-gradient-to-r ${gradient} flex items-center justify-center shadow-lg mb-5`}
+        >
+          <Icon className="text-white" size={27} />
+        </div>
+
+        <p className="text-slate-500 text-sm">{title}</p>
+
+        <h2 className="text-4xl font-black mt-1 text-slate-950">
+          {value}
+        </h2>
+      </div>
+    </div>
+  );
+}
+
+function ActionCard({ to, icon: Icon, title, desc, gradient }) {
+  return (
+    <Link to={to} className="group relative">
+      <div
+        className={`absolute -inset-0.5 rounded-[2rem] bg-gradient-to-r ${gradient} opacity-0 group-hover:opacity-40 blur transition duration-500`}
+      />
+
+      <div className="relative h-full bg-white p-6 rounded-[2rem] shadow-xl border border-white group-hover:-translate-y-1 transition duration-500">
+        <div
+          className={`w-14 h-14 rounded-2xl bg-gradient-to-r ${gradient} flex items-center justify-center shadow-lg mb-5`}
+        >
+          <Icon className="text-white" size={27} />
+        </div>
+
+        <h2 className="text-xl font-black text-slate-900">
+          {title}
+        </h2>
+
+        <p className="text-slate-500 mt-2">{desc}</p>
+      </div>
+    </Link>
   );
 }

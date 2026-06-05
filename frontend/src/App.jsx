@@ -34,6 +34,7 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminHospitals from "./pages/AdminHospitals";
 import AdminDoctors from "./pages/AdminDoctors";
+import AdminAnalytics from "./pages/AdminAnalytics";
 
 function App() {
   return (
@@ -134,6 +135,7 @@ function App() {
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="hospitals" element={<AdminHospitals />} />
         <Route path="doctors" element={<AdminDoctors />} />
+        <Route path="analytics" element={<AdminAnalytics />} />
       </Route>
     </Routes>
   );
