@@ -307,13 +307,16 @@ export default function HospitalDoctors() {
                   <div className="relative bg-white rounded-[2rem] p-6 border border-slate-100 shadow-lg group-hover:-translate-y-1 transition duration-500">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
                       <div className="flex gap-4">
-                        <img
-                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                            doctor.doctorName
-                          )}&background=0f172a&color=fff&bold=true`}
-                          alt={doctor.doctorName}
-                          className="w-20 h-20 rounded-3xl shadow-lg"
-                        />
+ <img
+  src={
+    doctor.profileImage ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      doctor.doctorName
+    )}&background=0f172a&color=fff&bold=true`
+  }
+  alt={doctor.doctorName}
+  className="w-20 h-20 rounded-3xl shadow-lg object-cover border-4 border-slate-100"
+/>
 
                         <div>
                           <div className="flex items-center gap-3 flex-wrap">

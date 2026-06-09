@@ -16,8 +16,15 @@ export default function AdminLogin() {
         password,
       });
 
-      localStorage.setItem("adminToken", res.data.access_token);
-      localStorage.setItem("adminUser", JSON.stringify(res.data.user));
+      localStorage.removeItem("patientToken");
+localStorage.removeItem("patientUser");
+localStorage.removeItem("doctorToken");
+localStorage.removeItem("doctorUser");
+localStorage.removeItem("hospitalToken");
+localStorage.removeItem("hospitalUser");
+
+localStorage.setItem("adminToken", res.data.access_token);
+localStorage.setItem("adminUser", JSON.stringify(res.data.user));
 
       navigate("/admin/dashboard");
     } catch (error) {

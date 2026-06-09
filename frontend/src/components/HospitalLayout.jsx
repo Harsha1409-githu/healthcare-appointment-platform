@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -7,14 +8,40 @@ import {
   BarChart3,
   LogOut,
   Building2,
+  UserRound,
+  CalendarClock,
 } from "lucide-react";
 
 export default function HospitalLayout() {
   const navigate = useNavigate();
 
-  const hospital = JSON.parse(
-    localStorage.getItem("hospitalUser") || "null"
+  const [hospital, setHospital] = useState(() =>
+    JSON.parse(localStorage.getItem("hospitalUser") || "null")
   );
+
+  useEffect(() => {
+    const updateHospitalProfile = () => {
+      setHospital(
+        JSON.parse(localStorage.getItem("hospitalUser") || "null")
+      );
+    };
+
+    updateHospitalProfile();
+
+    window.addEventListener(
+      "hospitalProfileUpdated",
+      updateHospitalProfile
+    );
+    window.addEventListener("storage", updateHospitalProfile);
+
+    return () => {
+      window.removeEventListener(
+        "hospitalProfileUpdated",
+        updateHospitalProfile
+      );
+      window.removeEventListener("storage", updateHospitalProfile);
+    };
+  }, []);
 
   const logout = () => {
     localStorage.removeItem("hospitalToken");
@@ -31,8 +58,16 @@ export default function HospitalLayout() {
     <div className="min-h-screen bg-slate-50 flex">
       <aside className="w-72 bg-white border-r border-slate-200 p-5 hidden lg:flex flex-col">
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 flex items-center justify-center">
-            <Building2 className="text-white" size={26} />
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 flex items-center justify-center overflow-hidden">
+            {hospital?.profileImage ? (
+              <img
+                src={hospital.profileImage}
+                alt="Hospital"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Building2 className="text-white" size={26} />
+            )}
           </div>
 
           <div>
@@ -51,6 +86,11 @@ export default function HospitalLayout() {
             Dashboard
           </NavLink>
 
+          <NavLink to="/hospital/profile" className={linkClass}>
+            <UserRound size={20} />
+            Profile
+          </NavLink>
+
           <NavLink to="/hospital/doctors" className={linkClass}>
             <Stethoscope size={20} />
             Doctors
@@ -60,6 +100,11 @@ export default function HospitalLayout() {
             <CalendarDays size={20} />
             Availability
           </NavLink>
+
+          <NavLink to="/hospital/calendar" className={linkClass}>
+  <CalendarClock size={20} />
+  Calendar
+</NavLink>
 
           <NavLink to="/hospital/appointments" className={linkClass}>
             <ClipboardList size={20} />

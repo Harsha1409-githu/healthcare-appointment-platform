@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function HospitalLogin() {
   const [email, setEmail] = useState("admin@apollo.com");
@@ -16,13 +16,21 @@ export default function HospitalLogin() {
         password,
       });
 
-      localStorage.setItem("token", res.data.access_token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      localStorage.removeItem("patientToken");
+localStorage.removeItem("patientUser");
+localStorage.removeItem("doctorToken");
+localStorage.removeItem("doctorUser");
+localStorage.removeItem("adminToken");
+localStorage.removeItem("adminUser");
+
+localStorage.setItem("hospitalToken", res.data.access_token);
+localStorage.setItem("hospitalUser", JSON.stringify(res.data.user));
 
       navigate("/hospital/dashboard");
     } catch (error) {
       alert(error.response?.data?.message || "Hospital login failed");
     }
+    
   };
 
   return (
@@ -57,6 +65,16 @@ export default function HospitalLogin() {
             Login
           </button>
         </form>
+
+        <p className="text-center text-sm text-gray-500 mt-5">
+  New hospital?{" "}
+  <Link
+    to="/hospital/register"
+    className="text-blue-600 font-bold"
+  >
+    Register here
+  </Link>
+</p>
       </div>
     </div>
   );

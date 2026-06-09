@@ -9,6 +9,7 @@ import HospitalLayout from "./components/HospitalLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DoctorProtectedRoute from "./components/DoctorProtectedRoute";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
+import HospitalProtectedRoute from "./components/HospitalProtectedRoute";
 
 import Home from "./pages/Home";
 import Doctors from "./pages/Doctors";
@@ -20,15 +21,24 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import MyPrescriptions from "./pages/MyPrescriptions";
+import PatientProfile from "./pages/PatientProfile";
+import ChangePassword from "./pages/ChangePassword";
+import Notifications from "./pages/Notifications";
+import VideoCall from "./pages/VideoCall";
+import AppointmentCalendar from "./pages/AppointmentCalendar";
 
 import HospitalLogin from "./pages/HospitalLogin";
 import HospitalDashboard from "./pages/HospitalDashboard";
 import HospitalDoctors from "./pages/HospitalDoctors";
 import HospitalAvailability from "./pages/HospitalAvailability";
 import HospitalAppointments from "./pages/HospitalAppointments";
+import HospitalProfile from "./pages/HospitalProfile";
+import HospitalAnalytics from "./pages/HospitalAnalytics";
+import HospitalRegister from "./pages/HospitalRegister";
 
 import DoctorLogin from "./pages/DoctorLogin";
 import DoctorDashboard from "./pages/DoctorDashboard";
+import DoctorMyProfile from "./pages/DoctorMyProfile";
 
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -39,7 +49,6 @@ import AdminAnalytics from "./pages/AdminAnalytics";
 function App() {
   return (
     <Routes>
-      {/* PUBLIC WEBSITE */}
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/doctors" element={<Doctors />} />
@@ -50,9 +59,67 @@ function App() {
         <Route path="/doctor/login" element={<DoctorLogin />} />
         <Route path="/hospital/login" element={<HospitalLogin />} />
         <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/hospital/register" element={<HospitalRegister />} />
+
+        <Route path="/notifications" element={<Notifications />} />
+
+        <Route path="/video-call/:appointmentId" element={<VideoCall />} />
+
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <PatientProfile />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/appointments"
+          element={
+            <ProtectedRoute>
+              <Appointments />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/prescriptions"
+          element={
+            <ProtectedRoute>
+              <MyPrescriptions />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/change-password"
+          element={
+            <ProtectedRoute>
+              <ChangePassword />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/book/:doctorId/:slotId"
+          element={
+            <ProtectedRoute>
+              <BookAppointment />
+            </ProtectedRoute>
+          }
+        />
       </Route>
 
-      {/* PATIENT PORTAL */}
       <Route
         path="/patient"
         element={
@@ -64,46 +131,9 @@ function App() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="appointments" element={<Appointments />} />
         <Route path="prescriptions" element={<MyPrescriptions />} />
+        <Route path="change-password" element={<ChangePassword />} />
       </Route>
 
-      {/* OLD PATIENT ROUTES - KEEP FOR NOW */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/appointments"
-        element={
-          <ProtectedRoute>
-            <Appointments />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/prescriptions"
-        element={
-          <ProtectedRoute>
-            <MyPrescriptions />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/book/:doctorId/:slotId"
-        element={
-          <ProtectedRoute>
-            <BookAppointment />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* DOCTOR PORTAL */}
       <Route
         path="/doctor"
         element={
@@ -113,17 +143,33 @@ function App() {
         }
       >
         <Route path="dashboard" element={<DoctorDashboard />} />
+        <Route path="profile" element={<DoctorMyProfile />} />
+        <Route path="appointments" element={<Appointments />} />
+         <Route path="prescriptions" element={<MyPrescriptions />} />
+         <Route path="calendar" element={<AppointmentCalendar />} />
+        <Route path="change-password" element={<ChangePassword />} />
+        
+
       </Route>
 
-      {/* HOSPITAL PORTAL */}
-      <Route path="/hospital" element={<HospitalLayout />}>
+      <Route
+        path="/hospital"
+        element={
+          <HospitalProtectedRoute>
+            <HospitalLayout />
+          </HospitalProtectedRoute>
+        }
+      >
         <Route path="dashboard" element={<HospitalDashboard />} />
         <Route path="doctors" element={<HospitalDoctors />} />
         <Route path="availability" element={<HospitalAvailability />} />
         <Route path="appointments" element={<HospitalAppointments />} />
+        <Route path="profile" element={<HospitalProfile />} />
+        <Route path="calendar" element={<AppointmentCalendar />} />
+        <Route path="analytics" element={<HospitalAnalytics />} />
+        <Route path="change-password" element={<ChangePassword />} />
       </Route>
 
-      {/* ADMIN PORTAL */}
       <Route
         path="/admin"
         element={

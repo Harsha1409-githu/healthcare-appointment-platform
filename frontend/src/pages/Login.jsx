@@ -27,8 +27,15 @@ export default function Login() {
 
       const res = await api.post("/auth/login", form);
 
-      localStorage.setItem("token", res.data.access_token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+    localStorage.removeItem("doctorToken");
+localStorage.removeItem("doctorUser");
+localStorage.removeItem("hospitalToken");
+localStorage.removeItem("hospitalUser");
+localStorage.removeItem("adminToken");
+localStorage.removeItem("adminUser");
+
+localStorage.setItem("patientToken", res.data.access_token);
+localStorage.setItem("patientUser", JSON.stringify(res.data.user));
 
       navigate("/appointments");
       window.location.reload();

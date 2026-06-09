@@ -135,10 +135,15 @@ export default function BookAppointment() {
               <>
                 <div className="flex items-center gap-4 mb-5">
                   <img
-                    src={`https://ui-avatars.com/api/?name=${doctor.doctorName}&background=2563eb&color=fff`}
-                    alt={doctor.doctorName}
-                    className="w-16 h-16 rounded-full"
-                  />
+  src={
+    doctor.profileImage ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      doctor.doctorName || "Doctor"
+    )}&background=2563eb&color=fff&bold=true`
+  }
+  alt={doctor.doctorName}
+  className="w-16 h-16 rounded-full object-cover"
+/>
 
                   <div>
                     <h3 className="font-bold">
@@ -155,9 +160,23 @@ export default function BookAppointment() {
                   <p>🎓 {doctor.qualification}</p>
                   <p>
                     🧑‍⚕️ {doctor.experience} Years Experience
-                  </p>
-                  <p>🏥 {doctor.hospital?.hospitalName}</p>
-                  <p>
+                  <div className="flex items-center gap-3">
+  <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center overflow-hidden">
+    {doctor.hospital?.profileImage ? (
+      <img
+        src={doctor.hospital.profileImage}
+        alt={doctor.hospital?.hospitalName}
+        className="w-full h-full object-cover"
+      />
+    ) : (
+      <span>🏥</span>
+    )}
+  </div>
+
+  <span>
+    {doctor.hospital?.hospitalName || "Hospital"}
+  </span>
+</div>
                     📍 {doctor.city}, {doctor.state}
                   </p>
                   <p className="font-bold text-green-600">

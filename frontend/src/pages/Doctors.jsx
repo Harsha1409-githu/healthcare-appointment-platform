@@ -260,12 +260,15 @@ export default function Doctors() {
 
                     <div className="relative flex items-center gap-4">
                       <img
-                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                          doc.doctorName
-                        )}&background=0f172a&color=fff&bold=true`}
-                        alt={doc.doctorName}
-                        className="w-20 h-20 rounded-3xl border-4 border-white/20 shadow-xl"
-                      />
+  src={
+    doc.profileImage ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      doc.doctorName
+    )}&background=0f172a&color=fff&bold=true`
+  }
+  alt={doc.doctorName}
+  className="w-20 h-20 rounded-3xl border-4 border-white/20 shadow-xl object-cover"
+/>
 
                       <div>
                         <h3 className="text-2xl font-black">

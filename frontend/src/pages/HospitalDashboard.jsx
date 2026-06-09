@@ -13,6 +13,8 @@ import {
   UsersRound,
   TrendingUp,
   LogOut,
+  IndianRupee,
+  Trophy,
 } from "lucide-react";
 import api from "../api/axios";
 
@@ -34,7 +36,11 @@ export default function HospitalDashboard() {
     pending: 0,
     reviews: 0,
     avgRating: 0,
+    revenue: 0,
   });
+
+  const [topDoctors, setTopDoctors] = useState([]);
+  const [monthlyStats, setMonthlyStats] = useState([]);
 
   useEffect(() => {
     loadDashboard();
@@ -71,9 +77,11 @@ export default function HospitalDashboard() {
         doctorIds.includes(a.doctor?.id)
       );
 
-      const completed = hospitalAppointments.filter(
+      const completedAppointments = hospitalAppointments.filter(
         (a) => a.status === "COMPLETED"
-      ).length;
+      );
+
+      const completed = completedAppointments.length;
 
       const cancelled = hospitalAppointments.filter(
         (a) => a.status === "CANCELLED"
@@ -82,6 +90,12 @@ export default function HospitalDashboard() {
       const pending = hospitalAppointments.filter(
         (a) => a.status === "BOOKED"
       ).length;
+
+      const revenue = completedAppointments.reduce(
+        (sum, a) =>
+          sum + (a.doctor?.consultationFee || 0),
+        0
+      );
 
       let totalReviews = 0;
       let totalRating = 0;
@@ -107,6 +121,72 @@ export default function HospitalDashboard() {
           ? 0
           : (totalRating / totalReviews).toFixed(1);
 
+      const rankedDoctors = hospitalDoctors
+        .map((doctor) => ({
+          id: doctor.id,
+          name: doctor.doctorName,
+          specialization: doctor.specialization,
+          image: doctor.profileImage,
+          appointments: hospitalAppointments.filter(
+            (a) => a.doctor?.id === doctor.id
+          ).length,
+          revenue: hospitalAppointments
+            .filter(
+              (a) =>
+                a.doctor?.id === doctor.id &&
+                a.status === "COMPLETED"
+            )
+            .reduce(
+              (sum, a) =>
+                sum + (a.doctor?.consultationFee || 0),
+              0
+            ),
+        }))
+        .sort((a, b) => b.appointments - a.appointments)
+        .slice(0, 5);
+
+      const monthMap = {};
+
+      hospitalAppointments.forEach((appointment) => {
+        const rawDate =
+          appointment.createdAt ||
+          appointment.slot?.date ||
+          appointment.date;
+
+        if (!rawDate) return;
+
+        const month = new Date(rawDate).toLocaleString("default", {
+          month: "short",
+        });
+
+        monthMap[month] = (monthMap[month] || 0) + 1;
+      });
+
+      const monthOrder = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+
+      const monthly = monthOrder
+        .map((month) => ({
+          month,
+          count: monthMap[month] || 0,
+        }))
+        .filter((item) => item.count > 0);
+
+      setTopDoctors(rankedDoctors);
+      setMonthlyStats(monthly);
+
       setStats({
         doctors: hospitalDoctors.length,
         activeDoctors: hospitalDoctors.filter((d) => d.isActive)
@@ -117,6 +197,7 @@ export default function HospitalDashboard() {
         pending,
         reviews: totalReviews,
         avgRating,
+        revenue,
       });
     } catch (error) {
       console.error("Hospital dashboard error:", error);
@@ -135,7 +216,21 @@ export default function HospitalDashboard() {
     ? Math.round((stats.pending / stats.appointments) * 100)
     : 0;
 
+  const maxMonthlyCount =
+    monthlyStats.length > 0
+      ? Math.max(...monthlyStats.map((m) => m.count))
+      : 0;
+
   const cards = [
+    {
+      title: "Revenue",
+      value: `₹${stats.revenue}`,
+      desc: "Completed consultations",
+      icon: IndianRupee,
+      gradient: "from-green-600 to-emerald-500",
+      bg: "bg-green-50",
+      text: "text-green-600",
+    },
     {
       title: "Doctors",
       value: stats.doctors,
@@ -198,7 +293,6 @@ export default function HospitalDashboard() {
       <div className="absolute top-40 right-0 w-96 h-96 bg-cyan-300/20 rounded-full blur-3xl" />
 
       <div className="relative max-w-7xl mx-auto px-6 py-10">
-        {/* Hero Header */}
         <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-900 p-8 md:p-10 text-white shadow-2xl mb-8">
           <div className="absolute -top-20 -right-20 w-80 h-80 bg-cyan-400/20 rounded-full blur-3xl" />
           <div className="absolute bottom-0 left-1/3 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl" />
@@ -208,7 +302,7 @@ export default function HospitalDashboard() {
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur mb-5">
                 <Building2 size={18} className="text-cyan-300" />
                 <span className="text-sm font-semibold">
-                  Hospital Command Center
+                  Hospital Analytics Center
                 </span>
               </div>
 
@@ -217,8 +311,8 @@ export default function HospitalDashboard() {
               </h1>
 
               <p className="text-blue-100 mt-3 max-w-2xl">
-                Manage doctors, appointments, availability, patient reviews and
-                hospital performance from one premium dashboard.
+                Monitor revenue, appointments, doctor performance, patient
+                reviews and operational health from one dashboard.
               </p>
             </div>
 
@@ -232,8 +326,7 @@ export default function HospitalDashboard() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {cards.map((card) => {
             const Icon = card.icon;
 
@@ -275,7 +368,6 @@ export default function HospitalDashboard() {
           })}
         </div>
 
-        {/* Overview */}
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2 bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-xl border border-white p-6">
             <div className="flex items-center gap-3 mb-6">
@@ -346,7 +438,130 @@ export default function HospitalDashboard() {
           </div>
         </div>
 
-        {/* Quick Actions */}
+        <div className="grid lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2 bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-xl border border-white p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-500 flex items-center justify-center">
+                <TrendingUp className="text-white" size={22} />
+              </div>
+
+              <div>
+                <h2 className="text-xl font-black text-slate-900">
+                  Monthly Appointments
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Booking trend based on appointment records
+                </p>
+              </div>
+            </div>
+
+            {monthlyStats.length === 0 ? (
+              <div className="text-slate-500 bg-slate-50 rounded-2xl p-6">
+                No monthly appointment data available.
+              </div>
+            ) : (
+              <div className="flex items-end gap-4 h-64">
+                {monthlyStats.map((item) => {
+                  const height =
+                    maxMonthlyCount === 0
+                      ? 0
+                      : Math.max(
+                          12,
+                          (item.count / maxMonthlyCount) * 190
+                        );
+
+                  return (
+                    <div
+                      key={item.month}
+                      className="flex-1 flex flex-col items-center justify-end gap-3"
+                    >
+                      <div className="text-sm font-black text-slate-700">
+                        {item.count}
+                      </div>
+
+                      <div
+                        className="w-full rounded-t-2xl bg-gradient-to-t from-purple-600 to-cyan-400 shadow-lg transition-all duration-700"
+                        style={{ height: `${height}px` }}
+                      />
+
+                      <div className="text-xs font-bold text-slate-500">
+                        {item.month}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-xl border border-white p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center">
+                <Trophy className="text-white" size={22} />
+              </div>
+
+              <div>
+                <h2 className="text-xl font-black text-slate-900">
+                  Top Doctors
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Ranked by appointments
+                </p>
+              </div>
+            </div>
+
+            {topDoctors.length === 0 ? (
+              <div className="text-slate-500 bg-slate-50 rounded-2xl p-6">
+                No doctor ranking available.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {topDoctors.map((doctor, index) => (
+                  <div
+                    key={doctor.id}
+                    className="flex items-center gap-3 rounded-2xl bg-slate-50 border border-slate-100 p-3"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center font-black">
+                      {index + 1}
+                    </div>
+
+                    <img
+                      src={
+                        doctor.image ||
+                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                          doctor.name || "Doctor"
+                        )}&background=0f172a&color=fff&bold=true`
+                      }
+                      alt={doctor.name}
+                      className="w-11 h-11 rounded-2xl object-cover"
+                    />
+
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-slate-900 truncate">
+                        {doctor.name}
+                      </p>
+
+                      <p className="text-xs text-slate-500 truncate">
+                        {doctor.specialization || "Specialist"}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="font-black text-blue-600">
+                        {doctor.appointments}
+                      </p>
+
+                      <p className="text-[11px] text-slate-400">
+                        appts
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="grid md:grid-cols-3 gap-6">
           <ActionCard
             to="/hospital/doctors"
@@ -417,7 +632,10 @@ function ActionCard({ to, icon: Icon, title, desc, gradient }) {
 
         <div className="mt-5 flex items-center gap-2 text-blue-600 font-bold">
           Open
-          <ArrowRight size={18} className="group-hover:translate-x-1 transition" />
+          <ArrowRight
+            size={18}
+            className="group-hover:translate-x-1 transition"
+          />
         </div>
       </div>
     </Link>
