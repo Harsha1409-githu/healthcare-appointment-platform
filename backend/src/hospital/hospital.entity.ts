@@ -36,6 +36,9 @@ password: string;
   address: string;
 
   @Column({ nullable: true })
+profileImage: string;
+
+  @Column({ nullable: true })
   licenseNumber?: string;
 
   @Column({ default: false })
@@ -43,6 +46,7 @@ password: string;
 
   @Column({ default: 'PENDING' })
   status: string;
+
 
   @OneToMany(
     () => Doctor,

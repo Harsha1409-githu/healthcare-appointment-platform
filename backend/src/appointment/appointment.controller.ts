@@ -54,6 +54,14 @@ export class AppointmentController {
     );
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  getAppointmentById(@Param('id') id: string) {
+    return this.appointmentService.getAppointmentById(
+      Number(id),
+    );
+  }
+
   @Get('doctor/:doctorId')
   getByDoctor(@Param('doctorId') doctorId: string) {
     return this.appointmentService.getAppointmentsByDoctor(

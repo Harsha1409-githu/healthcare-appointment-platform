@@ -17,16 +17,19 @@ import {
 
 import PDFDocument from 'pdfkit';
 import { Response } from 'express';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class PrescriptionService {
   constructor(
-    @InjectRepository(Prescription)
-    private prescriptionRepo: Repository<Prescription>,
+  @InjectRepository(Prescription)
+  private prescriptionRepo: Repository<Prescription>,
 
-    @InjectRepository(Appointment)
-    private appointmentRepo: Repository<Appointment>,
-  ) {}
+  @InjectRepository(Appointment)
+  private appointmentRepo: Repository<Appointment>,
+
+  private readonly mailService: MailService,
+) {}
 
   async createPrescription(dto: CreatePrescriptionDto) {
     const appointment = await this.appointmentRepo.findOne({
@@ -82,7 +85,20 @@ export class PrescriptionService {
       notes: dto.notes,
     });
 
-    return this.prescriptionRepo.save(prescription);
+    const savedPrescription =
+  await this.prescriptionRepo.save(prescription);
+
+try {
+  await this.mailService.sendPrescriptionReady({
+    to: appointment.patient.email,
+    patientName: appointment.patient.fullName,
+    doctorName: appointment.doctor.doctorName,
+  });
+} catch (error) {
+  console.error('Prescription email failed:', error);
+}
+
+return savedPrescription;
   }
 
   async getAllPrescriptions() {

@@ -12,6 +12,7 @@ import { Patient } from '../patient/patient.entity';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MailModule } from '../mail/mail.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -20,7 +21,6 @@ import { MailModule } from '../mail/mail.module';
       Doctor,
       Slot,
       Patient,
-      MailModule,
     ]),
 
     JwtModule.register({
@@ -31,6 +31,7 @@ import { MailModule } from '../mail/mail.module';
     }),
 
     MailModule,
+    NotificationModule,
   ],
 
   controllers: [AppointmentController],

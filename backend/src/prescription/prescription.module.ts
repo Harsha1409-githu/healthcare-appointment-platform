@@ -8,10 +8,14 @@ import { PrescriptionController } from './prescription.controller';
 
 import { Appointment } from '../appointment/appointment.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Prescription, Appointment]),
+    TypeOrmModule.forFeature([
+      Prescription,
+      Appointment,
+    ]),
 
     JwtModule.register({
       secret: 'doctor-platform-secret',
@@ -19,8 +23,15 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
         expiresIn: '1d',
       },
     }),
+
+    MailModule, // ← ADD THIS
   ],
+
   controllers: [PrescriptionController],
-  providers: [PrescriptionService, JwtAuthGuard],
+
+  providers: [
+    PrescriptionService,
+    JwtAuthGuard,
+  ],
 })
 export class PrescriptionModule {}

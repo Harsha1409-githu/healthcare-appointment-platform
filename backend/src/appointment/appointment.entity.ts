@@ -26,6 +26,9 @@ export class Appointment {
   @Column()
   patientPhone: string;
 
+  @Column({ nullable: true })
+videoRoomId: string;
+
   @Column({
     type: 'enum',
     enum: AppointmentStatus,

@@ -12,6 +12,7 @@ import { Hospital } from '../hospital/hospital.entity';
 import { Doctor } from '../doctor/doctor.entity';
 import { Patient } from '../patient/patient.entity';
 import { Appointment } from '../appointment/appointment.entity';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AdminService {
@@ -29,6 +30,8 @@ export class AdminService {
 
     @InjectRepository(Appointment)
     private appointmentRepo: Repository<Appointment>,
+
+    private readonly mailService: MailService,
   ) {}
 
   login(email: string, password: string) {
@@ -100,6 +103,18 @@ export class AdminService {
 
     await this.hospitalRepo.save(hospital);
 
+    try {
+      await this.mailService.sendHospitalApproved({
+        to: hospital.email,
+        hospitalName: hospital.hospitalName,
+      });
+    } catch (error) {
+      console.error(
+        'Hospital approval email failed:',
+        error,
+      );
+    }
+
     return {
       message: 'Hospital approved successfully',
       hospital,
@@ -119,6 +134,18 @@ export class AdminService {
     hospital.status = 'REJECTED';
 
     await this.hospitalRepo.save(hospital);
+
+    try {
+      await this.mailService.sendHospitalRejected({
+        to: hospital.email,
+        hospitalName: hospital.hospitalName,
+      });
+    } catch (error) {
+      console.error(
+        'Hospital rejection email failed:',
+        error,
+      );
+    }
 
     return {
       message: 'Hospital rejected successfully',

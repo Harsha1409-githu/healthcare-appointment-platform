@@ -13,6 +13,9 @@ import * as bcrypt from 'bcrypt';
 import { Doctor } from './doctor.entity';
 import { Hospital } from '../hospital/hospital.entity';
 import { SearchDoctorDto } from './dto/search-doctor.dto';
+import { v2 as cloudinary } from 'cloudinary';
+import { Readable } from 'stream';
+
 
 @Injectable()
 export class DoctorService {
@@ -250,4 +253,149 @@ export class DoctorService {
       totalPages: Math.ceil(total / limit),
     };
   }
+  async getDoctorProfile(doctorId: string) {
+  const doctor = await this.doctorRepository.findOne({
+    where: { id: doctorId },
+    relations: {
+      hospital: true,
+    },
+  });
+
+  if (!doctor) {
+    throw new NotFoundException('Doctor not found');
+  }
+
+  return doctor;
+}
+
+async updateDoctorProfile(
+  doctorId: string,
+  data: any,
+) {
+  const doctor = await this.doctorRepository.findOne({
+    where: { id: doctorId },
+  });
+
+  if (!doctor) {
+    throw new NotFoundException('Doctor not found');
+  }
+
+  doctor.doctorName =
+    data.doctorName ?? doctor.doctorName;
+
+  doctor.specialization =
+    data.specialization ??
+    doctor.specialization;
+
+  doctor.qualification =
+    data.qualification ??
+    doctor.qualification;
+
+  doctor.experience =
+    data.experience ?? doctor.experience;
+
+  doctor.consultationFee =
+    data.consultationFee ??
+    doctor.consultationFee;
+
+  doctor.mobile =
+    data.mobile ?? doctor.mobile;
+
+  doctor.city =
+    data.city ?? doctor.city;
+
+  doctor.state =
+    data.state ?? doctor.state;
+
+  return this.doctorRepository.save(doctor);
+}
+async changePassword(
+  doctorId: string,
+  currentPassword: string,
+  newPassword: string,
+) {
+  if (!currentPassword || !newPassword) {
+    throw new BadRequestException(
+      'Current password and new password are required',
+    );
+  }
+
+  const doctor = await this.doctorRepository.findOne({
+    where: {
+      id: doctorId,
+    },
+  });
+
+  if (!doctor) {
+    throw new NotFoundException('Doctor not found');
+  }
+
+  const isMatch = await bcrypt.compare(
+    currentPassword,
+    doctor.password,
+  );
+
+  if (!isMatch) {
+    throw new BadRequestException(
+      'Current password is incorrect',
+    );
+  }
+
+  doctor.password = await bcrypt.hash(newPassword, 10);
+
+  await this.doctorRepository.save(doctor);
+
+  return {
+    message: 'Password changed successfully',
+  };
+}
+async uploadDoctorPhoto(
+  doctorId: string,
+  file: Express.Multer.File,
+) {
+  const doctor = await this.doctorRepository.findOne({
+    where: { id: doctorId },
+    relations: {
+      hospital: true,
+    },
+  });
+
+  if (!doctor) {
+    throw new NotFoundException('Doctor not found');
+  }
+
+  if (!file) {
+    throw new BadRequestException('File is required');
+  }
+
+  if (!file.buffer) {
+    throw new BadRequestException('File buffer missing');
+  }
+
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+
+  const imageUrl = await new Promise<string>((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'doctors',
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result!.secure_url);
+      },
+    );
+
+    Readable.from(file.buffer).pipe(uploadStream);
+  });
+
+  doctor.profileImage = imageUrl;
+
+  const updatedDoctor = await this.doctorRepository.save(doctor);
+
+  return updatedDoctor;
+}
 }

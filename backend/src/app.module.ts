@@ -32,6 +32,10 @@ import { PrescriptionModule } from './prescription/prescription.module';
 import { Prescription } from './prescription/prescription.entity';
 import { AdminModule } from './admin/admin.module';
 
+import { NotificationModule } from './notification/notification.module';
+import { Notification } from './notification/notification.entity';
+
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -61,6 +65,7 @@ import { AdminModule } from './admin/admin.module';
         DoctorAvailability,
         Review,
         Prescription,
+        Notification,
       ],
 
       synchronize: true,
@@ -78,6 +83,7 @@ import { AdminModule } from './admin/admin.module';
     MailModule,
     PrescriptionModule,
     AdminModule,
+    NotificationModule,
   ],
 
   controllers: [AppController],  // ✅ FIX

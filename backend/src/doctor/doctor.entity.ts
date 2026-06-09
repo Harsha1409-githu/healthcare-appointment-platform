@@ -47,6 +47,9 @@ export class Doctor {
   @ManyToOne(() => Hospital)
   hospital: Hospital;
 
+  @Column({ nullable: true })
+profileImage: string;
+
   @OneToMany(() => Slot, (slot) => slot.doctor)
   slots: Slot[];
 

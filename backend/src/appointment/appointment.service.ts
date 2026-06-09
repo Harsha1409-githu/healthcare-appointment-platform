@@ -18,6 +18,7 @@ import { Doctor } from '../doctor/doctor.entity';
 import { Slot } from '../slot/slot.entity';
 import { Patient } from '../patient/patient.entity';
 import { MailService } from '../mail/mail.service';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class AppointmentService {
@@ -37,6 +38,8 @@ export class AppointmentService {
     private dataSource: DataSource,
 
     private readonly mailService: MailService,
+
+    private readonly notificationService: NotificationService,
   ) {}
 
   async bookAppointment(
@@ -97,17 +100,19 @@ export class AppointmentService {
       }
 
       slot.isAvailable = false;
-
       await manager.save(Slot, slot);
 
-      const appointment = manager.create(Appointment, {
-        doctor,
-        slot,
-        patient,
-        patientName: dto.patientName,
-        patientPhone: dto.patientPhone,
-        status: AppointmentStatus.BOOKED,
-      });
+      const videoRoomId = `medicare-${doctor.id}-${patient.id}-${Date.now()}`;
+
+const appointment = manager.create(Appointment, {
+  doctor,
+  slot,
+  patient,
+  patientName: dto.patientName,
+  patientPhone: dto.patientPhone,
+  status: AppointmentStatus.BOOKED,
+  videoRoomId,
+});
 
       const savedAppointment = await manager.save(
         Appointment,
@@ -130,6 +135,29 @@ export class AppointmentService {
         });
       } catch (mailError) {
         console.error('Email sending failed:', mailError);
+      }
+
+      await this.notificationService.create({
+        userId: patient.id,
+        role: 'patient',
+        title: 'Appointment Booked',
+        message: `Your appointment with Dr. ${doctor.doctorName} is booked for ${slot.date} at ${slot.startTime}.`,
+      });
+
+      await this.notificationService.create({
+        userId: doctor.id,
+        role: 'doctor',
+        title: 'New Appointment',
+        message: `${patient.fullName} booked an appointment on ${slot.date} at ${slot.startTime}.`,
+      });
+
+      if (doctor.hospital?.id) {
+        await this.notificationService.create({
+          userId: doctor.hospital.id,
+          role: 'hospital',
+          title: 'New Appointment',
+          message: `Appointment booked with Dr. ${doctor.doctorName}.`,
+        });
       }
 
       return savedAppointment;
@@ -294,6 +322,7 @@ export class AppointmentService {
   }
 
   async getAppointmentsByDoctor(doctorId: string) {
+    
     if (!doctorId) {
       throw new BadRequestException('doctorId is required');
     }
@@ -317,6 +346,26 @@ export class AppointmentService {
     });
   }
 
+  async getAppointmentById(id: number) {
+  const appointment = await this.appointmentRepo.findOne({
+    where: { id },
+    relations: {
+      doctor: {
+        hospital: true,
+      },
+      slot: true,
+      patient: true,
+    },
+  });
+
+  if (!appointment) {
+    throw new NotFoundException(
+      'Appointment not found',
+    );
+  }
+
+  return appointment;
+}
   async cancelAppointment(
     id: number,
     userId: string,
@@ -373,7 +422,50 @@ export class AppointmentService {
         await manager.save(Slot, appointment.slot);
       }
 
-      return await manager.save(Appointment, appointment);
+      const updatedAppointment = await manager.save(
+        Appointment,
+        appointment,
+      );
+
+      try {
+        await this.mailService.sendAppointmentCancelled({
+          to: appointment.patient.email,
+          patientName: appointment.patient.fullName,
+          doctorName: appointment.doctor.doctorName,
+          date: appointment.slot?.date,
+          startTime: appointment.slot?.startTime,
+        });
+      } catch (error) {
+        console.error(
+          'Appointment cancel email failed',
+          error,
+        );
+      }
+
+      await this.notificationService.create({
+        userId: appointment.patient.id,
+        role: 'patient',
+        title: 'Appointment Cancelled',
+        message: `Appointment with Dr. ${appointment.doctor.doctorName} has been cancelled.`,
+      });
+
+      await this.notificationService.create({
+        userId: appointment.doctor.id,
+        role: 'doctor',
+        title: 'Appointment Cancelled',
+        message: `${appointment.patientName} cancelled the appointment.`,
+      });
+
+      if (appointment.doctor?.hospital?.id) {
+        await this.notificationService.create({
+          userId: appointment.doctor.hospital.id,
+          role: 'hospital',
+          title: 'Appointment Cancelled',
+          message: `Appointment with Dr. ${appointment.doctor.doctorName} has been cancelled.`,
+        });
+      }
+
+      return updatedAppointment;
     });
   }
 
@@ -407,6 +499,45 @@ export class AppointmentService {
 
     appointment.status = AppointmentStatus.COMPLETED;
 
-    return this.appointmentRepo.save(appointment);
+    const completedAppointment =
+      await this.appointmentRepo.save(appointment);
+
+    try {
+      await this.mailService.sendAppointmentCompleted({
+        to: appointment.patient.email,
+        patientName: appointment.patient.fullName,
+        doctorName: appointment.doctor.doctorName,
+      });
+    } catch (error) {
+      console.error(
+        'Appointment completed email failed',
+        error,
+      );
+    }
+
+    await this.notificationService.create({
+      userId: appointment.patient.id,
+      role: 'patient',
+      title: 'Consultation Completed',
+      message: `Your consultation with Dr. ${appointment.doctor.doctorName} has been completed.`,
+    });
+
+    await this.notificationService.create({
+      userId: appointment.doctor.id,
+      role: 'doctor',
+      title: 'Consultation Completed',
+      message: `Consultation with ${appointment.patientName} has been completed.`,
+    });
+
+    if (appointment.doctor?.hospital?.id) {
+      await this.notificationService.create({
+        userId: appointment.doctor.hospital.id,
+        role: 'hospital',
+        title: 'Consultation Completed',
+        message: `Dr. ${appointment.doctor.doctorName} completed a consultation.`,
+      });
+    }
+
+    return completedAppointment;
   }
 }

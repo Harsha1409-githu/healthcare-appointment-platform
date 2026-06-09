@@ -10,6 +10,8 @@ import { Doctor } from '../doctor/doctor.entity';
 import { Appointment } from '../appointment/appointment.entity';
 import { Slot } from '../slot/slot.entity';
 
+import { MailModule } from '../mail/mail.module';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -20,17 +22,19 @@ import { Slot } from '../slot/slot.entity';
     ]),
 
     JwtModule.register({
-      secret:
-        process.env.JWT_SECRET ||
-        'doctor-platform-secret',
+      secret: 'doctor-platform-secret',
       signOptions: {
         expiresIn: '1d',
       },
     }),
+
+    MailModule,
   ],
 
   controllers: [HospitalController],
 
   providers: [HospitalService],
+
+  exports: [HospitalService],
 })
 export class HospitalModule {}

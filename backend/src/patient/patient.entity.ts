@@ -32,6 +32,9 @@ export class Patient {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ nullable: true })
+profileImage: string;
+
   @Column()
 @Exclude()
 password: string;
