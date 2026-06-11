@@ -53,6 +53,14 @@ export class AppointmentController {
       req.user.sub,
     );
   }
+  
+  @UseGuards(JwtAuthGuard)
+@Get('hospital/analytics')
+getHospitalAnalytics(@Req() req: any) {
+  return this.appointmentService.getHospitalAnalytics(
+    req.user.sub,
+  );
+}
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')

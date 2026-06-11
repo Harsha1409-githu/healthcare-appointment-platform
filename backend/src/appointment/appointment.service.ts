@@ -19,6 +19,9 @@ import { Slot } from '../slot/slot.entity';
 import { Patient } from '../patient/patient.entity';
 import { MailService } from '../mail/mail.service';
 import { NotificationService } from '../notification/notification.service';
+import { SymptomHistory } from '../symptom-history/symptom-history.entity';
+import { MedicalRecord } from '../medical-record/medical-record.entity';
+import { Prescription } from '../prescription/prescription.entity';
 
 @Injectable()
 export class AppointmentService {
@@ -34,6 +37,15 @@ export class AppointmentService {
 
     @InjectRepository(Patient)
     private patientRepo: Repository<Patient>,
+
+    @InjectRepository(SymptomHistory)
+private symptomHistoryRepo: Repository<SymptomHistory>,
+
+@InjectRepository(MedicalRecord)
+private medicalRecordRepo: Repository<MedicalRecord>,
+
+@InjectRepository(Prescription)
+private prescriptionRepo: Repository<Prescription>,
 
     private dataSource: DataSource,
 
@@ -271,6 +283,74 @@ const appointment = manager.create(Appointment, {
     };
   }
 
+  async getPatientProfile(
+  appointmentId: number,
+) {
+  const appointment =
+  await this.appointmentRepo.findOne({
+      where: {
+        id: appointmentId,
+      },
+      relations: {
+        patient: true,
+      },
+    });
+
+  if (!appointment) {
+    throw new NotFoundException(
+      'Appointment not found',
+    );
+  }
+
+  const patient = appointment.patient;
+
+  const symptomHistory =
+    await this.symptomHistoryRepo.find({
+      where: {
+        patient: {
+          id: patient.id,
+        },
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+      take: 5,
+    });
+
+  const medicalRecords =
+    await this.medicalRecordRepo.find({
+      where: {
+        patient: {
+          id: patient.id,
+        },
+      },
+      order: {
+        uploadedAt: 'DESC',
+      },
+      take: 10,
+    });
+
+  const prescriptions =
+    await this.prescriptionRepo.find({
+      where: {
+        patient: {
+          id: patient.id,
+        },
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+      take: 10,
+    });
+
+  return {
+    patient,
+    symptomHistory,
+    medicalRecords,
+    prescriptions,
+  };
+}
+
   async getMyAppointments(patientId: string) {
     if (!patientId) {
       throw new BadRequestException('patientId is required');
@@ -346,6 +426,177 @@ const appointment = manager.create(Appointment, {
     });
   }
 
+
+  async getHospitalAnalytics(hospitalId: string) {
+  const appointments = await this.appointmentRepo.find({
+    where: {
+      doctor: {
+        hospital: {
+          id: hospitalId,
+        },
+      },
+    },
+    relations: {
+      doctor: {
+        hospital: true,
+      },
+      slot: true,
+      patient: true,
+    },
+  });
+
+  const totalAppointments = appointments.length;
+
+  const booked = appointments.filter(
+    (a) => a.status === AppointmentStatus.BOOKED,
+  ).length;
+
+  const completed = appointments.filter(
+    (a) => a.status === AppointmentStatus.COMPLETED,
+  ).length;
+
+  const cancelled = appointments.filter(
+    (a) => a.status === AppointmentStatus.CANCELLED,
+  ).length;
+
+  const revenue = appointments
+    .filter((a) => a.status === AppointmentStatus.COMPLETED)
+    .reduce(
+      (sum, a) =>
+        sum + Number(a.doctor?.consultationFee || 0),
+      0,
+    );
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const todayAppointments = appointments.filter(
+    (a) => a.slot?.date === today,
+  ).length;
+
+  const doctorMap = new Map<
+    string,
+    {
+      doctorName: string;
+      appointments: number;
+      completed: number;
+      revenue: number;
+    }
+  >();
+
+  const specializationMap = new Map<string, number>();
+  const monthlyMap = new Map<
+    string,
+    {
+      appointments: number;
+      revenue: number;
+    }
+  >();
+
+  appointments.forEach((appointment) => {
+    const doctorId = appointment.doctor?.id || 'unknown';
+
+    if (!doctorMap.has(doctorId)) {
+      doctorMap.set(doctorId, {
+        doctorName:
+          appointment.doctor?.doctorName || 'Unknown Doctor',
+        appointments: 0,
+        completed: 0,
+        revenue: 0,
+      });
+    }
+
+    const doctorStats = doctorMap.get(doctorId)!;
+    doctorStats.appointments += 1;
+
+    if (appointment.status === AppointmentStatus.COMPLETED) {
+      doctorStats.completed += 1;
+      doctorStats.revenue += Number(
+        appointment.doctor?.consultationFee || 0,
+      );
+    }
+
+    const specialization =
+      appointment.doctor?.specialization || 'Unknown';
+
+    specializationMap.set(
+      specialization,
+      (specializationMap.get(specialization) || 0) + 1,
+    );
+
+    const rawDate = appointment.slot?.date;
+
+    if (rawDate) {
+      const month = new Date(rawDate).toLocaleString('default', {
+        month: 'short',
+      });
+
+      if (!monthlyMap.has(month)) {
+        monthlyMap.set(month, {
+          appointments: 0,
+          revenue: 0,
+        });
+      }
+
+      const monthStats = monthlyMap.get(month)!;
+      monthStats.appointments += 1;
+
+      if (appointment.status === AppointmentStatus.COMPLETED) {
+        monthStats.revenue += Number(
+          appointment.doctor?.consultationFee || 0,
+        );
+      }
+    }
+  });
+
+  const doctorPerformance = Array.from(
+    doctorMap.values(),
+  ).sort((a, b) => b.revenue - a.revenue);
+
+  const specializationStats = Array.from(
+    specializationMap.entries(),
+  ).map(([name, value]) => ({
+    name,
+    value,
+  }));
+
+  const monthOrder = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  const monthlyStats = monthOrder
+    .filter((month) => monthlyMap.has(month))
+    .map((month) => ({
+      month,
+      appointments: monthlyMap.get(month)!.appointments,
+      revenue: monthlyMap.get(month)!.revenue,
+    }));
+
+  const topDoctor = doctorPerformance[0] || null;
+
+  return {
+    totalAppointments,
+    booked,
+    completed,
+    cancelled,
+    revenue,
+    todayAppointments,
+    doctorPerformance,
+    specializationStats,
+    monthlyStats,
+    topDoctor,
+  };
+}
   async getAppointmentById(id: number) {
   const appointment = await this.appointmentRepo.findOne({
     where: { id },

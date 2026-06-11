@@ -34,7 +34,16 @@ import { AdminModule } from './admin/admin.module';
 
 import { NotificationModule } from './notification/notification.module';
 import { Notification } from './notification/notification.entity';
-
+import { SymptomHistoryModule } from './symptom-history/symptom-history.module';
+import { SymptomHistory } from './symptom-history/symptom-history.entity';
+import { MedicalRecordModule } from './medical-record/medical-record.module';
+import { MedicalRecord } from './medical-record/medical-record.entity';
+import { MedicineReminder } from './medicine-reminder/medicine-reminder.entity';
+import { MedicineReminderModule } from './medicine-reminder/medicine-reminder.module';
+import { LabTestModule } from './lab-test/lab-test.module';
+import { LabTest } from './lab-test/lab-test.entity';
+import { ChatModule } from './chat/chat.module';
+import { ChatMessage } from './chat/chat-message.entity';
 
 @Module({
   imports: [
@@ -66,6 +75,11 @@ import { Notification } from './notification/notification.entity';
         Review,
         Prescription,
         Notification,
+        SymptomHistory,
+        MedicalRecord,
+        MedicineReminder,
+        LabTest,
+        ChatMessage,
       ],
 
       synchronize: true,
@@ -84,6 +98,11 @@ import { Notification } from './notification/notification.entity';
     PrescriptionModule,
     AdminModule,
     NotificationModule,
+    SymptomHistoryModule,
+    MedicalRecordModule,
+    MedicineReminderModule,
+    LabTestModule,
+    ChatModule,
   ],
 
   controllers: [AppController],  // ✅ FIX

@@ -13,6 +13,9 @@ import { Patient } from '../patient/patient.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MailModule } from '../mail/mail.module';
 import { NotificationModule } from '../notification/notification.module';
+import { SymptomHistory } from '../symptom-history/symptom-history.entity';
+import { MedicalRecord } from '../medical-record/medical-record.entity';
+import { Prescription } from '../prescription/prescription.entity'; 
 
 @Module({
   imports: [
@@ -21,6 +24,10 @@ import { NotificationModule } from '../notification/notification.module';
       Doctor,
       Slot,
       Patient,
+      SymptomHistory,
+      MedicalRecord,
+      Prescription,
+      
     ]),
 
     JwtModule.register({

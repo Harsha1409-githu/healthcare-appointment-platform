@@ -8,6 +8,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  Param,
 } from '@nestjs/common';
 
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -78,6 +79,20 @@ changePassword(
     body.currentPassword,
     body.newPassword,
   );
+}
+
+@Get(':patientId/health-insights')
+getHealthInsights(
+  @Param('patientId') patientId: string,
+) {
+  return this.patientService.getHealthInsights(patientId);
+}
+
+@Get(':patientId/timeline')
+getTimeline(
+  @Param('patientId') patientId: string,
+) {
+  return this.patientService.getTimeline(patientId);
 }
 
 @Patch('profile/photo')
