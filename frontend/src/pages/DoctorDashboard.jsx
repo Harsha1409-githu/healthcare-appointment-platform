@@ -16,6 +16,7 @@ import {
   Activity,
 } from "lucide-react";
 import api from "../api/axios";
+import { Link } from "react-router-dom";
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
@@ -475,9 +476,16 @@ export default function DoctorDashboard() {
                     </div>
 
                     <div className="flex gap-3 flex-wrap">
+<Link
+  to={`/doctor/appointment/${appointment.id}/patient-profile`}
+  className="bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800"
+>
+  View Patient
+</Link> 
 
   {appointment.status === "BOOKED" &&
     appointment.videoRoomId && (
+
       <a
         href={`/video-call/${appointment.id}`}
         className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"

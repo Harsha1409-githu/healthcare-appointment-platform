@@ -17,6 +17,11 @@ import {
   FileText,
   Bell,
   Home,
+  Brain,
+  Ambulance,
+  Phone,
+  FlaskConical,
+  Video,
 } from "lucide-react";
 import api from "../api/axios";
 import { io } from "socket.io-client";
@@ -39,6 +44,7 @@ export default function Navbar() {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const patientToken = localStorage.getItem("patientToken");
   const doctorToken = localStorage.getItem("doctorToken");
@@ -58,7 +64,7 @@ export default function Navbar() {
         subtitle: "Patient Account",
         image: patientUser?.profileImage,
         icon: UserCircle,
-        profilePath: "/profile",
+        profilePath: "/patient/dashboard",
       }
     : doctorToken
     ? {
@@ -87,9 +93,21 @@ export default function Navbar() {
       }
     : null;
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll);
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const loadNotifications = async () => {
     try {
       if (!isLoggedIn) return;
+
       const res = await api.get("/notifications/my");
       setNotifications(res.data || []);
     } catch (error) {
@@ -129,7 +147,10 @@ export default function Navbar() {
     window.addEventListener("storage", updateDoctorProfile);
 
     return () => {
-      window.removeEventListener("doctorProfileUpdated", updateDoctorProfile);
+      window.removeEventListener(
+        "doctorProfileUpdated",
+        updateDoctorProfile
+      );
       window.removeEventListener("storage", updateDoctorProfile);
     };
   }, []);
@@ -155,61 +176,54 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-  if (!isLoggedIn) return;
+    if (!isLoggedIn) return;
 
-  const role = patientToken
-    ? "patient"
-    : doctorToken
-    ? "doctor"
-    : hospitalToken
-    ? "hospital"
-    : "admin";
+    const role = patientToken
+      ? "patient"
+      : doctorToken
+      ? "doctor"
+      : hospitalToken
+      ? "hospital"
+      : "admin";
 
-  const user =
-    role === "patient"
-      ? patientUser
-      : role === "doctor"
-      ? doctorUser
-      : role === "hospital"
-      ? hospitalUser
-      : adminUser;
+    const user =
+      role === "patient"
+        ? patientUser
+        : role === "doctor"
+        ? doctorUser
+        : role === "hospital"
+        ? hospitalUser
+        : adminUser;
 
-  const userId = role === "admin" ? "admin" : user?.id;
+    const userId = role === "admin" ? "admin" : user?.id;
 
-  if (!userId) return;
+    if (!userId) return;
 
-  const socket = io("http://localhost:3000");
+    const socket = io("http://localhost:3000");
 
-  socket.on("connect", () => {
-    console.log("Socket connected:", socket.id);
-
-    socket.emit("joinUserRoom", {
-      userId,
-      role,
+    socket.on("connect", () => {
+      socket.emit("joinUserRoom", {
+        userId,
+        role,
+      });
     });
-  });
 
-  socket.on("newNotification", (notification) => {
-    console.log("New live notification:", notification);
+    socket.on("newNotification", (notification) => {
+      setNotifications((prev) => [notification, ...prev]);
+    });
 
-    setNotifications((prev) => [
-      notification,
-      ...prev,
-    ]);
-  });
-
-  return () => {
-    socket.disconnect();
-  };
-}, [
-  patientToken,
-  doctorToken,
-  hospitalToken,
-  adminToken,
-  patientUser,
-  doctorUser,
-  hospitalUser,
-]);
+    return () => {
+      socket.disconnect();
+    };
+  }, [
+    patientToken,
+    doctorToken,
+    hospitalToken,
+    adminToken,
+    patientUser,
+    doctorUser,
+    hospitalUser,
+  ]);
 
   useEffect(() => {
     loadNotifications();
@@ -273,8 +287,8 @@ export default function Navbar() {
 
   const navClass = ({ isActive }) =>
     isActive
-      ? "flex items-center gap-2 px-4 py-2 rounded-2xl bg-blue-600 text-white font-bold shadow-lg shadow-blue-100"
-      : "flex items-center gap-2 px-4 py-2 rounded-2xl text-slate-600 hover:text-blue-600 hover:bg-blue-50 font-semibold transition";
+      ? "flex items-center gap-2 px-4 py-2 rounded-2xl bg-blue-600 text-white font-black shadow-lg shadow-blue-100"
+      : "flex items-center gap-2 px-4 py-2 rounded-2xl text-slate-600 hover:text-blue-600 hover:bg-blue-50 font-bold transition";
 
   const mobileNavClass = ({ isActive }) =>
     isActive
@@ -282,11 +296,27 @@ export default function Navbar() {
       : "flex items-center gap-3 p-4 rounded-2xl text-slate-700 hover:bg-blue-50 hover:text-blue-700 font-bold transition";
 
   return (
-    <header className="sticky top-0 z-50 bg-white/85 backdrop-blur-2xl border-b border-slate-100 shadow-sm">
+    <header
+      className={`sticky top-0 z-50 transition-all duration-500 ${
+        scrolled
+          ? "bg-white/80 backdrop-blur-2xl shadow-xl border-b border-slate-200"
+          : "bg-white/70 backdrop-blur-xl border-b border-white/20"
+      }`}
+    >
       <div className="max-w-[1500px] mx-auto px-5 lg:px-8">
-        <div className="h-20 flex items-center justify-between gap-6">
+        <div
+          className={`flex items-center justify-between gap-6 transition-all duration-500 ${
+            scrolled ? "h-16" : "h-20"
+          }`}
+        >
           <Link to="/" className="flex items-center gap-3 shrink-0">
-            <div className="w-12 h-12 rounded-3xl bg-gradient-to-br from-blue-700 via-cyan-500 to-emerald-400 flex items-center justify-center shadow-xl shadow-blue-100">
+            <div
+              className={`w-12 h-12 rounded-3xl bg-gradient-to-br from-blue-700 via-cyan-500 to-emerald-400 flex items-center justify-center transition-all duration-500 ${
+                scrolled
+                  ? "shadow-2xl shadow-cyan-300/50 scale-95"
+                  : "shadow-xl shadow-blue-100"
+              }`}
+            >
               <Stethoscope className="text-white" size={25} />
             </div>
 
@@ -302,14 +332,17 @@ export default function Navbar() {
                 </span>
               </div>
 
-              <p className="text-xs text-slate-400">
-                Smart Healthcare Platform
-              </p>
+              {!scrolled && (
+                <p className="text-xs text-slate-400">
+                  Smart Healthcare Platform
+                </p>
+              )}
             </div>
           </Link>
 
-          <nav className="hidden xl:flex items-center gap-2 bg-slate-50 rounded-3xl p-2 border border-slate-100">
+          <nav className="hidden xl:flex items-center gap-2 bg-white/80 backdrop-blur-xl rounded-3xl p-2 border border-slate-100 shadow-sm">
             <NavLink to="/" className={navClass}>
+              <Home size={17} />
               Home
             </NavLink>
 
@@ -318,11 +351,31 @@ export default function Navbar() {
               Doctors
             </NavLink>
 
+            <NavLink to="/patient/lab-tests" className={navClass}>
+  <FlaskConical size={17} />
+  Lab Tests
+</NavLink>
+
+            <NavLink to="/symptom-checker" className={navClass}>
+              <Brain size={17} />
+              AI Assistant
+            </NavLink>
+
+            <NavLink to="/ai-doctor-match">
+            <Brain size={17} />
+  AI Match  
+</NavLink>
+
+<NavLink to="/video-consult" className={navClass}>
+  <Video size={17} />
+  Video Consult
+</NavLink>
+
             {patientToken && (
               <>
-                <NavLink to="/dashboard" className={navClass}>
+                <NavLink to="/patient/dashboard" className={navClass}>
                   <LayoutDashboard size={17} />
-                  Dashboard
+                  Patient Portal
                 </NavLink>
 
                 <NavLink to="/appointments" className={navClass}>
@@ -361,99 +414,19 @@ export default function Navbar() {
 
           <div className="hidden xl:flex items-center gap-3 shrink-0">
             {isLoggedIn && (
-              <div className="relative">
-                <button
-                  onClick={() =>
-                    setShowNotifications(!showNotifications)
-                  }
-                  className="relative p-3 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 transition"
-                >
-                  <Bell size={22} className="text-slate-700" />
-
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-black rounded-full min-w-5 h-5 px-1 flex items-center justify-center">
-                      {unreadCount}
-                    </span>
-                  )}
-                </button>
-
-                {showNotifications && (
-                  <div className="absolute right-0 mt-3 w-96 bg-white rounded-[1.5rem] shadow-2xl border border-slate-100 z-50 overflow-hidden">
-                    <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-                      <div>
-                        <h3 className="font-black text-slate-900">
-                          Notifications
-                        </h3>
-                        <p className="text-xs text-slate-500">
-                          {unreadCount} unread
-                        </p>
-                      </div>
-
-                      {notifications.length > 0 && (
-                        <button
-                          onClick={markAllAsRead}
-                          className="text-xs font-bold text-blue-600 hover:text-blue-700"
-                        >
-                          Mark all read
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="max-h-96 overflow-y-auto">
-                      {notifications.length === 0 ? (
-                        <div className="p-5 text-sm text-slate-500">
-                          No notifications yet.
-                        </div>
-                      ) : (
-                        notifications.slice(0, 5).map((item) => (
-                          <div
-                            key={item.id}
-                            className={`p-4 border-b border-slate-100 ${
-                              item.isRead
-                                ? "bg-white"
-                                : "bg-blue-50/60"
-                            }`}
-                          >
-                            <div className="flex gap-3">
-                              <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">
-                                <Bell size={17} className="text-white" />
-                              </div>
-
-                              <div>
-                                <p className="font-black text-sm text-slate-900">
-                                  {item.title}
-                                </p>
-                                <p className="text-sm text-slate-600 mt-1">
-                                  {item.message}
-                                </p>
-                                <p className="text-[11px] text-slate-400 mt-2">
-                                  {new Date(item.createdAt).toLocaleString()}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    <div className="p-3 bg-slate-50">
-                      <Link
-                        to="/notifications"
-                        onClick={() => setShowNotifications(false)}
-                        className="block text-center text-blue-600 font-black text-sm"
-                      >
-                        View All Notifications
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <NotificationBell
+                unreadCount={unreadCount}
+                showNotifications={showNotifications}
+                setShowNotifications={setShowNotifications}
+                notifications={notifications}
+                markAllAsRead={markAllAsRead}
+              />
             )}
 
             {patientToken ? (
               <>
                 <Link
-                  to="/profile"
+                  to="/patient/dashboard"
                   className="flex items-center gap-3 px-4 py-2 rounded-3xl bg-white border border-blue-100 shadow-sm hover:bg-blue-50 transition"
                 >
                   <ProfileIcon
@@ -463,13 +436,13 @@ export default function Navbar() {
                   />
 
                   <div className="leading-tight text-left">
-                    <p className="text-sm font-black max-w-[160px] truncate text-slate-800">
+                    <p className="text-sm font-black max-w-[150px] truncate text-slate-800">
                       {patientUser?.fullName ||
                         patientUser?.email ||
                         "Patient"}
                     </p>
                     <p className="text-xs text-blue-500">
-                      Patient Account
+                      Patient Portal
                     </p>
                   </div>
                 </Link>
@@ -489,7 +462,7 @@ export default function Navbar() {
                   />
 
                   <div>
-                    <p className="text-sm font-black max-w-[160px] truncate">
+                    <p className="text-sm font-black max-w-[150px] truncate">
                       {doctorUser?.doctorName ||
                         doctorUser?.email ||
                         "Doctor"}
@@ -515,7 +488,7 @@ export default function Navbar() {
                   />
 
                   <div>
-                    <p className="text-sm font-black max-w-[160px] truncate">
+                    <p className="text-sm font-black max-w-[150px] truncate">
                       {hospitalUser?.hospitalName ||
                         hospitalUser?.email ||
                         "Hospital"}
@@ -555,14 +528,6 @@ export default function Navbar() {
                 </Link>
 
                 <Link
-                  to="/doctor/login"
-                  className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white border border-emerald-100 text-emerald-700 font-bold hover:bg-emerald-50"
-                >
-                  <Stethoscope size={18} />
-                  Doctor Login
-                </Link>
-
-                <Link
                   to="/register"
                   className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-black shadow-xl shadow-blue-100 hover:scale-[1.02] transition"
                 >
@@ -571,20 +536,53 @@ export default function Navbar() {
                   <ChevronRight size={17} />
                 </Link>
 
-                <Link
-                  to="/hospital/login"
-                  className="flex items-center gap-2 px-4 py-3 rounded-2xl text-slate-500 hover:text-blue-600 font-bold"
-                >
-                  <Building2 size={17} />
-                  Hospital Portal
-                </Link>
+                <div className="relative group">
+                  <button className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-950 text-white font-black hover:bg-blue-700 transition">
+                    <Building2 size={18} />
+                    Portals
+                    <ChevronRight
+                      size={17}
+                      className="group-hover:rotate-90 transition"
+                    />
+                  </button>
+
+                  <div className="absolute right-0 mt-3 w-72 bg-white rounded-[1.5rem] shadow-2xl border border-slate-100 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                    <PortalLink
+                      to="/doctor/login"
+                      icon={Stethoscope}
+                      title="Doctor Login"
+                      desc="Access doctor workspace"
+                    />
+
+                    <PortalLink
+                      to="/hospital/login"
+                      icon={Building2}
+                      title="Hospital Portal"
+                      desc="Manage hospital dashboard"
+                    />
+
+                    <PortalLink
+                      to="/hospital/register"
+                      icon={UserPlus}
+                      title="Hospital Signup"
+                      desc="Register new hospital"
+                    />
+
+                    <PortalLink
+                      to="/admin/login"
+                      icon={ShieldCheck}
+                      title="Admin Login"
+                      desc="Platform administration"
+                    />
+                  </div>
+                </div>
               </>
             )}
           </div>
 
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="xl:hidden relative p-3 rounded-2xl bg-slate-100 hover:bg-slate-200 transition"
+            className="xl:hidden relative p-3 rounded-2xl bg-white border border-slate-200 hover:bg-slate-100 transition shadow-sm"
           >
             <Menu size={26} />
 
@@ -615,6 +613,7 @@ export default function Navbar() {
                   </div>
 
                   <h2 className="text-3xl font-black">MediCare</h2>
+
                   <p className="text-blue-100 text-sm mt-1">
                     Smart Healthcare Platform
                   </p>
@@ -650,6 +649,7 @@ export default function Navbar() {
                     <p className="font-black truncate">
                       {currentUser.name}
                     </p>
+
                     <p className="text-sm text-blue-100">
                       {currentUser.subtitle}
                     </p>
@@ -659,7 +659,11 @@ export default function Navbar() {
             </div>
 
             <nav className="p-5 space-y-2">
-              <NavLink to="/" onClick={closeMobile} className={mobileNavClass}>
+              <NavLink
+                to="/"
+                onClick={closeMobile}
+                className={mobileNavClass}
+              >
                 <Home size={19} />
                 Home
               </NavLink>
@@ -673,15 +677,51 @@ export default function Navbar() {
                 Doctors
               </NavLink>
 
+              <NavLink
+  to="/patient/lab-tests"
+  onClick={closeMobile}
+  className={mobileNavClass}
+>
+  <FlaskConical size={19} />
+  Lab Tests
+</NavLink>
+
+              <NavLink
+                to="/symptom-checker"
+                onClick={closeMobile}
+                className={mobileNavClass}
+              >
+                <Brain size={19} />
+                AI Assistant
+              </NavLink>
+
+              <NavLink
+                to="/doctors"
+                onClick={closeMobile}
+                className={mobileNavClass}
+              >
+                <Ambulance size={19} />
+                Emergency
+              </NavLink>
+
+              <NavLink
+                to="/"
+                onClick={closeMobile}
+                className={mobileNavClass}
+              >
+                <Phone size={19} />
+                Contact
+              </NavLink>
+
               {patientToken && (
                 <>
                   <NavLink
-                    to="/dashboard"
+                    to="/patient/dashboard"
                     onClick={closeMobile}
                     className={mobileNavClass}
                   >
                     <LayoutDashboard size={19} />
-                    Dashboard
+                    Patient Portal
                   </NavLink>
 
                   <NavLink
@@ -823,6 +863,15 @@ export default function Navbar() {
                   </Link>
 
                   <Link
+                    to="/register"
+                    onClick={closeMobile}
+                    className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl bg-slate-950 text-white font-black"
+                  >
+                    <UserPlus size={18} />
+                    Patient Register
+                  </Link>
+
+                  <Link
                     to="/doctor/login"
                     onClick={closeMobile}
                     className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl bg-emerald-600 text-white font-black"
@@ -832,21 +881,30 @@ export default function Navbar() {
                   </Link>
 
                   <Link
-                    to="/register"
-                    onClick={closeMobile}
-                    className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl bg-slate-950 text-white font-black"
-                  >
-                    <UserPlus size={18} />
-                    Register
-                  </Link>
-
-                  <Link
                     to="/hospital/login"
                     onClick={closeMobile}
-                    className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl border border-slate-200 font-black text-slate-700"
+                    className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl bg-blue-700 text-white font-black"
                   >
                     <Building2 size={18} />
                     Hospital Portal
+                  </Link>
+
+                  <Link
+                    to="/hospital/register"
+                    onClick={closeMobile}
+                    className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl border border-blue-200 font-black text-blue-700"
+                  >
+                    <UserPlus size={18} />
+                    Hospital Signup
+                  </Link>
+
+                  <Link
+                    to="/admin/login"
+                    onClick={closeMobile}
+                    className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl border border-slate-200 font-black text-slate-700"
+                  >
+                    <ShieldCheck size={18} />
+                    Admin Login
                   </Link>
                 </div>
               )}
@@ -868,11 +926,130 @@ export default function Navbar() {
   );
 }
 
+function NotificationBell({
+  unreadCount,
+  showNotifications,
+  setShowNotifications,
+  notifications,
+  markAllAsRead,
+}) {
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setShowNotifications(!showNotifications)}
+        className="relative p-3 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 transition shadow-sm"
+      >
+        <Bell size={22} className="text-slate-700" />
+
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-black rounded-full min-w-5 h-5 px-1 flex items-center justify-center">
+            {unreadCount}
+          </span>
+        )}
+      </button>
+
+      {showNotifications && (
+        <div className="absolute right-0 mt-3 w-96 bg-white rounded-[1.5rem] shadow-2xl border border-slate-100 z-50 overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h3 className="font-black text-slate-900">
+                Notifications
+              </h3>
+
+              <p className="text-xs text-slate-500">
+                {unreadCount} unread
+              </p>
+            </div>
+
+            {notifications.length > 0 && (
+              <button
+                onClick={markAllAsRead}
+                className="text-xs font-bold text-blue-600 hover:text-blue-700"
+              >
+                Mark all read
+              </button>
+            )}
+          </div>
+
+          <div className="max-h-96 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="p-5 text-sm text-slate-500">
+                No notifications yet.
+              </div>
+            ) : (
+              notifications.slice(0, 5).map((item) => (
+                <div
+                  key={item.id}
+                  className={`p-4 border-b border-slate-100 ${
+                    item.isRead ? "bg-white" : "bg-blue-50/60"
+                  }`}
+                >
+                  <div className="flex gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">
+                      <Bell size={17} className="text-white" />
+                    </div>
+
+                    <div>
+                      <p className="font-black text-sm text-slate-900">
+                        {item.title}
+                      </p>
+
+                      <p className="text-sm text-slate-600 mt-1">
+                        {item.message}
+                      </p>
+
+                      <p className="text-[11px] text-slate-400 mt-2">
+                        {new Date(item.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="p-3 bg-slate-50">
+            <Link
+              to="/notifications"
+              onClick={() => setShowNotifications(false)}
+              className="block text-center text-blue-600 font-black text-sm"
+            >
+              View All Notifications
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PortalLink({ to, icon: Icon, title, desc }) {
+  return (
+    <Link
+      to={to}
+      className="flex items-center gap-3 p-4 hover:bg-blue-50 transition"
+    >
+      <div className="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center">
+        <Icon className="text-blue-600" size={22} />
+      </div>
+
+      <div>
+        <p className="font-black text-slate-900">{title}</p>
+        <p className="text-xs text-slate-500">{desc}</p>
+      </div>
+    </Link>
+  );
+}
+
 function ProfileIcon({ image, fallback: Fallback, color }) {
   return (
     <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center overflow-hidden">
       {image ? (
-        <img src={image} alt="Profile" className="w-full h-full object-cover" />
+        <img
+          src={image}
+          alt="Profile"
+          className="w-full h-full object-cover"
+        />
       ) : (
         <Fallback size={28} className={color} />
       )}

@@ -82,10 +82,12 @@ export default function Doctors() {
     }
 
     if (specialization !== "All") {
-      result = result.filter(
-        (d) => d.specialization === specialization
-      );
-    }
+  result = result.filter((d) =>
+    d.specialization
+      ?.toLowerCase()
+      .includes(specialization.toLowerCase())
+  );
+}
 
     setFiltered(result);
   }, [debouncedSearch, specialization, doctors]);

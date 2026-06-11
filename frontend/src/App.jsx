@@ -25,6 +25,7 @@ import PatientProfile from "./pages/PatientProfile";
 import ChangePassword from "./pages/ChangePassword";
 import Notifications from "./pages/Notifications";
 import VideoCall from "./pages/VideoCall";
+import VideoConsult from "./pages/VideoConsult";
 import AppointmentCalendar from "./pages/AppointmentCalendar";
 
 import HospitalLogin from "./pages/HospitalLogin";
@@ -39,6 +40,9 @@ import HospitalRegister from "./pages/HospitalRegister";
 import DoctorLogin from "./pages/DoctorLogin";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import DoctorMyProfile from "./pages/DoctorMyProfile";
+import DoctorPatientProfile from "./pages/DoctorPatientProfile";
+import AIDoctorMatch from "./pages/AIDoctorMatch";
+import AIHealthInsights from "./pages/AIHealthInsights";
 
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -46,24 +50,50 @@ import AdminHospitals from "./pages/AdminHospitals";
 import AdminDoctors from "./pages/AdminDoctors";
 import AdminAnalytics from "./pages/AdminAnalytics";
 
+import SymptomChecker from "./pages/SymptomChecker";
+import SymptomHistory from "./pages/SymptomHistory";
+import MedicalRecords from "./pages/MedicalRecords";
+import MedicineReminders from "./pages/MedicineReminders";
+import HealthTimeline from "./pages/HealthTimeline";
+import LabTests from "./pages/LabTests";
+import ChatRoom from "./pages/ChatRoom";
+
 function App() {
   return (
     <Routes>
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/doctors" element={<Doctors />} />
+         <Route path="/video-consult" element={<VideoConsult />} />
         <Route path="/doctor/:id" element={<DoctorProfile />} />
         <Route path="/success" element={<SuccessPage />} />
+
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/doctor/login" element={<DoctorLogin />} />
         <Route path="/hospital/login" element={<HospitalLogin />} />
-        <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/hospital/register" element={<HospitalRegister />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
 
+        <Route path="/symptom-checker" element={<SymptomChecker />} />
+        <Route path="/ai-doctor-match" element={<AIDoctorMatch />} />
         <Route path="/notifications" element={<Notifications />} />
 
-        <Route path="/video-call/:appointmentId" element={<VideoCall />} />
+        <Route
+          path="/video-call/:appointmentId"
+          element={<VideoCall />}
+        />
+
+       
+
+        <Route
+          path="/chat/:appointmentId"
+          element={
+            <ProtectedRoute>
+              <ChatRoom />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/dashboard"
@@ -128,9 +158,20 @@ function App() {
           </ProtectedRoute>
         }
       >
+        <Route index element={<Dashboard />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="appointments" element={<Appointments />} />
         <Route path="prescriptions" element={<MyPrescriptions />} />
+        <Route path="symptom-history" element={<SymptomHistory />} />
+        <Route path="profile" element={<PatientProfile />} />
+        <Route path="medical-records" element={<MedicalRecords />} />
+        <Route path="medicine-reminders" element={<MedicineReminders />} />
+        <Route path="health-timeline" element={<HealthTimeline />} />
+        <Route path="lab-tests" element={<LabTests />} />
+        <Route
+  path="ai-health-insights"
+  element={<AIHealthInsights />}
+/>
         <Route path="change-password" element={<ChangePassword />} />
       </Route>
 
@@ -145,11 +186,15 @@ function App() {
         <Route path="dashboard" element={<DoctorDashboard />} />
         <Route path="profile" element={<DoctorMyProfile />} />
         <Route path="appointments" element={<Appointments />} />
-         <Route path="prescriptions" element={<MyPrescriptions />} />
-         <Route path="calendar" element={<AppointmentCalendar />} />
-        <Route path="change-password" element={<ChangePassword />} />
-        
 
+        <Route
+          path="appointment/:appointmentId/patient-profile"
+          element={<DoctorPatientProfile />}
+        />
+
+        <Route path="prescriptions" element={<MyPrescriptions />} />
+        <Route path="calendar" element={<AppointmentCalendar />} />
+        <Route path="change-password" element={<ChangePassword />} />
       </Route>
 
       <Route
