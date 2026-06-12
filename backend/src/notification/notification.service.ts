@@ -19,8 +19,10 @@ export class NotificationService {
     role: string;
     title: string;
     message: string;
+    appointmentId?: string;
   }) {
-    const notification = this.notificationRepo.create(data);
+    const notification =
+      this.notificationRepo.create(data);
 
     const savedNotification =
       await this.notificationRepo.save(notification);
@@ -32,6 +34,30 @@ export class NotificationService {
     });
 
     return savedNotification;
+  }
+
+  async createOnce(data: {
+    userId: string;
+    role: string;
+    appointmentId: string;
+    title: string;
+    message: string;
+  }) {
+    const existing =
+      await this.notificationRepo.findOne({
+        where: {
+          userId: data.userId,
+          role: data.role,
+          appointmentId: data.appointmentId,
+          title: data.title,
+        },
+      });
+
+    if (existing) {
+      return existing;
+    }
+
+    return this.create(data);
   }
 
   async getMyNotifications(userId: string, role: string) {

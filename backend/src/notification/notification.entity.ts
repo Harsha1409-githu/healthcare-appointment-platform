@@ -22,6 +22,9 @@ export class Notification {
   @Column()
   message: string;
 
+  @Column({ nullable: true })
+appointmentId: string;
+
   @Column({ default: false })
   isRead: boolean;
 

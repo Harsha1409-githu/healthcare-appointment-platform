@@ -22,6 +22,7 @@ import { NotificationService } from '../notification/notification.service';
 import { SymptomHistory } from '../symptom-history/symptom-history.entity';
 import { MedicalRecord } from '../medical-record/medical-record.entity';
 import { Prescription } from '../prescription/prescription.entity';
+import { Between } from 'typeorm';
 
 @Injectable()
 export class AppointmentService {
@@ -719,6 +720,32 @@ const appointment = manager.create(Appointment, {
       return updatedAppointment;
     });
   }
+
+  async findUpcomingAppointments() {
+  const now = new Date();
+
+  const next24Hours = new Date();
+  next24Hours.setHours(
+    next24Hours.getHours() + 24,
+  );
+
+  return this.appointmentRepo.find({
+    where: {
+      status: AppointmentStatus.BOOKED,
+      slot: {
+        date: Between(
+          now.toISOString().split('T')[0],
+          next24Hours.toISOString().split('T')[0],
+        ),
+      },
+    },
+    relations: {
+      patient: true,
+      doctor: true,
+      slot: true,
+    },
+  });
+}
 
   async completeAppointment(id: number) {
     const appointment = await this.appointmentRepo.findOne({

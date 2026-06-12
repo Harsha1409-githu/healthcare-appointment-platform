@@ -44,12 +44,15 @@ import { LabTestModule } from './lab-test/lab-test.module';
 import { LabTest } from './lab-test/lab-test.entity';
 import { ChatModule } from './chat/chat.module';
 import { ChatMessage } from './chat/chat-message.entity';
+import { ScheduleModule } from '@nestjs/schedule';
+
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ScheduleModule.forRoot(),
 
     TypeOrmModule.forRoot({
       type: 'postgres',
