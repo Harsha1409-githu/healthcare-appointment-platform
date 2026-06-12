@@ -3,6 +3,8 @@ import {
   Phone,
   Video,
   ArrowRight,
+  ShieldCheck,
+  Clock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -10,70 +12,112 @@ export default function EmergencyBanner() {
   const navigate = useNavigate();
 
   return (
-    <section className="py-24 bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 text-white relative overflow-hidden">
-      <div className="absolute -top-20 -right-20 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-      <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
+    <section className="py-20 bg-white">
+      <div className="max-w-[1450px] mx-auto px-6">
+        <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-red-50 via-white to-rose-50 border border-red-100 shadow-xl">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-red-100/60 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-72 h-72 bg-rose-100/70 rounded-full blur-3xl" />
 
-      <div className="relative max-w-7xl mx-auto px-6">
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] p-10 md:p-14">
-          <div className="grid lg:grid-cols-2 gap-10 items-center">
+          <div className="relative p-8 md:p-12 lg:p-14 grid lg:grid-cols-[1fr_0.9fr] gap-10 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 mb-5">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-100 text-red-700 mb-5">
                 <Ambulance size={18} />
-                <span className="font-bold">
+                <span className="font-black">
                   Emergency Medical Support
                 </span>
               </div>
 
-              <h2 className="text-5xl font-black leading-tight">
-                Need Immediate Medical Help?
+              <h2 className="text-4xl md:text-5xl font-black leading-tight text-slate-950">
+                Need immediate medical help?
               </h2>
 
-              <p className="text-red-100 text-lg mt-5 max-w-2xl">
-                Connect with doctors instantly, start a video
-                consultation or find the nearest available
-                specialist during emergencies.
+              <p className="text-slate-600 text-lg mt-5 max-w-2xl leading-relaxed">
+                Quickly connect with available doctors, start a video
+                consultation, or find the right specialist during urgent
+                medical situations.
               </p>
+
+              <div className="grid sm:grid-cols-3 gap-4 mt-8 max-w-2xl">
+                <InfoBadge
+                  icon={Clock}
+                  title="24/7"
+                  desc="Support"
+                />
+                <InfoBadge
+                  icon={ShieldCheck}
+                  title="Verified"
+                  desc="Doctors"
+                />
+                <InfoBadge
+                  icon={Ambulance}
+                  title="Fast"
+                  desc="Assistance"
+                />
+              </div>
+
+              <button
+                onClick={() => navigate("/doctors")}
+                className="mt-9 inline-flex items-center gap-2 bg-red-600 text-white px-7 py-4 rounded-2xl font-black hover:bg-red-700 transition shadow-lg"
+              >
+                Get Emergency Help
+                <ArrowRight size={18} />
+              </button>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-5">
-              <button
+              <EmergencyCard
+                icon={Video}
+                title="Video Consultation"
+                desc="Talk to an available doctor quickly."
                 onClick={() => navigate("/doctors")}
-                className="bg-white text-red-600 rounded-3xl p-6 text-left shadow-xl hover:scale-105 transition"
-              >
-                <Video size={34} />
-                <h3 className="font-black text-xl mt-4">
-                  Video Consultation
-                </h3>
-                <p className="text-slate-600 mt-2">
-                  Talk to a doctor immediately.
-                </p>
-              </button>
+              />
 
-              <button
+              <EmergencyCard
+                icon={Phone}
+                title="Find Doctor"
+                desc="Locate nearby specialists and hospitals."
                 onClick={() => navigate("/doctors")}
-                className="bg-white text-red-600 rounded-3xl p-6 text-left shadow-xl hover:scale-105 transition"
-              >
-                <Phone size={34} />
-                <h3 className="font-black text-xl mt-4">
-                  Find Doctor
-                </h3>
-                <p className="text-slate-600 mt-2">
-                  Locate available specialists.
-                </p>
-              </button>
+              />
             </div>
           </div>
-
-          <button
-            onClick={() => navigate("/doctors")}
-            className="mt-10 flex items-center gap-2 bg-white text-red-600 px-7 py-4 rounded-2xl font-black hover:bg-red-50 transition"
-          >
-            Get Emergency Help
-            <ArrowRight size={18} />
-          </button>
         </div>
       </div>
     </section>
+  );
+}
+
+function EmergencyCard({ icon: Icon, title, desc, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="text-left bg-white rounded-3xl p-6 border border-red-100 shadow-lg hover:-translate-y-1 hover:shadow-xl transition"
+    >
+      <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mb-5">
+        <Icon size={30} className="text-red-600" />
+      </div>
+
+      <h3 className="font-black text-xl text-slate-950">
+        {title}
+      </h3>
+
+      <p className="text-slate-500 mt-2 leading-relaxed">
+        {desc}
+      </p>
+
+      <div className="mt-5 inline-flex items-center gap-2 text-red-600 font-black">
+        Continue
+        <ArrowRight size={17} />
+      </div>
+    </button>
+  );
+}
+
+function InfoBadge({ icon: Icon, title, desc }) {
+  return (
+    <div className="bg-white border border-red-100 rounded-2xl p-4 shadow-sm">
+      <Icon className="text-red-600 mb-3" size={22} />
+      <p className="text-xl font-black text-slate-950">{title}</p>
+      <p className="text-xs text-slate-500 font-semibold">{desc}</p>
+    </div>
   );
 }

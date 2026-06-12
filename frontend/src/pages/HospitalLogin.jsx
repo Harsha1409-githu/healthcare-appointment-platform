@@ -1,81 +1,257 @@
 import { useState } from "react";
-import api from "../api/axios";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  Building2,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  ArrowRight,
+  Loader2,
+  Stethoscope,
+  CalendarCheck,
+  BarChart3,
+  UserPlus,
+} from "lucide-react";
+import api from "../api/axios";
 
 export default function HospitalLogin() {
-  const [email, setEmail] = useState("admin@apollo.com");
-  const [password, setPassword] = useState("admin@123");
   const navigate = useNavigate();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const clearOtherUsers = () => {
+    localStorage.removeItem("patientToken");
+    localStorage.removeItem("patientUser");
+    localStorage.removeItem("doctorToken");
+    localStorage.removeItem("doctorUser");
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminUser");
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
+    if (!email || !password) {
+      alert("Please enter hospital email and password");
+      return;
+    }
+
     try {
+      setLoading(true);
+
       const res = await api.post("/auth/hospital/login", {
         email,
         password,
       });
 
-      localStorage.removeItem("patientToken");
-localStorage.removeItem("patientUser");
-localStorage.removeItem("doctorToken");
-localStorage.removeItem("doctorUser");
-localStorage.removeItem("adminToken");
-localStorage.removeItem("adminUser");
+      clearOtherUsers();
 
-localStorage.setItem("hospitalToken", res.data.access_token);
-localStorage.setItem("hospitalUser", JSON.stringify(res.data.user));
+      localStorage.setItem("hospitalToken", res.data.access_token);
+      localStorage.setItem("hospitalUser", JSON.stringify(res.data.user));
+
+      window.dispatchEvent(new Event("hospitalProfileUpdated"));
 
       navigate("/hospital/dashboard");
     } catch (error) {
       alert(error.response?.data?.message || "Hospital login failed");
+    } finally {
+      setLoading(false);
     }
-    
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        <h1 className="text-3xl font-bold text-center mb-2">
-          Hospital Portal
-        </h1>
+    <div className="min-h-screen bg-[#f4fbff] flex items-center justify-center px-6 py-10">
+      <div className="max-w-6xl w-full grid lg:grid-cols-2 bg-white rounded-[2rem] overflow-hidden shadow-2xl border border-slate-100">
+        <aside className="hidden lg:flex relative overflow-hidden bg-slate-950 text-white p-10 flex-col justify-center">
+          <div className="absolute -top-24 -right-24 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl" />
+          <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl" />
 
-        <p className="text-center text-gray-500 mb-6">
-          Login to manage doctors, slots and appointments
-        </p>
+          <div className="relative">
+            <div className="w-20 h-20 rounded-[2rem] bg-white/10 border border-white/20 flex items-center justify-center mb-8">
+              <Building2 size={42} className="text-cyan-300" />
+            </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <input
-            type="email"
-            className="w-full border p-3 rounded-lg"
-            placeholder="Hospital Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+            <h1 className="text-5xl font-black leading-tight">
+              Hospital
+              <span className="block text-cyan-300">Portal</span>
+            </h1>
 
-          <input
-            type="password"
-            className="w-full border p-3 rounded-lg"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+            <p className="text-cyan-100 mt-6 text-lg leading-relaxed">
+              Manage doctors, availability, appointments, patient flow and
+              hospital analytics from one secure MediCare workspace.
+            </p>
 
-          <button className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700">
-            Login
-          </button>
-        </form>
+            <div className="mt-10 space-y-4">
+              <Feature icon={Stethoscope} text="Manage doctors and specialists" />
+              <Feature icon={CalendarCheck} text="Control slots and appointments" />
+              <Feature icon={BarChart3} text="Track hospital performance" />
+              <Feature icon={ShieldCheck} text="Secure approved hospital access" />
+            </div>
 
-        <p className="text-center text-sm text-gray-500 mt-5">
-  New hospital?{" "}
-  <Link
-    to="/hospital/register"
-    className="text-blue-600 font-bold"
-  >
-    Register here
-  </Link>
-</p>
+            <div className="mt-10 bg-white/10 border border-white/10 rounded-[2rem] p-5">
+              <p className="text-sm text-cyan-100">
+                Approval Required
+              </p>
+
+              <h3 className="text-2xl font-black mt-1">
+                Admin Verified Hospitals Only
+              </h3>
+
+              <p className="text-cyan-100 text-sm mt-2 leading-relaxed">
+                New hospitals can register and access the portal after admin
+                approval.
+              </p>
+            </div>
+          </div>
+        </aside>
+
+        <main className="p-8 md:p-12 flex items-center">
+          <div className="w-full">
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 rounded-[2rem] bg-cyan-50 flex items-center justify-center mx-auto mb-5">
+                <Building2 size={38} className="text-cyan-600" />
+              </div>
+
+              <h2 className="text-4xl font-black text-slate-950">
+                Hospital Login
+              </h2>
+
+              <p className="text-slate-500 mt-3">
+                Access your hospital dashboard
+              </p>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div>
+                <label className="block text-sm font-black text-slate-700 mb-2">
+                  Hospital Email
+                </label>
+
+                <div className="relative">
+                  <Mail
+                    size={18}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+
+                  <input
+                    type="email"
+                    placeholder="hospital@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full h-14 pl-12 pr-4 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-cyan-500 outline-none text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-black text-slate-700 mb-2">
+                  Password
+                </label>
+
+                <div className="relative">
+                  <Lock
+                    size={18}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full h-14 pl-12 pr-12 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-cyan-500 outline-none text-slate-800"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-cyan-600"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                disabled={loading}
+                type="submit"
+                className="w-full h-14 rounded-2xl bg-cyan-600 text-white font-black hover:bg-cyan-700 transition flex items-center justify-center gap-2 disabled:bg-slate-400"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  <>
+                    Login
+                    <ArrowRight size={18} />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="mt-6 bg-cyan-50 border border-cyan-100 rounded-2xl p-4">
+              <div className="flex items-center gap-3">
+                <ShieldCheck size={20} className="text-cyan-600" />
+
+                <div>
+                  <p className="font-black text-slate-900 text-sm">
+                    Verified Hospital Access
+                  </p>
+
+                  <p className="text-xs text-slate-500">
+                    Only admin-approved hospitals can access the dashboard.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-center text-slate-500 mt-6">
+              New hospital?{" "}
+              <Link
+                to="/hospital/register"
+                className="text-cyan-600 font-black hover:text-cyan-700"
+              >
+                Register here
+              </Link>
+            </p>
+
+            <div className="text-center mt-4">
+              <Link
+                to="/"
+                className="text-slate-500 font-bold hover:text-cyan-600"
+              >
+                ← Back to Home
+              </Link>
+            </div>
+          </div>
+        </main>
       </div>
+    </div>
+  );
+}
+
+function Feature({ icon: Icon, text }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
+        <Icon size={17} className="text-cyan-300" />
+      </div>
+
+      <span className="font-semibold text-cyan-50">
+        {text}
+      </span>
     </div>
   );
 }

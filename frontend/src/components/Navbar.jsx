@@ -7,21 +7,21 @@ import {
   LogOut,
   Stethoscope,
   HeartPulse,
-  ChevronRight,
+  ChevronDown,
   ShieldCheck,
   Building2,
   UserPlus,
-  UserRound,
   LayoutDashboard,
   CalendarDays,
   FileText,
   Bell,
-  Home,
   Brain,
-  Ambulance,
-  Phone,
   FlaskConical,
   Video,
+  Search,
+  Hospital,
+  ClipboardList,
+  Home,
 } from "lucide-react";
 import api from "../api/axios";
 import { io } from "socket.io-client";
@@ -32,30 +32,28 @@ export default function Navbar() {
   const [patientUser, setPatientUser] = useState(() =>
     JSON.parse(localStorage.getItem("patientUser") || "null")
   );
-
   const [doctorUser, setDoctorUser] = useState(() =>
     JSON.parse(localStorage.getItem("doctorUser") || "null")
   );
-
   const [hospitalUser, setHospitalUser] = useState(() =>
     JSON.parse(localStorage.getItem("hospitalUser") || "null")
+  );
+  const [adminUser, setAdminUser] = useState(() =>
+    JSON.parse(localStorage.getItem("adminUser") || "null")
   );
 
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const patientToken = localStorage.getItem("patientToken");
   const doctorToken = localStorage.getItem("doctorToken");
   const hospitalToken = localStorage.getItem("hospitalToken");
   const adminToken = localStorage.getItem("adminToken");
 
-  const adminUser = JSON.parse(localStorage.getItem("adminUser") || "null");
-
-  const isLoggedIn =
-    patientToken || doctorToken || hospitalToken || adminToken;
-
+  const isLoggedIn = patientToken || doctorToken || hospitalToken || adminToken;
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const currentUser = patientToken
@@ -64,45 +62,45 @@ export default function Navbar() {
         subtitle: "Patient Account",
         image: patientUser?.profileImage,
         icon: UserCircle,
-        profilePath: "/patient/dashboard",
+        dashboardPath: "/patient/dashboard",
       }
     : doctorToken
     ? {
         name: doctorUser?.doctorName || doctorUser?.email || "Doctor",
         subtitle: "Doctor Account",
         image: doctorUser?.profileImage,
-        icon: UserCircle,
-        profilePath: "/doctor/profile",
+        icon: Stethoscope,
+        dashboardPath: "/doctor/dashboard",
       }
     : hospitalToken
     ? {
-        name:
-          hospitalUser?.hospitalName || hospitalUser?.email || "Hospital",
+        name: hospitalUser?.hospitalName || hospitalUser?.email || "Hospital",
         subtitle: "Hospital Portal",
         image: hospitalUser?.profileImage,
         icon: Building2,
-        profilePath: "/hospital/profile",
+        dashboardPath: "/hospital/dashboard",
       }
     : adminToken
     ? {
-        name: adminUser?.name || "Admin",
+        name: adminUser?.name || adminUser?.email || "Admin",
         subtitle: "Admin Console",
         image: "",
         icon: ShieldCheck,
-        profilePath: "/admin/dashboard",
+        dashboardPath: "/admin/dashboard",
       }
     : null;
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
+  const searchDoctors = (e) => {
+    e.preventDefault();
 
-    handleScroll();
-    window.addEventListener("scroll", handleScroll);
+    if (searchQuery.trim()) {
+      navigate(`/doctors?specialization=${encodeURIComponent(searchQuery)}`);
+    } else {
+      navigate("/doctors");
+    }
 
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    setMobileMenuOpen(false);
+  };
 
   const loadNotifications = async () => {
     try {
@@ -115,63 +113,26 @@ export default function Navbar() {
     }
   };
 
-  useEffect(() => {
-    const updatePatientProfile = () => {
-      setPatientUser(
-        JSON.parse(localStorage.getItem("patientUser") || "null")
-      );
-    };
-
-    updatePatientProfile();
-    window.addEventListener("patientProfileUpdated", updatePatientProfile);
-    window.addEventListener("storage", updatePatientProfile);
-
-    return () => {
-      window.removeEventListener(
-        "patientProfileUpdated",
-        updatePatientProfile
-      );
-      window.removeEventListener("storage", updatePatientProfile);
-    };
-  }, []);
+  const refreshUsers = () => {
+    setPatientUser(JSON.parse(localStorage.getItem("patientUser") || "null"));
+    setDoctorUser(JSON.parse(localStorage.getItem("doctorUser") || "null"));
+    setHospitalUser(JSON.parse(localStorage.getItem("hospitalUser") || "null"));
+    setAdminUser(JSON.parse(localStorage.getItem("adminUser") || "null"));
+  };
 
   useEffect(() => {
-    const updateDoctorProfile = () => {
-      setDoctorUser(
-        JSON.parse(localStorage.getItem("doctorUser") || "null")
-      );
-    };
+    refreshUsers();
 
-    updateDoctorProfile();
-    window.addEventListener("doctorProfileUpdated", updateDoctorProfile);
-    window.addEventListener("storage", updateDoctorProfile);
+    window.addEventListener("patientProfileUpdated", refreshUsers);
+    window.addEventListener("doctorProfileUpdated", refreshUsers);
+    window.addEventListener("hospitalProfileUpdated", refreshUsers);
+    window.addEventListener("storage", refreshUsers);
 
     return () => {
-      window.removeEventListener(
-        "doctorProfileUpdated",
-        updateDoctorProfile
-      );
-      window.removeEventListener("storage", updateDoctorProfile);
-    };
-  }, []);
-
-  useEffect(() => {
-    const updateHospitalProfile = () => {
-      setHospitalUser(
-        JSON.parse(localStorage.getItem("hospitalUser") || "null")
-      );
-    };
-
-    updateHospitalProfile();
-    window.addEventListener("hospitalProfileUpdated", updateHospitalProfile);
-    window.addEventListener("storage", updateHospitalProfile);
-
-    return () => {
-      window.removeEventListener(
-        "hospitalProfileUpdated",
-        updateHospitalProfile
-      );
-      window.removeEventListener("storage", updateHospitalProfile);
+      window.removeEventListener("patientProfileUpdated", refreshUsers);
+      window.removeEventListener("doctorProfileUpdated", refreshUsers);
+      window.removeEventListener("hospitalProfileUpdated", refreshUsers);
+      window.removeEventListener("storage", refreshUsers);
     };
   }, []);
 
@@ -202,20 +163,16 @@ export default function Navbar() {
     const socket = io("http://localhost:3000");
 
     socket.on("connect", () => {
-      socket.emit("joinUserRoom", {
-        userId,
-        role,
-      });
+      socket.emit("joinUserRoom", { userId, role });
     });
 
     socket.on("newNotification", (notification) => {
       setNotifications((prev) => [notification, ...prev]);
     });
 
-    return () => {
-      socket.disconnect();
-    };
+    return () => socket.disconnect();
   }, [
+    isLoggedIn,
     patientToken,
     doctorToken,
     hospitalToken,
@@ -223,14 +180,13 @@ export default function Navbar() {
     patientUser,
     doctorUser,
     hospitalUser,
+    adminUser,
   ]);
 
   useEffect(() => {
     loadNotifications();
 
-    const interval = setInterval(() => {
-      loadNotifications();
-    }, 30000);
+    const interval = setInterval(loadNotifications, 30000);
 
     return () => clearInterval(interval);
   }, [patientToken, doctorToken, hospitalToken, adminToken]);
@@ -246,170 +202,82 @@ export default function Navbar() {
 
   const closeMobile = () => setMobileMenuOpen(false);
 
-  const logout = () => {
+  const handleLogout = () => {
     localStorage.removeItem("patientToken");
     localStorage.removeItem("patientUser");
+    localStorage.removeItem("doctorToken");
+    localStorage.removeItem("doctorUser");
+    localStorage.removeItem("hospitalToken");
+    localStorage.removeItem("hospitalUser");
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminUser");
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+
+    setShowProfileMenu(false);
+    setMobileMenuOpen(false);
     navigate("/login");
     window.location.reload();
   };
 
-  const doctorLogout = () => {
-    localStorage.removeItem("doctorToken");
-    localStorage.removeItem("doctorUser");
-    navigate("/doctor/login");
-    window.location.reload();
-  };
-
-  const hospitalLogout = () => {
-    localStorage.removeItem("hospitalToken");
-    localStorage.removeItem("hospitalUser");
-    navigate("/hospital/login");
-    window.location.reload();
-  };
-
-  const adminLogout = () => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminUser");
-    navigate("/admin/login");
-    window.location.reload();
-  };
-
-  const handleLogout = () => {
-    closeMobile();
-
-    if (patientToken) logout();
-    else if (doctorToken) doctorLogout();
-    else if (hospitalToken) hospitalLogout();
-    else if (adminToken) adminLogout();
-  };
-
   const navClass = ({ isActive }) =>
     isActive
-      ? "flex items-center gap-2 px-4 py-2 rounded-2xl bg-blue-600 text-white font-black shadow-lg shadow-blue-100"
-      : "flex items-center gap-2 px-4 py-2 rounded-2xl text-slate-600 hover:text-blue-600 hover:bg-blue-50 font-bold transition";
+      ? "text-cyan-700 font-black"
+      : "text-slate-700 hover:text-cyan-700 font-bold transition";
 
   const mobileNavClass = ({ isActive }) =>
     isActive
-      ? "flex items-center gap-3 p-4 rounded-2xl bg-blue-600 text-white font-black shadow-lg"
-      : "flex items-center gap-3 p-4 rounded-2xl text-slate-700 hover:bg-blue-50 hover:text-blue-700 font-bold transition";
+      ? "flex items-center gap-3 p-4 rounded-2xl bg-cyan-600 text-white font-black"
+      : "flex items-center gap-3 p-4 rounded-2xl text-slate-700 hover:bg-cyan-50 hover:text-cyan-700 font-bold transition";
 
   return (
-    <header
-      className={`sticky top-0 z-50 transition-all duration-500 ${
-        scrolled
-          ? "bg-white/80 backdrop-blur-2xl shadow-xl border-b border-slate-200"
-          : "bg-white/70 backdrop-blur-xl border-b border-white/20"
-      }`}
-    >
-      <div className="max-w-[1500px] mx-auto px-5 lg:px-8">
-        <div
-          className={`flex items-center justify-between gap-6 transition-all duration-500 ${
-            scrolled ? "h-16" : "h-20"
-          }`}
-        >
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
+      <div className="max-w-[1450px] mx-auto px-5 lg:px-8">
+        <div className="h-16 flex items-center justify-between gap-6">
           <Link to="/" className="flex items-center gap-3 shrink-0">
-            <div
-              className={`w-12 h-12 rounded-3xl bg-gradient-to-br from-blue-700 via-cyan-500 to-emerald-400 flex items-center justify-center transition-all duration-500 ${
-                scrolled
-                  ? "shadow-2xl shadow-cyan-300/50 scale-95"
-                  : "shadow-xl shadow-blue-100"
-              }`}
-            >
-              <Stethoscope className="text-white" size={25} />
+            <div className="w-11 h-11 rounded-2xl bg-cyan-600 flex items-center justify-center shadow-sm">
+              <HeartPulse className="text-white" size={24} />
             </div>
 
-            <div className="leading-tight">
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-black bg-gradient-to-r from-slate-950 via-blue-700 to-cyan-600 bg-clip-text text-transparent">
-                  MediCare
-                </h1>
-
-                <span className="hidden xl:inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-                  <HeartPulse size={11} />
-                  Live
-                </span>
-              </div>
-
-              {!scrolled && (
-                <p className="text-xs text-slate-400">
-                  Smart Healthcare Platform
-                </p>
-              )}
-            </div>
+            <h1 className="text-2xl font-black text-slate-950">
+              MediCare
+            </h1>
           </Link>
 
-          <nav className="hidden xl:flex items-center gap-2 bg-white/80 backdrop-blur-xl rounded-3xl p-2 border border-slate-100 shadow-sm">
-            <NavLink to="/" className={navClass}>
-              <Home size={17} />
-              Home
+          <form
+            onSubmit={searchDoctors}
+            className="hidden lg:flex flex-1 max-w-md items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5"
+          >
+            <Search size={19} className="text-slate-400" />
+
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search doctors, specialties..."
+              className="w-full bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400"
+            />
+          </form>
+
+          <nav className="hidden xl:flex items-center gap-7">
+            <NavLink to="/doctors" className={navClass}>
+              Find Doctors
             </NavLink>
 
-            <NavLink to="/doctors" className={navClass}>
-              <Stethoscope size={17} />
-              Doctors
+            <NavLink to="/video-consult" className={navClass}>
+              Video Consult
+            </NavLink>
+
+            <NavLink to="/hospitals" className={navClass}>
+              Hospitals
             </NavLink>
 
             <NavLink to="/patient/lab-tests" className={navClass}>
-  <FlaskConical size={17} />
-  Lab Tests
-</NavLink>
-
-            <NavLink to="/symptom-checker" className={navClass}>
-              <Brain size={17} />
-              AI Assistant
+              Lab Tests
             </NavLink>
 
-            <NavLink to="/ai-doctor-match">
-            <Brain size={17} />
-  AI Match  
+            <NavLink to="/ai-health-assistant" className={navClass}>
+  MediCare AI
 </NavLink>
-
-<NavLink to="/video-consult" className={navClass}>
-  <Video size={17} />
-  Video Consult
-</NavLink>
-
-            {patientToken && (
-              <>
-                <NavLink to="/patient/dashboard" className={navClass}>
-                  <LayoutDashboard size={17} />
-                  Patient Portal
-                </NavLink>
-
-                <NavLink to="/appointments" className={navClass}>
-                  <CalendarDays size={17} />
-                  Appointments
-                </NavLink>
-
-                <NavLink to="/prescriptions" className={navClass}>
-                  <FileText size={17} />
-                  Prescriptions
-                </NavLink>
-              </>
-            )}
-
-            {doctorToken && (
-              <NavLink to="/doctor/dashboard" className={navClass}>
-                <Stethoscope size={17} />
-                Doctor
-              </NavLink>
-            )}
-
-            {hospitalToken && (
-              <NavLink to="/hospital/dashboard" className={navClass}>
-                <Building2 size={17} />
-                Hospital
-              </NavLink>
-            )}
-
-            {adminToken && (
-              <NavLink to="/admin/dashboard" className={navClass}>
-                <ShieldCheck size={17} />
-                Admin
-              </NavLink>
-            )}
           </nav>
 
           <div className="hidden xl:flex items-center gap-3 shrink-0">
@@ -423,159 +291,26 @@ export default function Navbar() {
               />
             )}
 
-            {patientToken ? (
-              <>
-                <Link
-                  to="/patient/dashboard"
-                  className="flex items-center gap-3 px-4 py-2 rounded-3xl bg-white border border-blue-100 shadow-sm hover:bg-blue-50 transition"
-                >
-                  <ProfileIcon
-                    image={patientUser?.profileImage}
-                    fallback={UserCircle}
-                    color="text-blue-600"
-                  />
-
-                  <div className="leading-tight text-left">
-                    <p className="text-sm font-black max-w-[150px] truncate text-slate-800">
-                      {patientUser?.fullName ||
-                        patientUser?.email ||
-                        "Patient"}
-                    </p>
-                    <p className="text-xs text-blue-500">
-                      Patient Portal
-                    </p>
-                  </div>
-                </Link>
-
-                <LogoutButton onClick={logout} />
-              </>
-            ) : doctorToken ? (
-              <>
-                <Link
-                  to="/doctor/profile"
-                  className="flex items-center gap-3 px-4 py-2 rounded-3xl bg-white border border-emerald-100 shadow-sm hover:bg-emerald-50 transition"
-                >
-                  <ProfileIcon
-                    image={doctorUser?.profileImage}
-                    fallback={UserCircle}
-                    color="text-emerald-600"
-                  />
-
-                  <div>
-                    <p className="text-sm font-black max-w-[150px] truncate">
-                      {doctorUser?.doctorName ||
-                        doctorUser?.email ||
-                        "Doctor"}
-                    </p>
-                    <p className="text-xs text-emerald-600">
-                      Doctor Account
-                    </p>
-                  </div>
-                </Link>
-
-                <LogoutButton onClick={doctorLogout} />
-              </>
-            ) : hospitalToken ? (
-              <>
-                <Link
-                  to="/hospital/profile"
-                  className="flex items-center gap-3 px-4 py-2 rounded-3xl bg-white border border-blue-100 shadow-sm hover:bg-blue-50 transition"
-                >
-                  <ProfileIcon
-                    image={hospitalUser?.profileImage}
-                    fallback={Building2}
-                    color="text-blue-600"
-                  />
-
-                  <div>
-                    <p className="text-sm font-black max-w-[150px] truncate">
-                      {hospitalUser?.hospitalName ||
-                        hospitalUser?.email ||
-                        "Hospital"}
-                    </p>
-                    <p className="text-xs text-blue-600">
-                      Hospital Portal
-                    </p>
-                  </div>
-                </Link>
-
-                <LogoutButton onClick={hospitalLogout} />
-              </>
-            ) : adminToken ? (
-              <>
-                <div className="flex items-center gap-3 px-4 py-2 rounded-3xl bg-white border border-purple-100 shadow-sm">
-                  <ShieldCheck size={25} className="text-purple-600" />
-                  <div>
-                    <p className="text-sm font-black">
-                      {adminUser?.name || "Admin"}
-                    </p>
-                    <p className="text-xs text-purple-600">
-                      Admin Console
-                    </p>
-                  </div>
-                </div>
-
-                <LogoutButton onClick={adminLogout} />
-              </>
+            {isLoggedIn && currentUser ? (
+              <ProfileDropdown
+                currentUser={currentUser}
+                patientToken={patientToken}
+                doctorToken={doctorToken}
+                hospitalToken={hospitalToken}
+                showProfileMenu={showProfileMenu}
+                setShowProfileMenu={setShowProfileMenu}
+                handleLogout={handleLogout}
+              />
             ) : (
               <>
                 <Link
                   to="/login"
-                  className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white border border-blue-100 text-blue-700 font-bold hover:bg-blue-50"
+                  className="inline-flex items-center justify-center bg-cyan-600 text-white px-6 py-3 rounded-2xl font-black hover:bg-cyan-700 transition"
                 >
-                  <UserRound size={18} />
-                  Patient Login
+                  Login / Sign Up
                 </Link>
 
-                <Link
-                  to="/register"
-                  className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-black shadow-xl shadow-blue-100 hover:scale-[1.02] transition"
-                >
-                  <UserPlus size={18} />
-                  Register
-                  <ChevronRight size={17} />
-                </Link>
-
-                <div className="relative group">
-                  <button className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-950 text-white font-black hover:bg-blue-700 transition">
-                    <Building2 size={18} />
-                    Portals
-                    <ChevronRight
-                      size={17}
-                      className="group-hover:rotate-90 transition"
-                    />
-                  </button>
-
-                  <div className="absolute right-0 mt-3 w-72 bg-white rounded-[1.5rem] shadow-2xl border border-slate-100 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
-                    <PortalLink
-                      to="/doctor/login"
-                      icon={Stethoscope}
-                      title="Doctor Login"
-                      desc="Access doctor workspace"
-                    />
-
-                    <PortalLink
-                      to="/hospital/login"
-                      icon={Building2}
-                      title="Hospital Portal"
-                      desc="Manage hospital dashboard"
-                    />
-
-                    <PortalLink
-                      to="/hospital/register"
-                      icon={UserPlus}
-                      title="Hospital Signup"
-                      desc="Register new hospital"
-                    />
-
-                    <PortalLink
-                      to="/admin/login"
-                      icon={ShieldCheck}
-                      title="Admin Login"
-                      desc="Platform administration"
-                    />
-                  </div>
-                </div>
+                <ProviderMenu />
               </>
             )}
           </div>
@@ -584,7 +319,7 @@ export default function Navbar() {
             onClick={() => setMobileMenuOpen(true)}
             className="xl:hidden relative p-3 rounded-2xl bg-white border border-slate-200 hover:bg-slate-100 transition shadow-sm"
           >
-            <Menu size={26} />
+            <Menu size={25} />
 
             {unreadCount > 0 && isLoggedIn && (
               <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-black rounded-full min-w-5 h-5 px-1 flex items-center justify-center">
@@ -596,333 +331,508 @@ export default function Navbar() {
       </div>
 
       {mobileMenuOpen && (
-        <>
-          <div
-            onClick={closeMobile}
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 xl:hidden"
+        <MobileMenu
+          closeMobile={closeMobile}
+          currentUser={currentUser}
+          searchDoctors={searchDoctors}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          mobileNavClass={mobileNavClass}
+          patientToken={patientToken}
+          doctorToken={doctorToken}
+          hospitalToken={hospitalToken}
+          adminToken={adminToken}
+          isLoggedIn={isLoggedIn}
+          unreadCount={unreadCount}
+          handleLogout={handleLogout}
+        />
+      )}
+    </header>
+  );
+}
+
+function ProfileDropdown({
+  currentUser,
+  patientToken,
+  doctorToken,
+  hospitalToken,
+  showProfileMenu,
+  setShowProfileMenu,
+  handleLogout,
+}) {
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setShowProfileMenu(!showProfileMenu)}
+        className="flex items-center gap-3 px-3 py-2 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 transition"
+      >
+        <ProfileIcon
+          image={currentUser.image}
+          fallback={currentUser.icon}
+          color="text-cyan-600"
+        />
+
+        <div className="leading-tight text-left">
+          <p className="text-sm font-black max-w-[140px] truncate text-slate-800">
+            {currentUser.name}
+          </p>
+          <p className="text-xs text-slate-500">{currentUser.subtitle}</p>
+        </div>
+
+        <ChevronDown size={17} className="text-slate-400" />
+      </button>
+
+      {showProfileMenu && (
+        <div className="absolute right-0 mt-3 w-72 bg-white rounded-[1.5rem] shadow-2xl border border-slate-100 overflow-hidden z-50">
+          <ProfileMenuLink
+            to={currentUser.dashboardPath}
+            icon={LayoutDashboard}
+            title="Dashboard"
+            onClick={() => setShowProfileMenu(false)}
           />
 
-          <aside className="fixed top-0 right-0 h-full w-[88%] max-w-[390px] bg-white z-50 shadow-2xl xl:hidden overflow-y-auto">
-            <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-900 p-6 text-white">
-              <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-cyan-400/20 blur-3xl" />
+          {patientToken && (
+            <>
+              <ProfileMenuLink
+                to="/appointments"
+                icon={CalendarDays}
+                title="Appointments"
+                onClick={() => setShowProfileMenu(false)}
+              />
 
-              <div className="relative flex items-start justify-between gap-4">
-                <div>
-                  <div className="w-14 h-14 rounded-3xl bg-white/10 border border-white/20 flex items-center justify-center mb-4">
-                    <Stethoscope size={28} className="text-cyan-300" />
-                  </div>
+              <ProfileMenuLink
+                to="/patient/medical-records"
+                icon={FileText}
+                title="Medical Records"
+                onClick={() => setShowProfileMenu(false)}
+              />
 
-                  <h2 className="text-3xl font-black">MediCare</h2>
+              <ProfileMenuLink
+                to="/patient/prescriptions"
+                icon={ClipboardList}
+                title="Prescriptions"
+                onClick={() => setShowProfileMenu(false)}
+              />
+            </>
+          )}
 
-                  <p className="text-blue-100 text-sm mt-1">
-                    Smart Healthcare Platform
-                  </p>
-                </div>
+          {doctorToken && (
+            <>
+              <ProfileMenuLink
+                to="/doctor/profile"
+                icon={UserCircle}
+                title="Doctor Profile"
+                onClick={() => setShowProfileMenu(false)}
+              />
 
-                <button
-                  onClick={closeMobile}
-                  className="w-11 h-11 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center"
-                >
-                  <X size={22} />
-                </button>
+              <ProfileMenuLink
+                to="/doctor/prescriptions"
+                icon={FileText}
+                title="Prescriptions"
+                onClick={() => setShowProfileMenu(false)}
+              />
+            </>
+          )}
+
+          {hospitalToken && (
+            <>
+              <ProfileMenuLink
+                to="/hospital/profile"
+                icon={Building2}
+                title="Hospital Profile"
+                onClick={() => setShowProfileMenu(false)}
+              />
+
+              <ProfileMenuLink
+                to="/hospital/doctors"
+                icon={Stethoscope}
+                title="Manage Doctors"
+                onClick={() => setShowProfileMenu(false)}
+              />
+            </>
+          )}
+
+          <ProfileMenuLink
+            to="/notifications"
+            icon={Bell}
+            title="Notifications"
+            onClick={() => setShowProfileMenu(false)}
+          />
+
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 p-4 text-red-600 hover:bg-red-50 transition font-black"
+          >
+            <LogOut size={20} />
+            Logout
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProviderMenu() {
+  return (
+    <div className="relative group">
+      <button className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-950 text-white font-black hover:bg-cyan-700 transition">
+        For Providers
+        <ChevronDown size={17} />
+      </button>
+
+      <div className="absolute right-0 mt-3 w-72 bg-white rounded-[1.5rem] shadow-2xl border border-slate-100 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+        <PortalLink
+          to="/doctor/login"
+          icon={Stethoscope}
+          title="Doctor Login"
+          desc="Access doctor workspace"
+        />
+
+        <PortalLink
+          to="/hospital/login"
+          icon={Building2}
+          title="Hospital Portal"
+          desc="Manage hospital dashboard"
+        />
+
+        <PortalLink
+          to="/hospital/register"
+          icon={UserPlus}
+          title="Hospital Signup"
+          desc="Register new hospital"
+        />
+
+        <PortalLink
+          to="/admin/login"
+          icon={ShieldCheck}
+          title="Admin Login"
+          desc="Platform administration"
+        />
+      </div>
+    </div>
+  );
+}
+
+function MobileMenu({
+  closeMobile,
+  currentUser,
+  searchDoctors,
+  searchQuery,
+  setSearchQuery,
+  mobileNavClass,
+  patientToken,
+  doctorToken,
+  hospitalToken,
+  adminToken,
+  isLoggedIn,
+  unreadCount,
+  handleLogout,
+}) {
+  return (
+    <>
+      <div
+        onClick={closeMobile}
+        className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-40 xl:hidden"
+      />
+
+      <aside className="fixed top-0 right-0 h-full w-[88%] max-w-[390px] bg-white z-50 shadow-2xl xl:hidden overflow-y-auto">
+        <div className="p-6 border-b border-slate-100">
+          <div className="flex items-start justify-between gap-4">
+            <Link to="/" onClick={closeMobile} className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-600 flex items-center justify-center">
+                <HeartPulse className="text-white" size={25} />
               </div>
 
-              {currentUser && (
-                <Link
-                  to={currentUser.profilePath}
-                  onClick={closeMobile}
-                  className="relative mt-6 flex items-center gap-3 bg-white/10 border border-white/20 rounded-3xl p-4"
-                >
-                  <div className="w-14 h-14 rounded-2xl bg-white/10 overflow-hidden flex items-center justify-center shrink-0">
-                    {currentUser.image ? (
-                      <img
-                        src={currentUser.image}
-                        alt={currentUser.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <currentUser.icon size={30} />
-                    )}
-                  </div>
+              <div>
+                <h2 className="text-2xl font-black text-slate-950">
+                  MediCare
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Healthcare made simple
+                </p>
+              </div>
+            </Link>
 
-                  <div className="min-w-0">
-                    <p className="font-black truncate">
-                      {currentUser.name}
-                    </p>
+            <button
+              onClick={closeMobile}
+              className="w-11 h-11 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center"
+            >
+              <X size={22} />
+            </button>
+          </div>
 
-                    <p className="text-sm text-blue-100">
-                      {currentUser.subtitle}
-                    </p>
-                  </div>
-                </Link>
-              )}
-            </div>
+          {currentUser && (
+            <Link
+              to={currentUser.dashboardPath}
+              onClick={closeMobile}
+              className="mt-5 flex items-center gap-3 bg-cyan-50 border border-cyan-100 rounded-3xl p-4"
+            >
+              <ProfileIcon
+                image={currentUser.image}
+                fallback={currentUser.icon}
+                color="text-cyan-600"
+              />
 
-            <nav className="p-5 space-y-2">
-              <NavLink
-                to="/"
-                onClick={closeMobile}
-                className={mobileNavClass}
-              >
-                <Home size={19} />
-                Home
-              </NavLink>
+              <div className="min-w-0">
+                <p className="font-black truncate text-slate-950">
+                  {currentUser.name}
+                </p>
+                <p className="text-sm text-cyan-700">
+                  {currentUser.subtitle}
+                </p>
+              </div>
+            </Link>
+          )}
+        </div>
 
-              <NavLink
-                to="/doctors"
-                onClick={closeMobile}
-                className={mobileNavClass}
-              >
-                <Stethoscope size={19} />
-                Doctors
-              </NavLink>
+        <div className="p-5">
+          <form
+            onSubmit={searchDoctors}
+            className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 mb-4"
+          >
+            <Search size={19} className="text-slate-400" />
 
-              <NavLink
-  to="/patient/lab-tests"
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search doctors..."
+              className="w-full bg-transparent outline-none text-sm"
+            />
+          </form>
+
+          <nav className="space-y-2">
+            <NavLink to="/" onClick={closeMobile} className={mobileNavClass}>
+              <Home size={19} />
+              Home
+            </NavLink>
+
+            <NavLink to="/doctors" onClick={closeMobile} className={mobileNavClass}>
+              <Stethoscope size={19} />
+              Find Doctors
+            </NavLink>
+
+            <NavLink
+              to="/video-consult"
+              onClick={closeMobile}
+              className={mobileNavClass}
+            >
+              <Video size={19} />
+              Video Consult
+            </NavLink>
+
+            <NavLink to="/hospitals" onClick={closeMobile} className={mobileNavClass}>
+              <Hospital size={19} />
+              Hospitals
+            </NavLink>
+
+            <NavLink
+              to="/patient/lab-tests"
+              onClick={closeMobile}
+              className={mobileNavClass}
+            >
+              <FlaskConical size={19} />
+              Lab Tests
+            </NavLink>
+
+           <NavLink
+  to="/ai-health-assistant"
   onClick={closeMobile}
   className={mobileNavClass}
 >
-  <FlaskConical size={19} />
-  Lab Tests
+  <Brain size={19} />
+  MediCare AI
 </NavLink>
 
-              <NavLink
-                to="/symptom-checker"
-                onClick={closeMobile}
-                className={mobileNavClass}
-              >
-                <Brain size={19} />
-                AI Assistant
-              </NavLink>
-
-              <NavLink
-                to="/doctors"
-                onClick={closeMobile}
-                className={mobileNavClass}
-              >
-                <Ambulance size={19} />
-                Emergency
-              </NavLink>
-
-              <NavLink
-                to="/"
-                onClick={closeMobile}
-                className={mobileNavClass}
-              >
-                <Phone size={19} />
-                Contact
-              </NavLink>
-
-              {patientToken && (
-                <>
-                  <NavLink
-                    to="/patient/dashboard"
-                    onClick={closeMobile}
-                    className={mobileNavClass}
-                  >
-                    <LayoutDashboard size={19} />
-                    Patient Portal
-                  </NavLink>
-
-                  <NavLink
-                    to="/appointments"
-                    onClick={closeMobile}
-                    className={mobileNavClass}
-                  >
-                    <CalendarDays size={19} />
-                    Appointments
-                  </NavLink>
-
-                  <NavLink
-                    to="/prescriptions"
-                    onClick={closeMobile}
-                    className={mobileNavClass}
-                  >
-                    <FileText size={19} />
-                    Prescriptions
-                  </NavLink>
-
-                  <NavLink
-                    to="/profile"
-                    onClick={closeMobile}
-                    className={mobileNavClass}
-                  >
-                    <UserCircle size={19} />
-                    Profile
-                  </NavLink>
-                </>
-              )}
-
-              {doctorToken && (
-                <>
-                  <NavLink
-                    to="/doctor/dashboard"
-                    onClick={closeMobile}
-                    className={mobileNavClass}
-                  >
-                    <Stethoscope size={19} />
-                    Doctor Dashboard
-                  </NavLink>
-
-                  <NavLink
-                    to="/doctor/profile"
-                    onClick={closeMobile}
-                    className={mobileNavClass}
-                  >
-                    <UserCircle size={19} />
-                    My Profile
-                  </NavLink>
-                </>
-              )}
-
-              {hospitalToken && (
-                <>
-                  <NavLink
-                    to="/hospital/dashboard"
-                    onClick={closeMobile}
-                    className={mobileNavClass}
-                  >
-                    <Building2 size={19} />
-                    Hospital Dashboard
-                  </NavLink>
-
-                  <NavLink
-                    to="/hospital/doctors"
-                    onClick={closeMobile}
-                    className={mobileNavClass}
-                  >
-                    <Stethoscope size={19} />
-                    Doctors
-                  </NavLink>
-
-                  <NavLink
-                    to="/hospital/availability"
-                    onClick={closeMobile}
-                    className={mobileNavClass}
-                  >
-                    <CalendarDays size={19} />
-                    Availability
-                  </NavLink>
-
-                  <NavLink
-                    to="/hospital/appointments"
-                    onClick={closeMobile}
-                    className={mobileNavClass}
-                  >
-                    <FileText size={19} />
-                    Appointments
-                  </NavLink>
-
-                  <NavLink
-                    to="/hospital/profile"
-                    onClick={closeMobile}
-                    className={mobileNavClass}
-                  >
-                    <Building2 size={19} />
-                    Hospital Profile
-                  </NavLink>
-                </>
-              )}
-
-              {adminToken && (
+            {patientToken && (
+              <>
                 <NavLink
-                  to="/admin/dashboard"
+                  to="/patient/dashboard"
                   onClick={closeMobile}
                   className={mobileNavClass}
                 >
-                  <ShieldCheck size={19} />
-                  Admin Dashboard
+                  <LayoutDashboard size={19} />
+                  Patient Dashboard
                 </NavLink>
-              )}
 
-              {isLoggedIn && (
                 <NavLink
-                  to="/notifications"
+                  to="/appointments"
                   onClick={closeMobile}
                   className={mobileNavClass}
                 >
-                  <Bell size={19} />
-                  Notifications
-                  {unreadCount > 0 && (
-                    <span className="ml-auto bg-red-600 text-white text-xs px-2 py-1 rounded-full">
-                      {unreadCount}
-                    </span>
-                  )}
+                  <CalendarDays size={19} />
+                  Appointments
                 </NavLink>
-              )}
 
-              {!isLoggedIn && (
-                <div className="pt-4 space-y-3">
-                  <Link
-                    to="/login"
-                    onClick={closeMobile}
-                    className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl bg-blue-600 text-white font-black"
-                  >
-                    <UserRound size={18} />
-                    Patient Login
-                  </Link>
-
-                  <Link
-                    to="/register"
-                    onClick={closeMobile}
-                    className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl bg-slate-950 text-white font-black"
-                  >
-                    <UserPlus size={18} />
-                    Patient Register
-                  </Link>
-
-                  <Link
-                    to="/doctor/login"
-                    onClick={closeMobile}
-                    className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl bg-emerald-600 text-white font-black"
-                  >
-                    <Stethoscope size={18} />
-                    Doctor Login
-                  </Link>
-
-                  <Link
-                    to="/hospital/login"
-                    onClick={closeMobile}
-                    className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl bg-blue-700 text-white font-black"
-                  >
-                    <Building2 size={18} />
-                    Hospital Portal
-                  </Link>
-
-                  <Link
-                    to="/hospital/register"
-                    onClick={closeMobile}
-                    className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl border border-blue-200 font-black text-blue-700"
-                  >
-                    <UserPlus size={18} />
-                    Hospital Signup
-                  </Link>
-
-                  <Link
-                    to="/admin/login"
-                    onClick={closeMobile}
-                    className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl border border-slate-200 font-black text-slate-700"
-                  >
-                    <ShieldCheck size={18} />
-                    Admin Login
-                  </Link>
-                </div>
-              )}
-
-              {isLoggedIn && (
-                <button
-                  onClick={handleLogout}
-                  className="mt-5 flex items-center justify-center gap-2 w-full p-4 rounded-2xl bg-red-600 text-white font-black"
+                <NavLink
+                  to="/patient/medical-records"
+                  onClick={closeMobile}
+                  className={mobileNavClass}
                 >
-                  <LogOut size={19} />
-                  Logout
-                </button>
-              )}
-            </nav>
-          </aside>
-        </>
-      )}
-    </header>
+                  <FileText size={19} />
+                  Medical Records
+                </NavLink>
+
+                <NavLink
+                  to="/patient/prescriptions"
+                  onClick={closeMobile}
+                  className={mobileNavClass}
+                >
+                  <ClipboardList size={19} />
+                  Prescriptions
+                </NavLink>
+              </>
+            )}
+
+            {doctorToken && (
+              <>
+                <NavLink
+                  to="/doctor/dashboard"
+                  onClick={closeMobile}
+                  className={mobileNavClass}
+                >
+                  <LayoutDashboard size={19} />
+                  Doctor Dashboard
+                </NavLink>
+
+                <NavLink
+                  to="/doctor/profile"
+                  onClick={closeMobile}
+                  className={mobileNavClass}
+                >
+                  <UserCircle size={19} />
+                  Doctor Profile
+                </NavLink>
+
+                <NavLink
+                  to="/doctor/prescriptions"
+                  onClick={closeMobile}
+                  className={mobileNavClass}
+                >
+                  <FileText size={19} />
+                  Doctor Prescriptions
+                </NavLink>
+              </>
+            )}
+
+            {hospitalToken && (
+              <>
+                <NavLink
+                  to="/hospital/dashboard"
+                  onClick={closeMobile}
+                  className={mobileNavClass}
+                >
+                  <LayoutDashboard size={19} />
+                  Hospital Dashboard
+                </NavLink>
+
+                <NavLink
+                  to="/hospital/doctors"
+                  onClick={closeMobile}
+                  className={mobileNavClass}
+                >
+                  <Stethoscope size={19} />
+                  Manage Doctors
+                </NavLink>
+
+                <NavLink
+                  to="/hospital/profile"
+                  onClick={closeMobile}
+                  className={mobileNavClass}
+                >
+                  <Building2 size={19} />
+                  Hospital Profile
+                </NavLink>
+              </>
+            )}
+
+            {adminToken && (
+              <NavLink
+                to="/admin/dashboard"
+                onClick={closeMobile}
+                className={mobileNavClass}
+              >
+                <ShieldCheck size={19} />
+                Admin Dashboard
+              </NavLink>
+            )}
+
+            {isLoggedIn && (
+              <NavLink
+                to="/notifications"
+                onClick={closeMobile}
+                className={mobileNavClass}
+              >
+                <Bell size={19} />
+                Notifications
+                {unreadCount > 0 && (
+                  <span className="ml-auto bg-red-600 text-white text-xs px-2 py-1 rounded-full">
+                    {unreadCount}
+                  </span>
+                )}
+              </NavLink>
+            )}
+
+            {!isLoggedIn && (
+              <div className="pt-4 space-y-3">
+                <Link
+                  to="/login"
+                  onClick={closeMobile}
+                  className="flex items-center justify-center w-full bg-cyan-600 text-white px-6 py-4 rounded-2xl font-black hover:bg-cyan-700 transition"
+                >
+                  Login / Sign Up
+                </Link>
+
+                <Link
+                  to="/doctor/login"
+                  onClick={closeMobile}
+                  className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl border border-slate-200 font-black text-slate-700"
+                >
+                  <Stethoscope size={18} />
+                  Doctor Login
+                </Link>
+
+                <Link
+                  to="/hospital/login"
+                  onClick={closeMobile}
+                  className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl border border-slate-200 font-black text-slate-700"
+                >
+                  <Building2 size={18} />
+                  Hospital Portal
+                </Link>
+
+                <Link
+                  to="/hospital/register"
+                  onClick={closeMobile}
+                  className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl border border-slate-200 font-black text-slate-700"
+                >
+                  <UserPlus size={18} />
+                  Hospital Signup
+                </Link>
+
+                <Link
+                  to="/admin/login"
+                  onClick={closeMobile}
+                  className="flex items-center justify-center gap-2 w-full p-4 rounded-2xl border border-slate-200 font-black text-slate-700"
+                >
+                  <ShieldCheck size={18} />
+                  Admin Login
+                </Link>
+              </div>
+            )}
+
+            {isLoggedIn && (
+              <button
+                onClick={handleLogout}
+                className="mt-5 flex items-center justify-center gap-2 w-full p-4 rounded-2xl bg-red-600 text-white font-black"
+              >
+                <LogOut size={19} />
+                Logout
+              </button>
+            )}
+          </nav>
+        </div>
+      </aside>
+    </>
   );
 }
 
@@ -939,7 +849,7 @@ function NotificationBell({
         onClick={() => setShowNotifications(!showNotifications)}
         className="relative p-3 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 transition shadow-sm"
       >
-        <Bell size={22} className="text-slate-700" />
+        <Bell size={21} className="text-slate-700" />
 
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-black rounded-full min-w-5 h-5 px-1 flex items-center justify-center">
@@ -952,19 +862,14 @@ function NotificationBell({
         <div className="absolute right-0 mt-3 w-96 bg-white rounded-[1.5rem] shadow-2xl border border-slate-100 z-50 overflow-hidden">
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
             <div>
-              <h3 className="font-black text-slate-900">
-                Notifications
-              </h3>
-
-              <p className="text-xs text-slate-500">
-                {unreadCount} unread
-              </p>
+              <h3 className="font-black text-slate-900">Notifications</h3>
+              <p className="text-xs text-slate-500">{unreadCount} unread</p>
             </div>
 
             {notifications.length > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-xs font-bold text-blue-600 hover:text-blue-700"
+                className="text-xs font-bold text-cyan-600 hover:text-cyan-700"
               >
                 Mark all read
               </button>
@@ -981,11 +886,11 @@ function NotificationBell({
                 <div
                   key={item.id}
                   className={`p-4 border-b border-slate-100 ${
-                    item.isRead ? "bg-white" : "bg-blue-50/60"
+                    item.isRead ? "bg-white" : "bg-cyan-50/60"
                   }`}
                 >
                   <div className="flex gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-cyan-600 flex items-center justify-center shrink-0">
                       <Bell size={17} className="text-white" />
                     </div>
 
@@ -1012,7 +917,7 @@ function NotificationBell({
             <Link
               to="/notifications"
               onClick={() => setShowNotifications(false)}
-              className="block text-center text-blue-600 font-black text-sm"
+              className="block text-center text-cyan-600 font-black text-sm"
             >
               View All Notifications
             </Link>
@@ -1027,10 +932,10 @@ function PortalLink({ to, icon: Icon, title, desc }) {
   return (
     <Link
       to={to}
-      className="flex items-center gap-3 p-4 hover:bg-blue-50 transition"
+      className="flex items-center gap-3 p-4 hover:bg-cyan-50 transition"
     >
-      <div className="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center">
-        <Icon className="text-blue-600" size={22} />
+      <div className="w-11 h-11 rounded-2xl bg-cyan-50 flex items-center justify-center">
+        <Icon className="text-cyan-600" size={22} />
       </div>
 
       <div>
@@ -1041,30 +946,30 @@ function PortalLink({ to, icon: Icon, title, desc }) {
   );
 }
 
-function ProfileIcon({ image, fallback: Fallback, color }) {
+function ProfileMenuLink({ to, icon: Icon, title, onClick }) {
   return (
-    <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center overflow-hidden">
-      {image ? (
-        <img
-          src={image}
-          alt="Profile"
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <Fallback size={28} className={color} />
-      )}
-    </div>
+    <Link
+      to={to}
+      onClick={onClick}
+      className="flex items-center gap-3 p-4 hover:bg-cyan-50 transition font-bold text-slate-700"
+    >
+      <div className="w-10 h-10 rounded-2xl bg-cyan-50 flex items-center justify-center">
+        <Icon className="text-cyan-600" size={20} />
+      </div>
+
+      {title}
+    </Link>
   );
 }
 
-function LogoutButton({ onClick }) {
+function ProfileIcon({ image, fallback: Fallback, color }) {
   return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-red-600 text-white font-bold hover:bg-red-700 shadow-lg shadow-red-100 transition"
-    >
-      <LogOut size={18} />
-      Logout
-    </button>
+    <div className="w-10 h-10 rounded-2xl bg-cyan-50 flex items-center justify-center overflow-hidden shrink-0">
+      {image ? (
+        <img src={image} alt="Profile" className="w-full h-full object-cover" />
+      ) : (
+        <Fallback size={25} className={color} />
+      )}
+    </div>
   );
 }

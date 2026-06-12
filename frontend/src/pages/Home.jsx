@@ -1,5 +1,4 @@
 import Hero from "../components/Hero";
-import Stats from "../components/Stats";
 import Specialties from "../components/Specialties";
 import FeaturedDoctors from "../components/FeaturedDoctors";
 import AIHealthAssistant from "../components/AIHealthAssistant";
@@ -15,80 +14,119 @@ export default function Home() {
   return (
     <main className="overflow-hidden bg-white">
       <Hero />
-      <AIHealthAssistant />
-      <Stats />
+
       <HomeFeatures />
-      <HomeLabTests />
+
       <Specialties />
-      <FeaturedDoctors />
-      <HowItWorks />
-      <Testimonials />
+
+      <AIHealthAssistant />
+
       <FeaturedHospitals />
-      <EmergencyBanner />
-      <section className="py-20 px-6">
-  <div className="max-w-7xl mx-auto">
-    <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-900 p-10 md:p-14 text-white">
-      <div className="absolute -top-20 -right-20 w-80 h-80 bg-cyan-400/20 rounded-full blur-3xl" />
 
-      <div className="relative grid lg:grid-cols-2 gap-10 items-center">
-        <div>
-          <span className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-5">
-            📱 MediCare Mobile App
-          </span>
+      <HowItWorks />
 
-          <h2 className="text-4xl md:text-5xl font-black leading-tight">
-            Healthcare in Your Pocket
-          </h2>
+      <Testimonials />
 
-          <p className="text-blue-100 text-lg mt-5 max-w-xl">
-            Book appointments, consult doctors online, access
-            prescriptions, manage medicine reminders and track your
-            health anytime, anywhere.
-          </p>
+      <DownloadApp />
 
-          <div className="grid sm:grid-cols-2 gap-4 mt-8">
-            <div className="bg-white/10 border border-white/20 rounded-2xl p-4">
-              🩺 Book Doctor Appointments
+      <Footer />
+    </main>
+  );
+}
+
+function DownloadApp() {
+  return (
+    <section className="py-20 bg-[#f4fbff]">
+      <div className="max-w-[1450px] mx-auto px-6">
+        <div className="grid lg:grid-cols-2 gap-14 items-center bg-white rounded-[2rem] border border-slate-100 shadow-xl p-8 md:p-12 lg:p-14">
+          <div>
+            <span className="inline-flex items-center px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-5">
+              DOWNLOAD THE MEDICARE APP
+            </span>
+
+            <h2 className="text-4xl md:text-5xl font-black text-slate-950 leading-tight">
+              Healthcare at your fingertips
+            </h2>
+
+            <p className="text-slate-600 text-lg mt-5 leading-relaxed max-w-2xl">
+              Book appointments, consult doctors online, access prescriptions,
+              manage medicine reminders and track your health anytime.
+            </p>
+
+            <div className="grid sm:grid-cols-2 gap-4 mt-8">
+              <AppFeature icon="🩺" title="Doctor Consultations" />
+              <AppFeature icon="🎥" title="Video Consult" />
+              <AppFeature icon="💊" title="Medicine Reminders" />
+              <AppFeature icon="🤖" title="AI Health Insights" />
             </div>
 
-            <div className="bg-white/10 border border-white/20 rounded-2xl p-4">
-              🎥 Video Consultations
-            </div>
+            <div className="flex flex-wrap gap-4 mt-10">
+              <button className="bg-slate-950 text-white px-6 py-4 rounded-2xl font-black hover:bg-cyan-700 transition">
+                 App Store
+              </button>
 
-            <div className="bg-white/10 border border-white/20 rounded-2xl p-4">
-              💊 Medicine Reminders
-            </div>
-
-            <div className="bg-white/10 border border-white/20 rounded-2xl p-4">
-              🤖 AI Health Insights
+              <button className="bg-slate-950 text-white px-6 py-4 rounded-2xl font-black hover:bg-cyan-700 transition">
+                ▶ Google Play
+              </button>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-4 mt-8">
-            <button className="bg-black text-white px-6 py-4 rounded-2xl font-bold hover:scale-105 transition">
-              🍎 Download for iPhone
-            </button>
+          <div className="flex justify-center">
+            <div className="relative">
+              <div className="w-[290px] h-[600px] bg-slate-950 rounded-[3rem] p-3 shadow-2xl">
+                <div className="w-full h-full bg-white rounded-[2.5rem] overflow-hidden">
+                  <div className="bg-cyan-600 text-white p-6">
+                    <h3 className="text-2xl font-black">
+                      MediCare
+                    </h3>
 
-            <button className="bg-green-600 text-white px-6 py-4 rounded-2xl font-bold hover:scale-105 transition">
-              ▶ Download for Android
-            </button>
-          </div>
-        </div>
+                    <p className="text-cyan-100 mt-2">
+                      Your Health Companion
+                    </p>
+                  </div>
 
-        <div className="flex justify-center">
-          <div className="bg-white rounded-[2rem] p-4 shadow-2xl">
-            <img
-              src="https://placehold.co/320x650"
-              alt="MediCare Mobile App"
-              className="rounded-[1.5rem]"
-            />
+                  <div className="p-5 space-y-4">
+                    <PhoneCard title="Book Appointment" bg="bg-cyan-50" />
+                    <PhoneCard title="Video Consultation" bg="bg-green-50" />
+                    <PhoneCard title="Medicine Reminder" bg="bg-purple-50" />
+                    <PhoneCard title="AI Health Insights" bg="bg-orange-50" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="absolute -right-8 top-24 bg-white shadow-xl rounded-2xl px-4 py-3 border border-slate-100">
+                ⭐ 4.9 Rating
+              </div>
+
+              <div className="absolute -left-10 bottom-24 bg-white shadow-xl rounded-2xl px-4 py-3 border border-slate-100">
+                👨‍⚕️ 500+ Doctors
+              </div>
+            </div>
           </div>
         </div>
       </div>
+    </section>
+  );
+}
+
+function AppFeature({ icon, title }) {
+  return (
+    <div className="flex items-center gap-3 bg-slate-50 rounded-2xl p-4 border border-slate-100">
+      <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shadow-sm">
+        {icon}
+      </div>
+      <span className="font-bold text-slate-800">{title}</span>
     </div>
-  </div>
-</section>
-      <Footer />
-    </main>
+  );
+}
+
+function PhoneCard({ title, bg }) {
+  return (
+    <div className={`${bg} rounded-2xl p-4 border border-slate-100`}>
+      <p className="font-black text-slate-800">{title}</p>
+      <p className="text-xs text-slate-500 mt-1">
+        Available in MediCare app
+      </p>
+    </div>
   );
 }

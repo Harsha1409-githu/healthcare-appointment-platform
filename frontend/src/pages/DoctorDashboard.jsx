@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   CalendarCheck,
   CheckCircle2,
@@ -14,16 +14,22 @@ import {
   Save,
   XCircle,
   Activity,
+  Video,
+  ClipboardList,
+  Stethoscope,
+  ShieldCheck,
+  Search,
+  Filter,
+  MessageSquare,
+  ArrowRight,
+  X,
 } from "lucide-react";
 import api from "../api/axios";
-import { Link } from "react-router-dom";
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
 
-  const doctor = JSON.parse(
-    localStorage.getItem("doctorUser") || "null"
-  );
+  const doctor = JSON.parse(localStorage.getItem("doctorUser") || "null");
 
   const [appointments, setAppointments] = useState([]);
   const [reviewSummary, setReviewSummary] = useState({
@@ -31,8 +37,9 @@ export default function DoctorDashboard() {
     averageRating: 0,
   });
 
-  const [showPrescriptionForm, setShowPrescriptionForm] =
-    useState(null);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [search, setSearch] = useState("");
 
   const [form, setForm] = useState({
     diagnosis: "",
@@ -63,10 +70,12 @@ export default function DoctorDashboard() {
       ]);
 
       setAppointments(appointmentRes.data || []);
-      setReviewSummary(reviewRes.data || {
-        totalReviews: 0,
-        averageRating: 0,
-      });
+      setReviewSummary(
+        reviewRes.data || {
+          totalReviews: 0,
+          averageRating: 0,
+        }
+      );
     } catch (error) {
       console.error("Doctor dashboard error:", error);
     }
@@ -78,14 +87,31 @@ export default function DoctorDashboard() {
       fetchDashboardData();
     } catch (error) {
       console.error("Complete error:", error);
-      alert(
-        error.response?.data?.message ||
-          "Failed to complete appointment"
-      );
+      alert(error.response?.data?.message || "Failed to complete appointment");
     }
   };
 
-  const savePrescription = async (appointmentId) => {
+  const openPrescriptionModal = (appointment) => {
+    setSelectedAppointment(appointment);
+    setForm({
+      diagnosis: "",
+      medicines: "",
+      notes: "",
+    });
+  };
+
+  const closePrescriptionModal = () => {
+    setSelectedAppointment(null);
+    setForm({
+      diagnosis: "",
+      medicines: "",
+      notes: "",
+    });
+  };
+
+  const savePrescription = async () => {
+    if (!selectedAppointment) return;
+
     if (!form.diagnosis || !form.medicines) {
       alert("Diagnosis and medicines are required");
       return;
@@ -93,28 +119,18 @@ export default function DoctorDashboard() {
 
     try {
       await api.post("/prescription", {
-        appointmentId,
+        appointmentId: selectedAppointment.id,
         diagnosis: form.diagnosis,
         medicines: form.medicines,
         notes: form.notes,
       });
 
       alert("Prescription created successfully");
-
-      setForm({
-        diagnosis: "",
-        medicines: "",
-        notes: "",
-      });
-
-      setShowPrescriptionForm(null);
+      closePrescriptionModal();
       fetchDashboardData();
     } catch (error) {
       console.error("Prescription error:", error);
-      alert(
-        error.response?.data?.message ||
-          "Failed to create prescription"
-      );
+      alert(error.response?.data?.message || "Failed to create prescription");
     }
   };
 
@@ -122,9 +138,7 @@ export default function DoctorDashboard() {
     (a) => a.status === "COMPLETED"
   ).length;
 
-  const pendingCount = appointments.filter(
-    (a) => a.status === "BOOKED"
-  ).length;
+  const pendingCount = appointments.filter((a) => a.status === "BOOKED").length;
 
   const cancelledCount = appointments.filter(
     (a) => a.status === "CANCELLED"
@@ -142,55 +156,76 @@ export default function DoctorDashboard() {
 
   const todayAppointments = appointments.filter(
     (a) => a.slot?.date === today
-  ).length;
+  );
 
   const completionRate = appointments.length
     ? Math.round((completedCount / appointments.length) * 100)
     : 0;
 
-  const monthlyMap = {};
+  const performanceScore = Math.min(
+    100,
+    completionRate +
+      Math.round((Number(reviewSummary.averageRating || 0) / 5) * 20)
+  );
 
-  appointments.forEach((appointment) => {
-    const rawDate =
-      appointment.createdAt ||
-      appointment.slot?.date ||
-      appointment.date;
+  const monthlyStats = useMemo(() => {
+    const monthlyMap = {};
 
-    if (!rawDate) return;
+    appointments.forEach((appointment) => {
+      const rawDate =
+        appointment.createdAt || appointment.slot?.date || appointment.date;
 
-    const month = new Date(rawDate).toLocaleString("default", {
-      month: "short",
+      if (!rawDate) return;
+
+      const month = new Date(rawDate).toLocaleString("default", {
+        month: "short",
+      });
+
+      monthlyMap[month] = (monthlyMap[month] || 0) + 1;
     });
 
-    monthlyMap[month] = (monthlyMap[month] || 0) + 1;
-  });
+    const monthOrder = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
 
-  const monthOrder = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-
-  const monthlyStats = monthOrder
-    .map((month) => ({
-      month,
-      count: monthlyMap[month] || 0,
-    }))
-    .filter((item) => item.count > 0);
+    return monthOrder
+      .map((month) => ({
+        month,
+        count: monthlyMap[month] || 0,
+      }))
+      .filter((item) => item.count > 0);
+  }, [appointments]);
 
   const maxMonthlyCount =
     monthlyStats.length > 0
       ? Math.max(...monthlyStats.map((m) => m.count))
       : 0;
+
+  const filteredAppointments = appointments.filter((appointment) => {
+    const matchesStatus =
+      statusFilter === "ALL" || appointment.status === statusFilter;
+
+    const text = `${appointment.patient?.fullName || ""} ${
+      appointment.patientName || ""
+    } ${appointment.patientPhone || ""} ${appointment.status || ""}`
+      .toLowerCase()
+      .trim();
+
+    const matchesSearch = text.includes(search.toLowerCase().trim());
+
+    return matchesStatus && matchesSearch;
+  });
 
   const cards = [
     {
@@ -198,42 +233,42 @@ export default function DoctorDashboard() {
       value: `₹${revenue}`,
       desc: "Completed consultations",
       icon: IndianRupee,
-      gradient: "from-green-600 to-emerald-500",
+      tone: "emerald",
     },
     {
       title: "Appointments",
       value: appointments.length,
       desc: "Total bookings",
       icon: CalendarCheck,
-      gradient: "from-blue-600 to-cyan-500",
+      tone: "cyan",
     },
     {
       title: "Today",
-      value: todayAppointments,
+      value: todayAppointments.length,
       desc: "Appointments today",
       icon: Clock,
-      gradient: "from-orange-500 to-amber-500",
+      tone: "amber",
     },
     {
       title: "Completed",
       value: completedCount,
       desc: `${completionRate}% completion rate`,
       icon: CheckCircle2,
-      gradient: "from-emerald-600 to-teal-500",
+      tone: "emerald",
     },
     {
-      title: "Pending",
+      title: "Booked",
       value: pendingCount,
       desc: "Awaiting consultation",
       icon: Activity,
-      gradient: "from-purple-600 to-fuchsia-500",
+      tone: "purple",
     },
     {
       title: "Cancelled",
       value: cancelledCount,
       desc: "Cancelled bookings",
       icon: XCircle,
-      gradient: "from-red-600 to-rose-500",
+      tone: "red",
     },
     {
       title: "Rating",
@@ -242,22 +277,26 @@ export default function DoctorDashboard() {
         : "0",
       desc: `${reviewSummary.totalReviews || 0} reviews`,
       icon: Star,
-      gradient: "from-yellow-500 to-orange-500",
+      tone: "yellow",
+    },
+    {
+      title: "Performance",
+      value: `${performanceScore}%`,
+      desc: "Overall score",
+      icon: TrendingUp,
+      tone: "cyan",
     },
   ];
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-slate-50 via-emerald-50/40 to-white">
-      <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-300/20 rounded-full blur-3xl" />
-      <div className="absolute top-40 right-0 w-96 h-96 bg-cyan-300/20 rounded-full blur-3xl" />
+    <div className="min-h-screen bg-[#f4fbff]">
+      <div className="max-w-[1450px] mx-auto px-6 py-8">
+        <section className="relative overflow-hidden bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
+          <div className="absolute -top-20 -right-20 w-80 h-80 bg-cyan-100 rounded-full blur-3xl" />
 
-      <div className="relative max-w-7xl mx-auto p-6 md:p-10">
-        <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-emerald-950 to-cyan-900 p-8 md:p-10 text-white shadow-2xl mb-8">
-          <div className="absolute -top-20 -right-20 w-80 h-80 bg-emerald-400/20 rounded-full blur-3xl" />
-
-          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="flex items-center gap-5">
-              <div className="w-20 h-20 rounded-3xl bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center">
+          <div className="relative flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
+            <div className="flex flex-col md:flex-row md:items-center gap-5">
+              <div className="w-24 h-24 rounded-[2rem] bg-cyan-50 border border-cyan-100 overflow-hidden flex items-center justify-center shrink-0">
                 {doctor?.profileImage ? (
                   <img
                     src={doctor.profileImage}
@@ -265,92 +304,88 @@ export default function DoctorDashboard() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <UserRound size={42} className="text-emerald-300" />
+                  <UserRound size={44} className="text-cyan-600" />
                 )}
               </div>
 
               <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur mb-3">
-                  <TrendingUp size={18} className="text-emerald-300" />
-                  <span className="text-sm font-semibold">
-                    Doctor Analytics Center
-                  </span>
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
+                  <TrendingUp size={17} />
+                  DOCTOR ANALYTICS CENTER
                 </div>
 
-                <h1 className="text-4xl md:text-5xl font-black">
+                <h1 className="text-4xl md:text-5xl font-black text-slate-950">
                   Dr. {doctor?.doctorName}
                 </h1>
 
-                <p className="text-emerald-100 mt-2">
+                <p className="text-slate-500 mt-2 text-lg">
                   {doctor?.specialization || "Medical Specialist"}
                 </p>
               </div>
             </div>
 
-            <button
-              onClick={logout}
-              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 px-5 py-3 rounded-2xl font-bold transition"
-            >
-              <LogOut size={18} />
-              Logout
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                to="/doctor/profile"
+                className="inline-flex items-center justify-center gap-2 border border-cyan-600 text-cyan-700 px-5 py-3 rounded-2xl font-black hover:bg-cyan-50 transition"
+              >
+                <UserRound size={18} />
+                My Profile
+              </Link>
+
+              <Link
+                to="/doctor/calendar"
+                className="inline-flex items-center justify-center gap-2 bg-cyan-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-cyan-700 transition"
+              >
+                <CalendarCheck size={18} />
+                Calendar
+              </Link>
+
+              <button
+                onClick={logout}
+                className="inline-flex items-center justify-center gap-2 bg-red-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-red-700 transition"
+              >
+                <LogOut size={18} />
+                Logout
+              </button>
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {cards.map((card) => {
-            const Icon = card.icon;
+        <section className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+          {cards.map((card) => (
+            <StatCard key={card.title} {...card} />
+          ))}
+        </section>
 
-            return (
-              <div key={card.title} className="group relative">
-                <div
-                  className={`absolute -inset-0.5 rounded-[2rem] bg-gradient-to-r ${card.gradient} opacity-0 group-hover:opacity-40 blur transition duration-500`}
-                />
+        <section className="grid xl:grid-cols-[1fr_360px] gap-8 mb-8">
+          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
+            <div className="flex items-center justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-2xl font-black text-slate-950">
+                  Monthly Appointments
+                </h2>
 
-                <div className="relative h-full bg-white/95 backdrop-blur-xl rounded-[2rem] p-6 border border-white shadow-xl group-hover:-translate-y-1 transition duration-500">
-                  <div
-                    className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-lg`}
-                  >
-                    <Icon className="text-white" size={27} />
-                  </div>
-
-                  <p className="text-slate-500 text-sm mt-5">
-                    {card.title}
-                  </p>
-
-                  <h2 className="text-4xl font-black mt-1 text-slate-950">
-                    {card.value}
-                  </h2>
-
-                  <p className="text-sm text-slate-500 mt-2">
-                    {card.desc}
-                  </p>
-                </div>
+                <p className="text-slate-500">
+                  Consultation trend by month
+                </p>
               </div>
-            );
-          })}
-        </div>
 
-        <div className="grid lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2 bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-xl border border-white p-6">
-            <h2 className="text-xl font-black text-slate-900 mb-6">
-              Monthly Appointments
-            </h2>
+              <div className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm">
+                <Activity size={16} />
+                {appointments.length} Total
+              </div>
+            </div>
 
             {monthlyStats.length === 0 ? (
-              <div className="text-slate-500 bg-slate-50 rounded-2xl p-6">
-                No appointment trend available.
-              </div>
+              <EmptyMini text="No appointment trend available." />
             ) : (
               <div className="flex items-end gap-4 h-64">
                 {monthlyStats.map((item) => {
                   const height =
                     maxMonthlyCount === 0
                       ? 0
-                      : Math.max(
-                          12,
-                          (item.count / maxMonthlyCount) * 190
-                        );
+                      : Math.max(12, (item.count / maxMonthlyCount) * 190);
 
                   return (
                     <div
@@ -362,7 +397,7 @@ export default function DoctorDashboard() {
                       </div>
 
                       <div
-                        className="w-full rounded-t-2xl bg-gradient-to-t from-emerald-600 to-cyan-400 shadow-lg transition-all duration-700"
+                        className="w-full rounded-t-2xl bg-gradient-to-t from-cyan-600 to-emerald-400 shadow-sm transition-all duration-700"
                         style={{ height: `${height}px` }}
                       />
 
@@ -376,225 +411,429 @@ export default function DoctorDashboard() {
             )}
           </div>
 
-          <div className="relative overflow-hidden bg-slate-950 text-white rounded-[2rem] p-6 shadow-2xl">
-            <TrendingUp className="text-emerald-300" size={34} />
+          <aside className="space-y-5">
+            <div className="relative overflow-hidden bg-slate-950 text-white rounded-[2rem] p-6 shadow-sm">
+              <div className="absolute -top-16 -right-16 w-52 h-52 bg-cyan-400/20 rounded-full blur-3xl" />
 
-            <h2 className="text-2xl font-black mt-5">
-              Performance Score
-            </h2>
+              <div className="relative">
+                <TrendingUp className="text-cyan-300" size={34} />
 
-            <p className="text-slate-300 mt-2 text-sm">
-              Based on completion rate and patient rating.
-            </p>
+                <h2 className="text-2xl font-black mt-5">
+                  Performance Score
+                </h2>
 
-            <p className="text-5xl font-black mt-7">
-              {Math.min(
-                100,
-                completionRate +
-                  Math.round(
-                    (Number(reviewSummary.averageRating || 0) / 5) * 20
-                  )
+                <p className="text-slate-300 mt-2 text-sm">
+                  Based on completion rate and patient rating.
+                </p>
+
+                <p className="text-6xl font-black mt-7">
+                  {performanceScore}%
+                </p>
+
+                <div className="w-full h-3 bg-white/10 rounded-full mt-5 overflow-hidden">
+                  <div
+                    className="h-full bg-cyan-300 rounded-full"
+                    style={{ width: `${performanceScore}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6">
+              <h3 className="text-xl font-black text-slate-950 mb-4">
+                Today's Schedule
+              </h3>
+
+              {todayAppointments.length === 0 ? (
+                <p className="text-slate-500">No appointments today.</p>
+              ) : (
+                <div className="space-y-3">
+                  {todayAppointments.slice(0, 4).map((appointment) => (
+                    <div
+                      key={appointment.id}
+                      className="bg-slate-50 border border-slate-100 rounded-2xl p-3"
+                    >
+                      <p className="font-black text-slate-950">
+                        {appointment.slot?.startTime} -{" "}
+                        {appointment.patient?.fullName ||
+                          appointment.patientName}
+                      </p>
+
+                      <p className="text-sm text-slate-500">
+                        {appointment.status}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               )}
-              %
-            </p>
+            </div>
+          </aside>
+        </section>
 
-            <p className="text-emerald-300 font-semibold mt-1">
-              Doctor performance
-            </p>
-          </div>
-        </div>
+        <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5 mb-6">
+            <div>
+              <h2 className="text-2xl font-black text-slate-950">
+                My Appointments
+              </h2>
 
-        <div className="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-xl border border-white p-6">
-          <h2 className="text-2xl font-black text-slate-900 mb-6">
-            My Appointments
-          </h2>
-
-          {appointments.length === 0 ? (
-            <div className="bg-slate-50 rounded-2xl p-6">
               <p className="text-slate-500">
-                No appointments found.
+                Manage patients, consultations and prescriptions.
               </p>
             </div>
+
+            <div className="grid lg:grid-cols-[1fr_220px] gap-3 xl:w-[600px]">
+              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
+                <Search className="text-cyan-600" size={20} />
+
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search patient or phone..."
+                  className="w-full bg-transparent outline-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
+                <Filter className="text-cyan-600" size={20} />
+
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full bg-transparent outline-none font-semibold text-slate-800"
+                >
+                  <option value="ALL">All</option>
+                  <option value="BOOKED">Booked</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {filteredAppointments.length === 0 ? (
+            <EmptyAppointments />
           ) : (
             <div className="space-y-4">
-              {appointments.map((appointment) => (
-                <div
+              {filteredAppointments.map((appointment) => (
+                <AppointmentCard
                   key={appointment.id}
-                  className="rounded-[2rem] border border-slate-100 bg-white shadow p-5"
-                >
-                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center overflow-hidden">
-                        {appointment.patient?.profileImage ? (
-                          <img
-                            src={appointment.patient.profileImage}
-                            alt={
-                              appointment.patient?.fullName ||
-                              appointment.patientName
-                            }
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <UserRound
-                            size={28}
-                            className="text-emerald-600"
-                          />
-                        )}
-                      </div>
-
-                      <div>
-                        <h3 className="font-black text-lg text-slate-900">
-                          {appointment.patient?.fullName ||
-                            appointment.patientName}
-                        </h3>
-
-                        <p className="text-slate-500 flex items-center gap-2">
-                          <Phone size={15} />
-                          {appointment.patientPhone}
-                        </p>
-
-                        <p className="text-slate-500">
-                          {appointment.slot?.date} |{" "}
-                          {appointment.slot?.startTime} -{" "}
-                          {appointment.slot?.endTime}
-                        </p>
-
-                        <p className="mt-2">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              appointment.status === "COMPLETED"
-                                ? "bg-emerald-100 text-emerald-700"
-                                : appointment.status === "CANCELLED"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-blue-100 text-blue-700"
-                            }`}
-                          >
-                            {appointment.status}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3 flex-wrap">
-<Link
-  to={`/doctor/appointment/${appointment.id}/patient-profile`}
-  className="bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800"
->
-  View Patient
-</Link> 
-
-  {appointment.status === "BOOKED" &&
-    appointment.videoRoomId && (
-
-      <a
-        href={`/video-call/${appointment.id}`}
-        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-      >
-        Join Video Call
-      </a>
-    )}
-
-  {appointment.status === "BOOKED" && (
-    <button
-      onClick={() =>
-        completeAppointment(appointment.id)
-      }
-      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-    >
-      Complete
-    </button>
-  )}
-
-  {appointment.status === "COMPLETED" && (
-    <button
-      onClick={() =>
-        setShowPrescriptionForm(
-          showPrescriptionForm === appointment.id
-            ? null
-            : appointment.id
-        )
-      }
-      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-    >
-      Create Prescription
-    </button>
-  )}
-</div>
-                  </div>
-
-                  {showPrescriptionForm === appointment.id && (
-                    <div className="mt-5 border-t pt-5">
-                      <h3 className="font-black mb-4">
-                        Create Prescription
-                      </h3>
-
-                      <input
-                        type="text"
-                        placeholder="Diagnosis"
-                        value={form.diagnosis}
-                        onChange={(e) =>
-                          setForm({
-                            ...form,
-                            diagnosis: e.target.value,
-                          })
-                        }
-                        className="w-full border border-slate-200 bg-slate-50 p-3 rounded-xl mb-3 outline-none focus:ring-2 focus:ring-emerald-500"
-                      />
-
-                      <textarea
-                        placeholder="Medicines"
-                        rows="4"
-                        value={form.medicines}
-                        onChange={(e) =>
-                          setForm({
-                            ...form,
-                            medicines: e.target.value,
-                          })
-                        }
-                        className="w-full border border-slate-200 bg-slate-50 p-3 rounded-xl mb-3 outline-none focus:ring-2 focus:ring-emerald-500"
-                      />
-
-                      <textarea
-                        placeholder="Notes"
-                        rows="3"
-                        value={form.notes}
-                        onChange={(e) =>
-                          setForm({
-                            ...form,
-                            notes: e.target.value,
-                          })
-                        }
-                        className="w-full border border-slate-200 bg-slate-50 p-3 rounded-xl mb-3 outline-none focus:ring-2 focus:ring-emerald-500"
-                      />
-
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() =>
-                            savePrescription(appointment.id)
-                          }
-                          className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-emerald-700"
-                        >
-                          <Save size={18} />
-                          Save Prescription
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            setShowPrescriptionForm(null)
-                          }
-                          className="border border-slate-300 px-5 py-2 rounded-xl font-bold hover:bg-slate-50"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  appointment={appointment}
+                  completeAppointment={completeAppointment}
+                  openPrescriptionModal={openPrescriptionModal}
+                />
               ))}
             </div>
           )}
+        </section>
+
+        {selectedAppointment && (
+          <PrescriptionModal
+            appointment={selectedAppointment}
+            form={form}
+            setForm={setForm}
+            onClose={closePrescriptionModal}
+            onSave={savePrescription}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ title, value, desc, icon: Icon, tone }) {
+  const styles = {
+    emerald: "bg-emerald-50 text-emerald-600",
+    cyan: "bg-cyan-50 text-cyan-600",
+    amber: "bg-amber-50 text-amber-600",
+    purple: "bg-purple-50 text-purple-600",
+    red: "bg-red-50 text-red-600",
+    yellow: "bg-yellow-50 text-yellow-600",
+  };
+
+  return (
+    <div className="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition">
+      <div
+        className={`w-12 h-12 rounded-2xl ${
+          styles[tone] || styles.cyan
+        } flex items-center justify-center mb-4`}
+      >
+        <Icon size={24} />
+      </div>
+
+      <p className="text-sm text-slate-500 font-bold">
+        {title}
+      </p>
+
+      <h2 className="text-3xl font-black mt-1 text-slate-950">
+        {value}
+      </h2>
+
+      <p className="text-sm text-slate-500 mt-2">
+        {desc}
+      </p>
+    </div>
+  );
+}
+
+function AppointmentCard({
+  appointment,
+  completeAppointment,
+  openPrescriptionModal,
+}) {
+  return (
+    <div className="rounded-[2rem] border border-slate-100 bg-slate-50 p-5">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center overflow-hidden border border-slate-100 shrink-0">
+            {appointment.patient?.profileImage ? (
+              <img
+                src={appointment.patient.profileImage}
+                alt={appointment.patient?.fullName || appointment.patientName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <UserRound size={30} className="text-cyan-600" />
+            )}
+          </div>
+
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-100 text-emerald-700 font-black text-xs mb-2">
+              <ShieldCheck size={14} />
+              Patient
+            </div>
+
+            <h3 className="font-black text-xl text-slate-950 truncate">
+              {appointment.patient?.fullName || appointment.patientName}
+            </h3>
+
+            <div className="flex flex-wrap gap-3 mt-3">
+              <InfoBadge icon={Phone} text={appointment.patientPhone} />
+
+              <InfoBadge
+                icon={Clock}
+                text={`${appointment.slot?.date || "-"} | ${
+                  appointment.slot?.startTime || ""
+                } - ${appointment.slot?.endTime || ""}`}
+              />
+
+              <StatusBadge status={appointment.status} />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 flex-wrap">
+          <Link
+            to={`/doctor/appointment/${appointment.id}/patient-profile`}
+            className="inline-flex items-center gap-2 bg-slate-950 text-white px-4 py-3 rounded-2xl font-black hover:bg-cyan-700 transition"
+          >
+            <UserRound size={17} />
+            Patient
+          </Link>
+
+          {appointment.status === "BOOKED" && appointment.videoRoomId && (
+            <Link
+              to={`/video-call/${appointment.id}`}
+              className="inline-flex items-center gap-2 bg-cyan-600 text-white px-4 py-3 rounded-2xl font-black hover:bg-cyan-700 transition"
+            >
+              <Video size={17} />
+              Video
+            </Link>
+          )}
+
+          {appointment.status === "BOOKED" && (
+            <button
+              onClick={() => completeAppointment(appointment.id)}
+              className="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-2xl font-black hover:bg-emerald-700 transition"
+            >
+              <CheckCircle2 size={17} />
+              Complete
+            </button>
+          )}
+
+          {appointment.status === "COMPLETED" && (
+            <button
+              onClick={() => openPrescriptionModal(appointment)}
+              className="inline-flex items-center gap-2 bg-cyan-600 text-white px-4 py-3 rounded-2xl font-black hover:bg-cyan-700 transition"
+            >
+              <FileText size={17} />
+              Prescription
+            </button>
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function PrescriptionModal({ appointment, form, setForm, onClose, onSave }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center px-4">
+      <div className="bg-white rounded-[2rem] shadow-2xl border border-slate-100 w-full max-w-2xl overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-black text-slate-950">
+              Create Prescription
+            </h2>
+
+            <p className="text-slate-500">
+              Patient:{" "}
+              {appointment.patient?.fullName || appointment.patientName}
+            </p>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="w-11 h-11 rounded-2xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center"
+          >
+            <X size={21} />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <InputField
+            label="Diagnosis"
+            value={form.diagnosis}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                diagnosis: e.target.value,
+              })
+            }
+            placeholder="Example: Viral fever"
+          />
+
+          <TextAreaField
+            label="Medicines"
+            value={form.medicines}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                medicines: e.target.value,
+              })
+            }
+            placeholder="Example: Paracetamol 500mg - twice daily after food"
+            rows={5}
+          />
+
+          <TextAreaField
+            label="Notes"
+            value={form.notes}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                notes: e.target.value,
+              })
+            }
+            placeholder="Additional instructions"
+            rows={3}
+          />
+        </div>
+
+        <div className="p-6 border-t border-slate-100 flex flex-wrap justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="border border-slate-300 px-5 py-3 rounded-2xl font-black hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={onSave}
+            className="flex items-center gap-2 bg-cyan-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-cyan-700"
+          >
+            <Save size={18} />
+            Save Prescription
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InputField({ label, value, onChange, placeholder }) {
+  return (
+    <label className="block">
+      <p className="text-sm font-black text-slate-700 mb-2">
+        {label}
+      </p>
+
+      <input
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-cyan-500"
+      />
+    </label>
+  );
+}
+
+function TextAreaField({ label, value, onChange, placeholder, rows }) {
+  return (
+    <label className="block">
+      <p className="text-sm font-black text-slate-700 mb-2">
+        {label}
+      </p>
+
+      <textarea
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        rows={rows}
+        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-cyan-500 resize-none"
+      />
+    </label>
+  );
+}
+
+function InfoBadge({ icon: Icon, text }) {
+  return (
+    <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-white border border-slate-100 text-slate-600 text-sm font-bold">
+      <Icon size={15} className="text-cyan-600" />
+      {text || "-"}
+    </span>
+  );
+}
+
+function StatusBadge({ status }) {
+  const style =
+    status === "COMPLETED"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+      : status === "CANCELLED"
+      ? "bg-red-50 text-red-700 border-red-100"
+      : "bg-cyan-50 text-cyan-700 border-cyan-100";
+
+  return (
+    <span
+      className={`inline-flex items-center px-3 py-2 rounded-full border text-sm font-black ${style}`}
+    >
+      {status}
+    </span>
+  );
+}
+
+function EmptyMini({ text }) {
+  return (
+    <div className="text-slate-500 bg-slate-50 border border-slate-100 rounded-2xl p-6">
+      {text}
+    </div>
+  );
+}
+
+function EmptyAppointments() {
+  return (
+    <div className="bg-slate-50 rounded-[2rem] border border-slate-100 p-10 text-center">
+      <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center mx-auto mb-4">
+        <CalendarCheck className="text-cyan-600" size={32} />
+      </div>
+
+      <h3 className="text-2xl font-black text-slate-950">
+        No appointments found
+      </h3>
+
+      <p className="text-slate-500 mt-2">
+        Appointments assigned to you will appear here.
+      </p>
     </div>
   );
 }

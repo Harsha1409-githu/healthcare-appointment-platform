@@ -3,19 +3,25 @@ import {
   Mail,
   Phone,
   MapPin,
-  Globe,
 } from "lucide-react";
+
+import {
+  FaFacebookF,
+  FaInstagram,
+  FaTwitter,
+  FaLinkedinIn,
+} from "react-icons/fa";
 import { Link } from "react-router-dom";
 
 export default function Footer() {
   return (
     <footer className="bg-slate-950 text-white">
-      <div className="max-w-7xl mx-auto px-6 py-20">
+      <div className="max-w-[1450px] mx-auto px-6 py-16">
         <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-10">
           <div className="lg:col-span-2">
-            <div className="flex items-center gap-3">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 flex items-center justify-center">
-                <HeartPulse size={30} />
+            <Link to="/" className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-600 flex items-center justify-center">
+                <HeartPulse size={28} />
               </div>
 
               <div>
@@ -23,66 +29,80 @@ export default function Footer() {
                   MediCare
                 </h2>
 
-                <p className="text-slate-400">
-                  Smart Healthcare Platform
+                <p className="text-slate-400 text-sm">
+                  Healthcare made simple
                 </p>
               </div>
-            </div>
+            </Link>
 
             <p className="text-slate-400 mt-6 leading-relaxed max-w-md">
-              Connecting patients, doctors and hospitals through
-              modern healthcare technology, AI assistance and
-              seamless consultations.
+              MediCare connects patients, doctors and hospitals through
+              appointment booking, online consultations, AI health guidance,
+              prescriptions and secure medical records.
             </p>
 
             <div className="flex gap-3 mt-6">
-              <Social icon={Globe} />
-<Social icon={Globe} />
-<Social icon={Globe} />
-<Social icon={Globe} />
-            </div>
+  <SocialIcon Icon={FaFacebookF} />
+  <SocialIcon Icon={FaInstagram} />
+  <SocialIcon Icon={FaTwitter} />
+  <SocialIcon Icon={FaLinkedinIn} />
+</div>
           </div>
 
           <FooterColumn
-            title="Platform"
+            title="For Patients"
             links={[
               ["Find Doctors", "/doctors"],
-              ["Hospitals", "/hospitals"],
-              ["AI Assistant", "/symptom-checker"],
-              ["Appointments", "/doctors"],
+              ["Video Consult", "/video-consult"],
+              ["Lab Tests", "/patient/lab-tests"],
+              ["AI Health Assistant", "/symptom-checker"],
+              ["Medical Records", "/patient/medical-records"],
             ]}
           />
 
           <FooterColumn
-            title="Resources"
+            title="For Providers"
             links={[
-              ["Medical Records", "/patient/dashboard"],
-              ["Video Consultation", "/doctors"],
-              ["Prescriptions", "/patient/dashboard"],
-              ["Reviews", "/doctors"],
+              ["Doctor Login", "/doctor/login"],
+              ["Hospital Login", "/hospital/login"],
+              ["Register Hospital", "/hospital/register"],
+              ["Admin Login", "/admin/login"],
             ]}
           />
 
           <div>
-            <h3 className="font-black text-lg mb-5">
-              Contact
-            </h3>
+            <FooterColumn
+              title="Company"
+              links={[
+                ["About Us", "/"],
+                ["Contact", "/"],
+                ["Careers", "/"],
+                ["Privacy Policy", "/"],
+                ["Terms & Conditions", "/"],
+              ]}
+            />
 
-            <div className="space-y-4">
-              <ContactItem
-                icon={Mail}
-                text="support@medicare.com"
-              />
+            <div className="mt-8">
+              <h3 className="font-black text-lg mb-5">
+                Contact
+              </h3>
 
-              <ContactItem
-                icon={Phone}
-                text="+91 9876543210"
-              />
+              <div className="space-y-4">
+                <ContactItem
+                  icon={Mail}
+                  text="support@medicare.com"
+                />
 
-              <ContactItem
-                icon={MapPin}
-                text="Chennai, India"
-              />
+                <ContactItem
+                  icon={Phone}
+                  text="+91 98765 43210"
+                />
+
+                <ContactItem
+                  icon={MapPin}
+                  text="Chennai, India"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -92,10 +112,18 @@ export default function Footer() {
             © 2026 MediCare. All rights reserved.
           </p>
 
-          <div className="flex gap-6 text-sm text-slate-500">
-            <Link to="/">Privacy Policy</Link>
-            <Link to="/">Terms & Conditions</Link>
-            <Link to="/">Cookie Policy</Link>
+          <div className="flex flex-wrap justify-center gap-6 text-sm text-slate-500">
+            <Link to="/" className="hover:text-white transition">
+              Privacy Policy
+            </Link>
+
+            <Link to="/" className="hover:text-white transition">
+              Terms
+            </Link>
+
+            <Link to="/" className="hover:text-white transition">
+              Help Center
+            </Link>
           </div>
         </div>
       </div>
@@ -128,16 +156,16 @@ function FooterColumn({ title, links }) {
 function ContactItem({ icon: Icon, text }) {
   return (
     <div className="flex items-center gap-3 text-slate-400">
-      <Icon size={18} />
+      <Icon size={18} className="text-cyan-500" />
       <span>{text}</span>
     </div>
   );
 }
 
-function Social({ icon: Icon }) {
+function SocialIcon({ Icon }) {
   return (
-    <button className="w-11 h-11 rounded-2xl bg-slate-900 hover:bg-blue-600 transition flex items-center justify-center">
-      <Icon size={20} />
+    <button className="w-11 h-11 rounded-2xl bg-slate-900 hover:bg-cyan-600 transition flex items-center justify-center">
+      <Icon size={18} />
     </button>
   );
 }

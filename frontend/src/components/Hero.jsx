@@ -1,243 +1,333 @@
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
-  ShieldCheck,
-  CalendarCheck,
-  HeartPulse,
-  Star,
   MapPin,
-  Stethoscope,
-  Clock,
-  ArrowRight,
-  Brain,
+  Navigation,
+  X,
   Video,
-  FileText,
-  Sparkles,
-  Activity,
-  Users,
-  Hospital,
+  Stethoscope,
+  ShieldCheck,
+  ArrowRight,
+  Building2,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+
+const locationSuggestions = [
+  { area: "Secunderabad", city: "Hyderabad" },
+  { area: "Banjara Hills", city: "Hyderabad" },
+  { area: "Kukatpally", city: "Hyderabad" },
+  { area: "Anna Nagar", city: "Chennai" },
+  { area: "T Nagar", city: "Chennai" },
+  { area: "Velachery", city: "Chennai" },
+  { area: "Whitefield", city: "Bangalore" },
+  { area: "Indiranagar", city: "Bangalore" },
+];
+
+const searchSuggestions = [
+  { title: "Cardiology", type: "Speciality", icon: Stethoscope },
+  { title: "Dermatology", type: "Speciality", icon: Stethoscope },
+  { title: "Neurology", type: "Speciality", icon: Stethoscope },
+  { title: "Orthopedics", type: "Speciality", icon: Stethoscope },
+  { title: "Pediatrics", type: "Speciality", icon: Stethoscope },
+  { title: "ENT", type: "Speciality", icon: Stethoscope },
+  { title: "General Physician", type: "Speciality", icon: Stethoscope },
+  { title: "Apollo Hospital", type: "Hospital", icon: Building2 },
+  { title: "Fortis Hospital", type: "Hospital", icon: Building2 },
+];
 
 export default function Hero() {
   const navigate = useNavigate();
-  const [query, setQuery] = useState("");
+  const searchBoxRef = useRef(null);
 
-  const searchDoctors = () => {
-    if (query.trim()) {
-      navigate(
-        `/doctors?specialization=${encodeURIComponent(query)}`
-      );
+  const [location, setLocation] = useState(
+    localStorage.getItem("selectedCity") || ""
+  );
+  const [search, setSearch] = useState("");
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [detecting, setDetecting] = useState(false);
+
+  useEffect(() => {
+    const closeDropdown = (event) => {
+      if (
+        searchBoxRef.current &&
+        !searchBoxRef.current.contains(event.target)
+      ) {
+        setActiveDropdown(null);
+      }
+    };
+
+    document.addEventListener("mousedown", closeDropdown);
+
+    return () => {
+      document.removeEventListener("mousedown", closeDropdown);
+    };
+  }, []);
+
+  const filteredLocations = locationSuggestions.filter((item) =>
+    `${item.area} ${item.city}`
+      .toLowerCase()
+      .includes(location.toLowerCase())
+  );
+
+  const filteredSearch = searchSuggestions.filter((item) =>
+    `${item.title} ${item.type}`
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+
+    const params = new URLSearchParams();
+
+    if (location.trim()) {
+      params.set("city", location.trim());
+      localStorage.setItem("selectedCity", location.trim());
+    }
+
+    if (search.trim()) {
+      params.set("search", search.trim());
+    }
+
+    setActiveDropdown(null);
+    navigate(`/doctors?${params.toString()}`);
+  };
+
+  const useMyLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Location is not supported in this browser");
       return;
     }
 
-    navigate("/doctors");
+    setDetecting(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+          );
+
+          const data = await res.json();
+
+          const city =
+            data.address?.city ||
+            data.address?.town ||
+            data.address?.village ||
+            data.address?.county ||
+            "";
+
+          setLocation(city);
+          localStorage.setItem("selectedCity", city);
+          setActiveDropdown(null);
+        } catch (error) {
+          console.error(error);
+          alert("Unable to detect location");
+        } finally {
+          setDetecting(false);
+        }
+      },
+      () => {
+        setDetecting(false);
+        alert("Please allow location permission");
+      }
+    );
   };
 
   return (
-    <section className="relative overflow-hidden bg-slate-950 text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.22),transparent_35%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.25),transparent_35%),radial-gradient(circle_at_bottom,rgba(16,185,129,0.15),transparent_35%)]" />
-
-      <div className="absolute inset-0 opacity-[0.07] bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:54px_54px]" />
-
-      <div className="absolute -top-40 -left-40 w-[520px] h-[520px] bg-cyan-400/20 rounded-full blur-3xl" />
-      <div className="absolute top-20 right-0 w-[620px] h-[620px] bg-blue-500/20 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-1/3 w-[520px] h-[520px] bg-emerald-400/10 rounded-full blur-3xl" />
-
-      <div className="relative max-w-[1500px] mx-auto px-6 py-24 lg:py-32 grid xl:grid-cols-[1.05fr_0.95fr] gap-16 items-center">
-        <div>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur mb-6 shadow-xl">
-            <Sparkles size={18} className="text-cyan-300" />
-            <span className="text-sm font-semibold">
-              AI-powered healthcare platform for patients, doctors & hospitals
-            </span>
-          </div>
-
-          <h1 className="text-5xl md:text-6xl xl:text-7xl font-black leading-[1.02] tracking-tight">
-            Your Health.
-            <span className="block bg-gradient-to-r from-cyan-300 via-blue-300 to-emerald-300 bg-clip-text text-transparent">
-              Smarter. Faster.
-            </span>
-            <span className="block">Connected.</span>
-          </h1>
-
-          <p className="text-lg lg:text-xl text-blue-100 mt-6 max-w-2xl leading-relaxed">
-            Book verified doctors, start video consultations, check symptoms
-            with AI, upload medical records and access prescriptions from one
-            intelligent healthcare platform.
-          </p>
-
-          <div className="mt-9 bg-white/95 backdrop-blur-xl rounded-[2rem] p-3 shadow-2xl max-w-3xl border border-white/40">
-            <div className="flex flex-col md:flex-row gap-3">
-              <div className="flex-1 flex items-center gap-3 px-4 py-4 bg-slate-50 rounded-2xl">
-                <Search className="text-slate-400" size={22} />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search doctor, specialty, hospital..."
-                  className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
-                />
+    <section className="bg-[#f4fbff] pt-6 pb-10">
+      <div className="max-w-[1500px] mx-auto px-6">
+        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-visible">
+          <div className="grid xl:grid-cols-[1fr_340px] gap-8 items-center p-7 md:p-10">
+            <div>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm border border-cyan-100 mb-5">
+                <ShieldCheck size={16} />
+                Trusted Healthcare Platform
               </div>
 
-              <button
-                onClick={searchDoctors}
-                className="group px-7 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-black shadow-lg hover:scale-[1.02] transition flex items-center justify-center gap-2"
+              <h1 className="text-4xl md:text-5xl font-black text-slate-950 leading-tight">
+                Find Trusted Doctors
+                <span className="block text-cyan-600">Near You</span>
+              </h1>
+
+              <p className="text-slate-500 text-lg mt-4 max-w-3xl leading-relaxed">
+                Search doctors, clinics, hospitals and book appointments from
+                your selected location.
+              </p>
+
+              <form
+                ref={searchBoxRef}
+                onSubmit={handleSearch}
+                className="relative mt-7 bg-white border border-slate-300 rounded-xl shadow-sm grid xl:grid-cols-[360px_1fr_140px]"
               >
-                Find Doctors
-                <ArrowRight
-                  size={19}
-                  className="group-hover:translate-x-1 transition"
-                />
-              </button>
-            </div>
-          </div>
+                <div className="relative border-b xl:border-b-0 xl:border-r border-slate-300">
+                  <div className="flex items-center gap-3 px-4 h-16">
+                    <MapPin size={19} className="text-slate-500" />
 
-          <div className="flex flex-col sm:flex-row gap-4 mt-5">
-            <button
-              onClick={() => navigate("/doctors")}
-              className="flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-white text-blue-700 font-black hover:bg-blue-50 transition"
-            >
-              <CalendarCheck size={20} />
-              Book Appointment
-            </button>
+                    <input
+                      value={location}
+                      onFocus={() => setActiveDropdown("location")}
+                      onChange={(e) => {
+                        setLocation(e.target.value);
+                        setActiveDropdown("location");
+                      }}
+                      placeholder="Search location"
+                      className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
+                    />
 
-            <button
-              onClick={() => navigate("/symptom-checker")}
-              className="flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-white/10 border border-white/20 text-white font-black hover:bg-white/20 transition"
-            >
-              <Brain size={20} className="text-cyan-300" />
-              Try AI Symptom Checker
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-9 max-w-3xl">
-            <MiniStat icon={Stethoscope} value="50+" label="Doctors" />
-            <MiniStat icon={Users} value="500+" label="Patients" />
-            <MiniStat icon={CalendarCheck} value="1K+" label="Bookings" />
-            <MiniStat icon={Star} value="4.9" label="Rating" />
-          </div>
-
-          <div className="grid sm:grid-cols-3 gap-4 mt-8 max-w-3xl">
-            <TrustCard
-              icon={ShieldCheck}
-              title="Verified"
-              desc="Doctors"
-              color="text-emerald-300"
-            />
-
-            <TrustCard
-              icon={Video}
-              title="Video"
-              desc="Consultations"
-              color="text-cyan-300"
-            />
-
-            <TrustCard
-              icon={FileText}
-              title="Digital"
-              desc="Health Records"
-              color="text-pink-300"
-            />
-          </div>
-        </div>
-
-        <div className="relative">
-          <div className="absolute -inset-8 bg-gradient-to-r from-cyan-400/20 to-blue-500/20 blur-3xl rounded-full" />
-
-          <div className="relative grid gap-5">
-            <div className="relative bg-white/10 backdrop-blur-2xl border border-white/20 rounded-[2rem] p-5 shadow-2xl">
-              <div className="bg-white rounded-[1.7rem] p-6 text-slate-900 shadow-xl">
-                <div className="flex items-center justify-between gap-5">
-                  <div>
-                    <p className="inline-flex items-center gap-2 text-sm font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-                      <Activity size={14} />
-                      Available Today
-                    </p>
-
-                    <h2 className="text-3xl font-black mt-4">
-                      Dr. Ravi Kumar
-                    </h2>
-
-                    <p className="text-blue-600 font-bold">
-                      Cardiologist
-                    </p>
+                    {location && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLocation("");
+                          localStorage.removeItem("selectedCity");
+                          setActiveDropdown(null);
+                        }}
+                        className="w-6 h-6 rounded-full bg-slate-400 text-white flex items-center justify-center"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
                   </div>
 
-                  <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-600 to-cyan-400 flex items-center justify-center shadow-xl">
-                    <Stethoscope className="text-white" size={38} />
+                  {activeDropdown === "location" && (
+                    <Dropdown className="left-0 w-full">
+                      <button
+                        type="button"
+                        onClick={useMyLocation}
+                        className="w-full flex items-center gap-3 px-4 py-4 text-cyan-600 font-black hover:bg-cyan-50"
+                      >
+                        <Navigation
+                          size={18}
+                          className={detecting ? "animate-pulse" : ""}
+                        />
+                        {detecting ? "Detecting location..." : "Use my location"}
+                      </button>
+
+                      {filteredLocations.map((item) => (
+                        <button
+                          key={`${item.area}-${item.city}`}
+                          type="button"
+                          onClick={() => {
+                            setLocation(item.city);
+                            localStorage.setItem("selectedCity", item.city);
+                            setActiveDropdown(null);
+                          }}
+                          className="w-full flex items-center gap-4 px-4 py-4 border-t border-slate-100 hover:bg-slate-50 text-left"
+                        >
+                          <CircleIcon icon={Search} />
+
+                          <div>
+                            <p className="font-bold text-slate-800">
+                              {item.area}
+                            </p>
+                            <p className="text-sm text-slate-500">
+                              {item.city}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </Dropdown>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <div className="flex items-center gap-3 px-4 h-16">
+                    <Search size={19} className="text-slate-500" />
+
+                    <input
+                      value={search}
+                      onFocus={() => setActiveDropdown("search")}
+                      onChange={(e) => {
+                        setSearch(e.target.value);
+                        setActiveDropdown("search");
+                      }}
+                      placeholder="Search doctors, clinics, hospitals, etc."
+                      className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
+                    />
+
+                    {search && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearch("");
+                          setActiveDropdown(null);
+                        }}
+                        className="w-6 h-6 rounded-full bg-slate-400 text-white flex items-center justify-center"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
                   </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 mt-6">
-                  <Metric value="12+" label="Years" />
-                  <Metric value="4.9" label="Rating" />
-                  <Metric value="₹800" label="Fee" />
-                </div>
-
-                <div className="mt-6 space-y-3">
-                  <InfoRow
-                    icon={Hospital}
-                    color="text-blue-600"
-                    bg="bg-blue-50"
-                    text="Apollo Hospital, Chennai"
-                  />
-
-                  <InfoRow
-                    icon={Clock}
-                    color="text-emerald-600"
-                    bg="bg-emerald-50"
-                    text="Next slot: Today, 10:30 AM"
-                  />
-
-                  <InfoRow
-                    icon={Star}
-                    color="text-yellow-500 fill-yellow-500"
-                    bg="bg-yellow-50"
-                    text="500+ successful consultations"
-                  />
                 </div>
 
                 <button
-                  onClick={() => navigate("/doctors")}
-                  className="mt-6 w-full py-4 rounded-2xl bg-slate-950 text-white font-black hover:bg-blue-700 transition"
+                  type="submit"
+                  className="bg-cyan-600 text-white px-5 h-16 font-black hover:bg-cyan-700 transition flex items-center justify-center gap-2 rounded-b-xl xl:rounded-b-none xl:rounded-r-xl"
                 >
-                  Book Appointment
+                  Search
+                  <ArrowRight size={17} />
+                </button>
+
+                {activeDropdown === "search" && (
+                  <div className="absolute top-[66px] left-0 xl:left-[360px] right-0 xl:right-[140px] bg-white border border-slate-200 shadow-2xl z-50 rounded-b-2xl overflow-hidden">
+                    {(search ? filteredSearch : searchSuggestions).map(
+                      (item) => {
+                        const Icon = item.icon;
+
+                        return (
+                          <button
+                            key={`${item.title}-${item.type}`}
+                            type="button"
+                            onClick={() => {
+                              setSearch(item.title);
+                              setActiveDropdown(null);
+                            }}
+                            className="w-full flex items-center gap-4 px-5 py-4 border-b border-slate-100 hover:bg-slate-50 text-left"
+                          >
+                            <CircleIcon icon={Icon} />
+                            <div>
+                              <p className="font-black text-slate-800">
+                                {item.title}
+                              </p>
+                              <p className="text-sm text-slate-500">
+                                {item.type}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      }
+                    )}
+                  </div>
+                )}
+              </form>
+
+              <div className="flex flex-wrap gap-3 mt-6">
+                <button
+                  onClick={() => navigate("/doctors")}
+                  className="inline-flex items-center gap-2 bg-cyan-600 text-white px-6 py-4 rounded-2xl font-black hover:bg-cyan-700 transition"
+                >
+                  <Stethoscope size={18} />
+                  Find Doctors
+                </button>
+
+                <button
+                  onClick={() => navigate("/video-consult")}
+                  className="inline-flex items-center gap-2 bg-white border border-slate-200 text-slate-800 px-6 py-4 rounded-2xl font-black hover:bg-slate-50 transition"
+                >
+                  <Video size={18} />
+                  Video Consult
                 </button>
               </div>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-5">
-              <FloatingCard
-                icon={Brain}
-                title="AI Symptom Checker"
-                desc="Find the right specialist instantly"
-                action={() => navigate("/symptom-checker")}
-              />
-
-              <FloatingCard
-                icon={FileText}
-                title="Medical Records"
-                desc="Upload reports & prescriptions"
-                action={() => navigate("/patient/medical-records")}
-              />
+            <div className="hidden xl:block">
+              <div className="relative h-[320px] bg-gradient-to-br from-cyan-50 via-blue-50 to-white rounded-[2rem] border border-cyan-100 overflow-hidden flex items-center justify-center">
+                <Stethoscope className="text-cyan-600 animate-float" size={130} />
+              </div>
             </div>
-          </div>
-
-          <div className="absolute -bottom-6 -left-6 bg-white text-slate-900 rounded-3xl p-5 shadow-2xl hidden md:block border border-slate-100">
-            <p className="text-sm text-slate-500">Appointments</p>
-            <p className="text-3xl font-black">1,250+</p>
-            <p className="text-xs text-emerald-600 font-bold">
-              Successfully booked
-            </p>
-          </div>
-
-          <div className="absolute -top-6 -right-6 bg-white text-slate-900 rounded-3xl p-5 shadow-2xl hidden lg:block border border-slate-100">
-            <p className="text-sm text-slate-500">Live doctors</p>
-            <p className="text-3xl font-black">24/7</p>
-            <p className="text-xs text-blue-600 font-bold">
-              Online consultation
-            </p>
           </div>
         </div>
       </div>
@@ -245,58 +335,20 @@ export default function Hero() {
   );
 }
 
-function MiniStat({ icon: Icon, value, label }) {
+function Dropdown({ children, className }) {
   return (
-    <div className="bg-white/10 border border-white/10 backdrop-blur rounded-2xl p-4">
-      <Icon className="text-cyan-300 mb-3" size={22} />
-      <p className="text-2xl font-black">{value}</p>
-      <p className="text-xs text-blue-100">{label}</p>
-    </div>
-  );
-}
-
-function TrustCard({ icon: Icon, title, desc, color }) {
-  return (
-    <div className="flex items-center gap-3 bg-white/10 border border-white/10 rounded-2xl p-4 backdrop-blur">
-      <Icon className={color} />
-      <div>
-        <p className="font-black">{title}</p>
-        <p className="text-xs text-blue-100">{desc}</p>
-      </div>
-    </div>
-  );
-}
-
-function Metric({ value, label }) {
-  return (
-    <div className="bg-slate-50 rounded-2xl p-4 text-center">
-      <p className="text-2xl font-black">{value}</p>
-      <p className="text-xs text-slate-500">{label}</p>
-    </div>
-  );
-}
-
-function InfoRow({ icon: Icon, color, bg, text }) {
-  return (
-    <div className={`flex items-center gap-3 p-4 ${bg} rounded-2xl`}>
-      <Icon className={color} />
-      <span className="font-bold">{text}</span>
-    </div>
-  );
-}
-
-function FloatingCard({ icon: Icon, title, desc, action }) {
-  return (
-    <button
-      onClick={action}
-      className="text-left bg-white/10 border border-white/20 backdrop-blur-xl rounded-[1.5rem] p-5 hover:bg-white/20 transition"
+    <div
+      className={`absolute top-[66px] ${className} bg-white border border-slate-200 shadow-2xl z-50 rounded-b-2xl overflow-hidden max-h-[390px] overflow-y-auto`}
     >
-      <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-4">
-        <Icon className="text-cyan-300" size={25} />
-      </div>
+      {children}
+    </div>
+  );
+}
 
-      <h3 className="font-black text-lg">{title}</h3>
-      <p className="text-sm text-blue-100 mt-1">{desc}</p>
-    </button>
+function CircleIcon({ icon: Icon }) {
+  return (
+    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+      <Icon size={17} className="text-slate-500" />
+    </div>
   );
 }

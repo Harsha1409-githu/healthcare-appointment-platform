@@ -4,7 +4,7 @@ import {
   Stethoscope,
   GraduationCap,
   BriefcaseMedical,
-  BadgeIndianRupee,
+  IndianRupee,
   MapPin,
   Building2,
   BadgeCheck,
@@ -13,6 +13,11 @@ import {
   ArrowRight,
   Phone,
   Mail,
+  ShieldCheck,
+  Clock,
+  Video,
+  Loader2,
+  Award,
 } from "lucide-react";
 import api from "../api/axios";
 
@@ -42,16 +47,25 @@ export default function DoctorDetails() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">
-        Loading doctor details...
+      <div className="min-h-screen bg-[#f4fbff] flex items-center justify-center">
+        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 text-center">
+          <Loader2 className="mx-auto text-cyan-600 animate-spin mb-4" size={38} />
+          <p className="text-slate-500 font-semibold">
+            Loading doctor details...
+          </p>
+        </div>
       </div>
     );
   }
 
   if (!doctor) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-red-500">
-        Doctor not found
+      <div className="min-h-screen bg-[#f4fbff] flex items-center justify-center">
+        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 text-center">
+          <p className="text-red-500 font-black text-xl">
+            Doctor not found
+          </p>
+        </div>
       </div>
     );
   }
@@ -60,67 +74,112 @@ export default function DoctorDetails() {
     doctor.profileImage ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(
       doctor.doctorName || "Doctor"
-    )}&background=0f172a&color=fff&bold=true`;
+    )}&background=0891b2&color=fff&bold=true`;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-slate-50 via-blue-50/40 to-white py-10">
-      <div className="absolute top-0 left-0 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl" />
-      <div className="absolute top-40 right-0 w-96 h-96 bg-cyan-300/20 rounded-full blur-3xl" />
+    <div className="min-h-screen bg-[#f4fbff]">
+      <div className="max-w-[1450px] mx-auto px-6 py-8">
+        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
+          <div className="grid xl:grid-cols-[1fr_330px] gap-8">
+            <div className="flex flex-col lg:flex-row gap-6">
+              <div className="relative shrink-0">
+                <img
+                  src={doctorImage}
+                  alt={doctor.doctorName}
+                  className="w-36 h-36 rounded-[2rem] object-cover border border-slate-100 shadow-sm"
+                />
 
-      <div className="relative max-w-6xl mx-auto px-6">
-        <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-900 p-8 md:p-10 text-white shadow-2xl">
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl" />
-
-          <div className="relative flex flex-col lg:flex-row lg:items-center gap-8">
-            <img
-              src={doctorImage}
-              alt={doctor.doctorName}
-              className="w-36 h-36 rounded-[2rem] object-cover border-4 border-white/20 shadow-2xl"
-            />
-
-            <div className="flex-1">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur mb-4">
-                <BadgeCheck size={18} className="text-emerald-300" />
-                <span className="text-sm font-semibold">
-                  Verified Specialist
-                </span>
+                <div className="absolute -bottom-3 -right-3 w-11 h-11 rounded-full bg-emerald-500 flex items-center justify-center border-4 border-white">
+                  <BadgeCheck size={20} className="text-white" />
+                </div>
               </div>
 
-              <h1 className="text-4xl md:text-5xl font-black">
-                {doctor.doctorName}
-              </h1>
+              <div className="min-w-0">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 font-black text-sm mb-4">
+                  <ShieldCheck size={17} />
+                  VERIFIED SPECIALIST
+                </div>
 
-              <p className="text-cyan-200 text-xl font-semibold mt-2">
-                {doctor.specialization || "Specialist"}
-              </p>
+                <h1 className="text-4xl md:text-5xl font-black text-slate-950">
+                  {doctor.doctorName}
+                </h1>
 
-              <div className="flex flex-wrap gap-3 mt-5">
-                <Badge icon={Star} text="4.8 Rating" />
-                <Badge icon={BriefcaseMedical} text={`${doctor.experience || 0}+ Years`} />
-                <Badge icon={BadgeIndianRupee} text={`₹${doctor.consultationFee || 0}`} />
+                <p className="text-cyan-700 text-xl font-black mt-2">
+                  {doctor.specialization || "Specialist"}
+                </p>
+
+                <div className="flex flex-wrap gap-3 mt-5">
+                  <Badge icon={Star} text="4.8 Rating" />
+                  <Badge
+                    icon={BriefcaseMedical}
+                    text={`${doctor.experience || 0}+ Years`}
+                  />
+                  <Badge icon={Video} text="Video Consult" />
+                  <Badge icon={Clock} text="Available Today" />
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-3 mt-6">
+                  <InfoLine
+                    icon={Building2}
+                    text={doctor.hospital?.hospitalName || "Hospital Not Available"}
+                  />
+
+                  <InfoLine
+                    icon={MapPin}
+                    text={
+                      doctor.city || doctor.hospital?.city || "Location Available"
+                    }
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="bg-white/10 border border-white/20 rounded-[2rem] p-5 min-w-[240px]">
-              <p className="text-blue-100 text-sm mb-2">
+            <div className="bg-slate-50 rounded-[2rem] border border-slate-100 p-6">
+              <p className="text-sm text-slate-500 font-semibold">
                 Consultation Fee
               </p>
 
-              <p className="text-4xl font-black">
-                ₹{doctor.consultationFee || 0}
+              <div className="flex items-center text-5xl font-black text-slate-950 mt-2">
+                <IndianRupee size={34} />
+                {doctor.consultationFee || 0}
+              </div>
+
+              <p className="text-emerald-700 font-black mt-4 flex items-center gap-2">
+                <CalendarCheck size={18} />
+                Instant appointment booking
               </p>
 
-              <p className="text-blue-100 text-sm mt-2">
-                Pay securely and book your slot.
-              </p>
+              <div className="grid gap-3 mt-6">
+                {slots.length > 0 ? (
+                  <Link to={`/book/${doctor.id}/${slots[0].id}`}>
+                    <button className="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black hover:bg-cyan-700 transition flex items-center justify-center gap-2">
+                      Book Appointment
+                      <ArrowRight size={18} />
+                    </button>
+                  </Link>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full bg-slate-300 text-white py-4 rounded-2xl font-black cursor-not-allowed"
+                  >
+                    No Slots Available
+                  </button>
+                )}
+
+                <Link to="/doctors">
+                  <button className="w-full border border-cyan-600 text-cyan-700 py-4 rounded-2xl font-black hover:bg-cyan-50 transition">
+                    View Other Doctors
+                  </button>
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="grid lg:grid-cols-3 gap-6 mt-8">
-          <div className="lg:col-span-2 space-y-6">
-            <section className="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-xl border border-white p-6 md:p-8">
-              <h2 className="text-2xl font-black text-slate-900 mb-6">
+        <div className="grid xl:grid-cols-[1fr_380px] gap-8">
+          <main className="space-y-8">
+            <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
+              <h2 className="text-2xl font-black text-slate-950 mb-6">
                 Professional Details
               </h2>
 
@@ -144,73 +203,84 @@ export default function DoctorDetails() {
                 />
 
                 <InfoCard
-                  icon={BadgeIndianRupee}
+                  icon={IndianRupee}
                   label="Consultation Fee"
                   value={`₹${doctor.consultationFee || 0}`}
                 />
 
-                <InfoCard
-                  icon={Phone}
-                  label="Mobile"
-                  value={doctor.mobile}
-                />
+                <InfoCard icon={Phone} label="Mobile" value={doctor.mobile} />
 
-                <InfoCard
-                  icon={Mail}
-                  label="Email"
-                  value={doctor.email}
-                />
+                <InfoCard icon={Mail} label="Email" value={doctor.email} />
               </div>
             </section>
 
-            <section className="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-xl border border-white p-6 md:p-8">
-              <h2 className="text-2xl font-black text-slate-900 mb-6">
-                Available Slots
-              </h2>
+            <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
+              <div className="flex items-center justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-2xl font-black text-slate-950">
+                    Available Slots
+                  </h2>
+
+                  <p className="text-slate-500 mt-1">
+                    Choose your preferred appointment time.
+                  </p>
+                </div>
+
+                <span className="hidden sm:inline-flex px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm">
+                  {slots.length} Slots
+                </span>
+              </div>
 
               {slots.length === 0 ? (
-                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-6 text-slate-500">
-                  No available slots right now.
+                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-8 text-center">
+                  <CalendarCheck className="mx-auto text-slate-300 mb-4" size={42} />
+
+                  <h3 className="text-xl font-black text-slate-950">
+                    No available slots
+                  </h3>
+
+                  <p className="text-slate-500 mt-2">
+                    Please check again later or choose another doctor.
+                  </p>
                 </div>
               ) : (
                 <div className="grid md:grid-cols-2 gap-4">
-                  {slots.slice(0, 6).map((slot) => (
+                  {slots.map((slot) => (
                     <Link
                       key={slot.id}
                       to={`/book/${doctor.id}/${slot.id}`}
-                      className="group rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:border-blue-500 hover:bg-blue-50 transition"
+                      className="group rounded-2xl border border-slate-100 bg-slate-50 p-5 hover:border-cyan-200 hover:bg-cyan-50 transition"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="font-black text-slate-900">
+                          <p className="font-black text-slate-950">
                             {slot.date}
                           </p>
 
-                          <p className="text-sm text-slate-500">
+                          <p className="text-sm text-slate-500 mt-1">
                             {slot.startTime} - {slot.endTime}
                           </p>
                         </div>
 
-                        <ArrowRight
-                          size={20}
-                          className="text-blue-600 group-hover:translate-x-1 transition"
-                        />
+                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center border border-slate-100 group-hover:translate-x-1 transition">
+                          <ArrowRight size={19} className="text-cyan-600" />
+                        </div>
                       </div>
                     </Link>
                   ))}
                 </div>
               )}
             </section>
-          </div>
+          </main>
 
           <aside className="space-y-6">
-            <section className="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-xl border border-white p-6">
-              <h2 className="text-xl font-black text-slate-900 mb-5">
+            <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
+              <h2 className="text-xl font-black text-slate-950 mb-5">
                 Hospital
               </h2>
 
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center overflow-hidden">
+                <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center overflow-hidden border border-cyan-100">
                   {doctor.hospital?.profileImage ? (
                     <img
                       src={doctor.hospital.profileImage}
@@ -218,12 +288,12 @@ export default function DoctorDetails() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <Building2 size={30} className="text-blue-600" />
+                    <Building2 size={30} className="text-cyan-600" />
                   )}
                 </div>
 
                 <div>
-                  <p className="font-black text-slate-900">
+                  <p className="font-black text-slate-950">
                     {doctor.hospital?.hospitalName || "Hospital"}
                   </p>
 
@@ -234,34 +304,34 @@ export default function DoctorDetails() {
               </div>
             </section>
 
-            <section className="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-xl border border-white p-6">
-              <h2 className="text-xl font-black text-slate-900 mb-5">
+            <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
+              <h2 className="text-xl font-black text-slate-950 mb-5">
                 Location
               </h2>
 
-              <div className="flex items-center gap-3 text-slate-600">
-                <MapPin size={22} className="text-emerald-600" />
+              <div className="flex items-center gap-3 text-slate-600 bg-slate-50 rounded-2xl border border-slate-100 p-4">
+                <MapPin size={22} className="text-cyan-600" />
 
-                <span>
+                <span className="font-semibold">
                   {doctor.city || "-"}, {doctor.state || "-"}
                 </span>
               </div>
             </section>
 
-            <section className="bg-gradient-to-r from-blue-600 to-cyan-500 rounded-[2rem] shadow-xl p-6 text-white">
+            <section className="bg-cyan-600 rounded-[2rem] shadow-sm p-6 text-white">
               <CalendarCheck size={34} className="mb-4" />
 
               <h2 className="text-2xl font-black mb-2">
                 Book Appointment
               </h2>
 
-              <p className="text-blue-100 mb-5">
+              <p className="text-cyan-100 mb-5">
                 Select an available slot and confirm your consultation.
               </p>
 
               {slots.length > 0 ? (
                 <Link to={`/book/${doctor.id}/${slots[0].id}`}>
-                  <button className="w-full bg-white text-blue-700 py-4 rounded-2xl font-black hover:scale-[1.02] transition">
+                  <button className="w-full bg-white text-cyan-700 py-4 rounded-2xl font-black hover:bg-cyan-50 transition">
                     Book Now
                   </button>
                 </Link>
@@ -283,26 +353,35 @@ export default function DoctorDetails() {
 
 function Badge({ icon: Icon, text }) {
   return (
-    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-sm font-bold">
+    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-100 text-sm font-black">
       <Icon size={16} />
       {text}
     </span>
   );
 }
 
+function InfoLine({ icon: Icon, text }) {
+  return (
+    <div className="flex items-center gap-3 text-slate-600 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 min-w-0">
+      <Icon size={18} className="text-cyan-600 shrink-0" />
+      <span className="truncate font-semibold">{text || "-"}</span>
+    </div>
+  );
+}
+
 function InfoCard({ icon: Icon, label, value }) {
   return (
     <div className="flex items-center gap-4 rounded-2xl bg-slate-50 border border-slate-100 p-4">
-      <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
-        <Icon size={22} className="text-blue-600" />
+      <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center">
+        <Icon size={22} className="text-cyan-600" />
       </div>
 
       <div>
-        <p className="text-xs font-bold uppercase text-slate-400">
+        <p className="text-xs font-black uppercase text-slate-400">
           {label}
         </p>
 
-        <p className="font-black text-slate-900">
+        <p className="font-black text-slate-950">
           {value || "-"}
         </p>
       </div>

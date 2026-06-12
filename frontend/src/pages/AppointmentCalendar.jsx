@@ -15,6 +15,12 @@ import {
   XCircle,
   CalendarCheck,
   RefreshCw,
+  Filter,
+  ShieldCheck,
+  Activity,
+  Phone,
+  Building2,
+  Loader2,
 } from "lucide-react";
 import api from "../api/axios";
 
@@ -49,9 +55,7 @@ export default function AppointmentCalendar() {
       let res;
 
       if (doctorToken) {
-        const doctor = JSON.parse(
-          localStorage.getItem("doctorUser") || "null"
-        );
+        const doctor = JSON.parse(localStorage.getItem("doctorUser") || "null");
         res = await api.get(`/appointment/doctor/${doctor.id}`);
       } else if (hospitalToken) {
         res = await api.get("/appointment/hospital/my");
@@ -72,21 +76,26 @@ export default function AppointmentCalendar() {
     const matchesStatus =
       statusFilter === "ALL" || item.status === statusFilter;
 
-    const text = `${item.patientName} ${item.patientPhone} ${item.doctor?.doctorName} ${item.doctor?.specialization}`
-      .toLowerCase();
+    const text = `${item.patientName || ""} ${item.patientPhone || ""} ${
+      item.doctor?.doctorName || ""
+    } ${item.doctor?.specialization || ""} ${
+      item.doctor?.hospital?.hospitalName || ""
+    }`.toLowerCase();
 
     const matchesSearch = text.includes(search.toLowerCase());
 
     return matchesStatus && matchesSearch;
   });
 
-  const totalBooked = appointments.filter((a) => a.status === "BOOKED").length;
-  const totalCompleted = appointments.filter(
-    (a) => a.status === "COMPLETED"
-  ).length;
-  const totalCancelled = appointments.filter(
-    (a) => a.status === "CANCELLED"
-  ).length;
+  const stats = useMemo(
+    () => ({
+      total: appointments.length,
+      booked: appointments.filter((a) => a.status === "BOOKED").length,
+      completed: appointments.filter((a) => a.status === "COMPLETED").length,
+      cancelled: appointments.filter((a) => a.status === "CANCELLED").length,
+    }),
+    [appointments]
+  );
 
   const events = useMemo(() => {
     return filteredAppointments
@@ -111,9 +120,9 @@ export default function AppointmentCalendar() {
   const eventStyleGetter = (event) => {
     const status = event.resource?.status;
 
-    let backgroundColor = "#2563eb";
+    let backgroundColor = "#0891b2";
 
-    if (status === "COMPLETED") backgroundColor = "#16a34a";
+    if (status === "COMPLETED") backgroundColor = "#059669";
     if (status === "CANCELLED") backgroundColor = "#dc2626";
 
     return {
@@ -131,32 +140,33 @@ export default function AppointmentCalendar() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">
-        Loading appointment calendar...
+      <div className="min-h-screen bg-[#f4fbff] flex items-center justify-center">
+        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 text-center">
+          <Loader2 className="mx-auto text-cyan-600 animate-spin mb-4" size={38} />
+          <p className="text-slate-500 font-semibold">
+            Loading appointment calendar...
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-blue-50/40 to-white py-8 px-6">
-      <div className="max-w-[1500px] mx-auto">
-        <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-900 p-8 md:p-10 text-white shadow-2xl mb-8">
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl" />
-
-          <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+    <div className="min-h-screen bg-[#f4fbff]">
+      <div className="max-w-[1500px] mx-auto px-6 py-8">
+        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
             <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 mb-5">
-                <CalendarDays size={18} className="text-cyan-300" />
-                <span className="text-sm font-semibold">
-                  Advanced Scheduling Center
-                </span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
+                <CalendarDays size={17} />
+                ADVANCED SCHEDULING CENTER
               </div>
 
-              <h1 className="text-4xl md:text-5xl font-black">
+              <h1 className="text-4xl md:text-5xl font-black text-slate-950">
                 Appointment Calendar
               </h1>
 
-              <p className="text-blue-100 mt-3 max-w-2xl">
+              <p className="text-slate-500 mt-3 max-w-2xl text-lg leading-relaxed">
                 Month, week, day and agenda views with status colors, video
                 consultation access and appointment insights.
               </p>
@@ -164,47 +174,38 @@ export default function AppointmentCalendar() {
 
             <button
               onClick={fetchAppointments}
-              className="flex items-center gap-2 bg-white/10 border border-white/20 px-5 py-3 rounded-2xl font-bold hover:bg-white/20"
+              className="inline-flex items-center justify-center gap-2 bg-cyan-600 text-white px-6 py-4 rounded-2xl font-black hover:bg-cyan-700 transition"
             >
               <RefreshCw size={18} />
               Refresh
             </button>
           </div>
-        </div>
+        </section>
 
-        <div className="grid md:grid-cols-4 gap-5 mb-8">
-          <StatCard
-            icon={CalendarCheck}
-            label="Total"
-            value={appointments.length}
-            color="blue"
-          />
-          <StatCard
-            icon={Clock}
-            label="Booked"
-            value={totalBooked}
-            color="blue"
-          />
+        <section className="grid md:grid-cols-4 gap-5 mb-8">
+          <StatCard icon={CalendarCheck} label="Total" value={stats.total} />
+          <StatCard icon={Clock} label="Booked" value={stats.booked} />
           <StatCard
             icon={CheckCircle2}
             label="Completed"
-            value={totalCompleted}
-            color="green"
+            value={stats.completed}
+            tone="green"
           />
           <StatCard
             icon={XCircle}
             label="Cancelled"
-            value={totalCancelled}
-            color="red"
+            value={stats.cancelled}
+            tone="red"
           />
-        </div>
+        </section>
 
-        <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
+        <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-6 border-b border-slate-100 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-black text-slate-900">
+              <h2 className="text-2xl font-black text-slate-950">
                 Calendar View
               </h2>
+
               <p className="text-slate-500 text-sm">
                 Showing {events.length} appointment events
               </p>
@@ -212,7 +213,8 @@ export default function AppointmentCalendar() {
 
             <div className="flex flex-col md:flex-row gap-3">
               <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 md:w-80">
-                <Search size={18} className="text-blue-600" />
+                <Search size={18} className="text-cyan-600" />
+
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -221,16 +223,20 @@ export default function AppointmentCalendar() {
                 />
               </div>
 
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 font-bold outline-none"
-              >
-                <option value="ALL">All Status</option>
-                <option value="BOOKED">Booked</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
+              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
+                <Filter size={18} className="text-cyan-600" />
+
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="bg-transparent font-bold outline-none text-slate-800"
+                >
+                  <option value="ALL">All Status</option>
+                  <option value="BOOKED">Booked</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -251,7 +257,7 @@ export default function AppointmentCalendar() {
               />
             </div>
           </div>
-        </div>
+        </section>
       </div>
 
       {selectedAppointment && (
@@ -266,8 +272,8 @@ export default function AppointmentCalendar() {
 
 function AppointmentModal({ appointment, onClose }) {
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full overflow-hidden">
+    <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+      <div className="bg-white rounded-[2rem] shadow-2xl max-w-xl w-full overflow-hidden border border-slate-100">
         <div className="bg-slate-950 text-white p-6 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-black">Appointment Details</h2>
@@ -276,7 +282,7 @@ function AppointmentModal({ appointment, onClose }) {
 
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center"
+            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center"
           >
             <X size={20} />
           </button>
@@ -296,33 +302,37 @@ function AppointmentModal({ appointment, onClose }) {
           />
 
           <Detail
+            icon={Phone}
+            label="Patient Phone"
+            value={appointment.patientPhone}
+          />
+
+          <Detail
+            icon={Building2}
+            label="Hospital"
+            value={appointment.doctor?.hospital?.hospitalName || "Hospital"}
+          />
+
+          <Detail
             icon={Clock}
             label="Schedule"
-            value={`${appointment.slot?.date} | ${appointment.slot?.startTime} - ${appointment.slot?.endTime}`}
+            value={`${appointment.slot?.date || "-"} | ${
+              appointment.slot?.startTime || ""
+            } - ${appointment.slot?.endTime || ""}`}
           />
 
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase mb-2">
+            <p className="text-xs font-black text-slate-400 uppercase mb-2">
               Status
             </p>
 
-            <span
-              className={`inline-flex px-4 py-2 rounded-full text-sm font-black ${
-                appointment.status === "COMPLETED"
-                  ? "bg-green-100 text-green-700"
-                  : appointment.status === "CANCELLED"
-                  ? "bg-red-100 text-red-700"
-                  : "bg-blue-100 text-blue-700"
-              }`}
-            >
-              {appointment.status}
-            </span>
+            <StatusBadge status={appointment.status} />
           </div>
 
           {appointment.videoRoomId && appointment.status === "BOOKED" && (
             <a
               href={`/video-call/${appointment.id}`}
-              className="flex items-center justify-center gap-2 bg-blue-600 text-white py-4 rounded-2xl font-black hover:bg-blue-700"
+              className="flex items-center justify-center gap-2 bg-cyan-600 text-white py-4 rounded-2xl font-black hover:bg-cyan-700 transition"
             >
               <Video size={20} />
               Join Video Consultation
@@ -336,38 +346,61 @@ function AppointmentModal({ appointment, onClose }) {
 
 function Detail({ icon: Icon, label, value }) {
   return (
-    <div className="bg-slate-50 rounded-2xl p-4 flex gap-3">
-      <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-        <Icon size={20} className="text-blue-600" />
+    <div className="bg-slate-50 rounded-2xl p-4 flex gap-3 border border-slate-100">
+      <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center shrink-0">
+        <Icon size={20} className="text-cyan-600" />
       </div>
 
       <div>
-        <p className="text-xs font-bold text-slate-400 uppercase">
+        <p className="text-xs font-black text-slate-400 uppercase">
           {label}
         </p>
-        <p className="font-black text-slate-900">{value || "-"}</p>
+
+        <p className="font-black text-slate-950">
+          {value || "-"}
+        </p>
       </div>
     </div>
   );
 }
 
-function StatCard({ icon: Icon, label, value, color }) {
-  const colorClass =
-    color === "green"
-      ? "from-green-600 to-emerald-500"
-      : color === "red"
-      ? "from-red-600 to-rose-500"
-      : "from-blue-600 to-cyan-500";
+function StatusBadge({ status }) {
+  const style =
+    status === "COMPLETED"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+      : status === "CANCELLED"
+      ? "bg-red-50 text-red-700 border-red-100"
+      : "bg-cyan-50 text-cyan-700 border-cyan-100";
 
   return (
-    <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-white">
+    <span
+      className={`inline-flex px-4 py-2 rounded-full text-sm font-black border ${style}`}
+    >
+      {status}
+    </span>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, tone = "cyan" }) {
+  const styles = {
+    cyan: "bg-cyan-50 text-cyan-600",
+    green: "bg-emerald-50 text-emerald-600",
+    red: "bg-red-50 text-red-600",
+  };
+
+  return (
+    <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100">
       <div
-        className={`w-14 h-14 rounded-2xl bg-gradient-to-r ${colorClass} flex items-center justify-center mb-5 shadow-lg`}
+        className={`w-14 h-14 rounded-2xl ${
+          styles[tone] || styles.cyan
+        } flex items-center justify-center mb-5`}
       >
-        <Icon className="text-white" size={26} />
+        <Icon size={26} />
       </div>
 
-      <p className="text-slate-500 text-sm">{label}</p>
+      <p className="text-slate-500 text-sm font-semibold">
+        {label}
+      </p>
 
       <h2 className="text-4xl font-black text-slate-950 mt-1">
         {value}

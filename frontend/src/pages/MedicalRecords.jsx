@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FileText,
   Upload,
@@ -9,12 +9,19 @@ import {
   Loader2,
   Image,
   FileUp,
+  ShieldCheck,
+  CalendarCheck,
+  ClipboardList,
+  X,
+  Filter,
+  Eye,
 } from "lucide-react";
 import api from "../api/axios";
 
 export default function MedicalRecords() {
   const [records, setRecords] = useState([]);
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("ALL");
 
   const [form, setForm] = useState({
     title: "",
@@ -52,32 +59,23 @@ export default function MedicalRecords() {
     try {
       setUploading(true);
 
-      const res = await api.post(
-        "/medical-record/upload",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const res = await api.post("/medical-record/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       setForm((prev) => ({
         ...prev,
         fileUrl: res.data.fileUrl,
         fileName: res.data.fileName,
-        title:
-          prev.title ||
-          res.data.fileName?.replace(/\.[^/.]+$/, ""),
+        title: prev.title || res.data.fileName?.replace(/\.[^/.]+$/, ""),
       }));
 
       alert("File uploaded successfully");
     } catch (error) {
       console.error("Upload error:", error);
-      alert(
-        error.response?.data?.message ||
-          "File upload failed"
-      );
+      alert(error.response?.data?.message || "File upload failed");
     } finally {
       setUploading(false);
     }
@@ -102,14 +100,10 @@ export default function MedicalRecords() {
       });
 
       setSelectedFile(null);
-
       fetchRecords();
     } catch (error) {
       console.error(error);
-      alert(
-        error.response?.data?.message ||
-          "Failed to save record"
-      );
+      alert(error.response?.data?.message || "Failed to save record");
     } finally {
       setSaving(false);
     }
@@ -126,55 +120,105 @@ export default function MedicalRecords() {
     }
   };
 
-  const filtered = records.filter((item) =>
-    `${item.title} ${item.recordType} ${item.fileName || ""}`
+  const filtered = records.filter((item) => {
+    const matchesSearch = `${item.title} ${item.recordType} ${
+      item.fileName || ""
+    }`
       .toLowerCase()
-      .includes(search.toLowerCase())
-  );
+      .includes(search.toLowerCase());
+
+    const matchesType =
+      typeFilter === "ALL" || item.recordType === typeFilter;
+
+    return matchesSearch && matchesType;
+  });
+
+  const stats = useMemo(() => {
+    return {
+      total: records.length,
+      labReports: records.filter((r) => r.recordType === "LAB_REPORT").length,
+      prescriptions: records.filter((r) => r.recordType === "PRESCRIPTION")
+        .length,
+      scans: records.filter((r) =>
+        ["XRAY", "MRI"].includes(r.recordType)
+      ).length,
+    };
+  }, [records]);
 
   const isImage = (url = "") =>
     url.match(/\.(jpg|jpeg|png|webp|gif)$/i);
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-blue-50/40 to-white p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-900 text-white rounded-[2rem] p-8 mb-8 shadow-2xl">
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl" />
+  const clearUpload = () => {
+    setSelectedFile(null);
+    setForm({
+      title: "",
+      recordType: "LAB_REPORT",
+      fileUrl: "",
+      fileName: "",
+    });
+  };
 
-          <div className="relative">
-            <div className="w-16 h-16 rounded-3xl bg-white/10 border border-white/20 flex items-center justify-center mb-5">
-              <FileText size={34} className="text-cyan-300" />
+  return (
+    <div className="min-h-screen bg-[#f4fbff]">
+      <div className="max-w-[1450px] mx-auto px-6 py-8">
+        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
+            <div>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
+                <FileText size={17} />
+                MEDICAL RECORDS
+              </div>
+
+              <h1 className="text-4xl md:text-5xl font-black text-slate-950">
+                Your Health Documents
+              </h1>
+
+              <p className="text-slate-500 mt-3 max-w-2xl text-lg leading-relaxed">
+                Upload and manage lab reports, prescriptions, scans and
+                discharge summaries securely in one place.
+              </p>
             </div>
 
-            <h1 className="text-4xl font-black">
-              Medical Records
-            </h1>
-
-            <p className="text-blue-100 mt-2 max-w-2xl">
-              Upload lab reports, scans, prescriptions and discharge summaries
-              securely to your medical history.
-            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <MiniStat title="Total" value={stats.total} icon={ClipboardList} />
+              <MiniStat title="Reports" value={stats.labReports} icon={FileText} />
+              <MiniStat
+                title="Rx"
+                value={stats.prescriptions}
+                icon={ShieldCheck}
+              />
+              <MiniStat title="Scans" value={stats.scans} icon={Image} />
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-slate-100 mb-8">
-          <div className="flex items-center gap-2 mb-5">
-            <Plus className="text-blue-600" />
-            <h2 className="font-black text-xl text-slate-900">
-              Upload New Record
-            </h2>
-          </div>
+        <section className="grid xl:grid-cols-[430px_1fr] gap-8 mb-8">
+          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 h-fit xl:sticky xl:top-24">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center">
+                <Plus className="text-cyan-600" size={24} />
+              </div>
 
-          <div className="grid lg:grid-cols-[1fr_1fr] gap-6">
-            <div>
+              <div>
+                <h2 className="font-black text-2xl text-slate-950">
+                  Upload Record
+                </h2>
+
+                <p className="text-slate-500 text-sm">
+                  Add a new health document
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-5">
               <label className="block">
-                <p className="text-sm font-bold text-slate-600 mb-2">
+                <p className="text-sm font-black text-slate-700 mb-2">
                   Select File
                 </p>
 
-                <div className="border-2 border-dashed border-blue-200 bg-blue-50/40 rounded-[2rem] p-8 text-center hover:bg-blue-50 transition">
+                <div className="border-2 border-dashed border-cyan-200 bg-cyan-50/50 rounded-[2rem] p-8 text-center hover:bg-cyan-50 transition">
                   <FileUp
-                    className="mx-auto text-blue-600 mb-4"
+                    className="mx-auto text-cyan-600 mb-4"
                     size={42}
                   />
 
@@ -190,7 +234,7 @@ export default function MedicalRecords() {
 
                   <label
                     htmlFor="medical-file-upload"
-                    className="inline-flex cursor-pointer bg-blue-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-blue-700"
+                    className="inline-flex cursor-pointer bg-cyan-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-cyan-700"
                   >
                     Browse File
                   </label>
@@ -200,9 +244,11 @@ export default function MedicalRecords() {
                   </p>
 
                   {selectedFile && (
-                    <p className="mt-4 font-bold text-slate-800 break-all">
-                      {selectedFile.name}
-                    </p>
+                    <div className="mt-4 bg-white rounded-2xl border border-cyan-100 p-3">
+                      <p className="font-black text-slate-800 break-all">
+                        {selectedFile.name}
+                      </p>
+                    </div>
                   )}
                 </div>
               </label>
@@ -210,7 +256,7 @@ export default function MedicalRecords() {
               <button
                 onClick={uploadFile}
                 disabled={uploading || !selectedFile}
-                className="mt-4 w-full flex items-center justify-center gap-2 bg-slate-950 text-white px-5 py-4 rounded-2xl font-black hover:bg-blue-700 disabled:bg-slate-400"
+                className="w-full flex items-center justify-center gap-2 bg-slate-950 text-white px-5 py-4 rounded-2xl font-black hover:bg-cyan-700 disabled:bg-slate-400"
               >
                 {uploading ? (
                   <Loader2 className="animate-spin" size={19} />
@@ -219,11 +265,9 @@ export default function MedicalRecords() {
                 )}
                 {uploading ? "Uploading..." : "Upload File"}
               </button>
-            </div>
 
-            <div className="space-y-4">
               <div>
-                <p className="text-sm font-bold text-slate-600 mb-2">
+                <p className="text-sm font-black text-slate-700 mb-2">
                   Record Title
                 </p>
 
@@ -236,12 +280,12 @@ export default function MedicalRecords() {
                       title: e.target.value,
                     })
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-cyan-500"
                 />
               </div>
 
               <div>
-                <p className="text-sm font-bold text-slate-600 mb-2">
+                <p className="text-sm font-black text-slate-700 mb-2">
                   Record Type
                 </p>
 
@@ -253,7 +297,7 @@ export default function MedicalRecords() {
                       recordType: e.target.value,
                     })
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-cyan-500"
                 >
                   <option value="LAB_REPORT">Lab Report</option>
                   <option value="PRESCRIPTION">Prescription</option>
@@ -267,20 +311,28 @@ export default function MedicalRecords() {
 
               {form.fileUrl && (
                 <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
-                  <p className="font-black text-emerald-700">
-                    File uploaded successfully
-                  </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-black text-emerald-700">
+                        File uploaded successfully
+                      </p>
 
-                  <p className="text-sm text-emerald-700 break-all mt-1">
-                    {form.fileName}
-                  </p>
+                      <p className="text-sm text-emerald-700 break-all mt-1">
+                        {form.fileName}
+                      </p>
+                    </div>
+
+                    <button onClick={clearUpload}>
+                      <X className="text-emerald-700" size={18} />
+                    </button>
+                  </div>
                 </div>
               )}
 
               <button
                 onClick={createRecord}
                 disabled={saving || !form.fileUrl}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-5 py-4 rounded-2xl font-black hover:scale-[1.01] transition disabled:bg-slate-400 disabled:scale-100"
+                className="w-full flex items-center justify-center gap-2 bg-cyan-600 text-white px-5 py-4 rounded-2xl font-black hover:bg-cyan-700 transition disabled:bg-slate-400"
               >
                 {saving ? (
                   <Loader2 className="animate-spin" size={19} />
@@ -291,103 +343,165 @@ export default function MedicalRecords() {
               </button>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-slate-100 mb-6">
-          <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-            <Search size={18} className="text-blue-600" />
+          <div>
+            <div className="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100 mb-6">
+              <div className="grid lg:grid-cols-[1fr_260px] gap-4">
+                <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
+                  <Search size={18} className="text-cyan-600" />
 
-            <input
-              placeholder="Search records..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-transparent outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-5">
-          {filtered.map((record) => (
-            <div
-              key={record.id}
-              className="bg-white rounded-[2rem] p-5 shadow-xl border border-slate-100"
-            >
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center overflow-hidden">
-                    {isImage(record.fileUrl) ? (
-                      <img
-                        src={record.fileUrl}
-                        alt={record.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Image className="text-blue-600" size={30} />
-                    )}
-                  </div>
-
-                  <div>
-                    <h3 className="font-black text-lg text-slate-900">
-                      {record.title}
-                    </h3>
-
-                    <p className="text-slate-500">
-                      {record.recordType}
-                    </p>
-
-                    <p className="text-sm text-slate-400 mt-1">
-                      {new Date(record.uploadedAt).toLocaleString()}
-                    </p>
-
-                    {record.fileName && (
-                      <p className="text-xs text-slate-400 mt-1 break-all">
-                        {record.fileName}
-                      </p>
-                    )}
-                  </div>
+                  <input
+                    placeholder="Search records..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full bg-transparent outline-none"
+                  />
                 </div>
 
-                <div className="flex gap-3">
-                  <a
-                    href={record.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="bg-green-600 text-white px-4 py-3 rounded-2xl font-bold flex items-center gap-2"
-                  >
-                    <Download size={16} />
-                    Open
-                  </a>
+                <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
+                  <Filter size={18} className="text-cyan-600" />
 
-                  <button
-                    onClick={() => deleteRecord(record.id)}
-                    className="bg-red-600 text-white px-4 py-3 rounded-2xl font-bold flex items-center gap-2"
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="w-full bg-transparent outline-none font-semibold text-slate-800"
                   >
-                    <Trash2 size={16} />
-                    Delete
-                  </button>
+                    <option value="ALL">All Records</option>
+                    <option value="LAB_REPORT">Lab Reports</option>
+                    <option value="PRESCRIPTION">Prescriptions</option>
+                    <option value="XRAY">X-Ray</option>
+                    <option value="MRI">MRI</option>
+                    <option value="DISCHARGE_SUMMARY">
+                      Discharge Summary
+                    </option>
+                  </select>
                 </div>
               </div>
             </div>
-          ))}
 
-          {filtered.length === 0 && (
-            <div className="bg-white rounded-[2rem] p-10 text-center shadow-xl border border-slate-100">
-              <FileText
-                className="mx-auto text-slate-300 mb-4"
-                size={44}
-              />
+            <div className="grid gap-5">
+              {filtered.map((record) => (
+                <RecordCard
+                  key={record.id}
+                  record={record}
+                  isImage={isImage}
+                  deleteRecord={deleteRecord}
+                />
+              ))}
 
-              <h3 className="font-black text-xl text-slate-900">
-                No Records Found
-              </h3>
+              {filtered.length === 0 && (
+                <div className="bg-white rounded-[2rem] p-10 text-center shadow-sm border border-slate-100">
+                  <FileText
+                    className="mx-auto text-slate-300 mb-4"
+                    size={44}
+                  />
 
-              <p className="text-slate-500 mt-2">
-                Upload your first medical document.
-              </p>
+                  <h3 className="font-black text-xl text-slate-950">
+                    No Records Found
+                  </h3>
+
+                  <p className="text-slate-500 mt-2">
+                    Upload your first medical document.
+                  </p>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function RecordCard({ record, isImage, deleteRecord }) {
+  const typeLabel = record.recordType?.replaceAll("_", " ") || "Record";
+
+  return (
+    <div className="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100 hover:shadow-xl transition">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-20 h-20 rounded-3xl bg-cyan-50 flex items-center justify-center overflow-hidden border border-cyan-100 shrink-0">
+            {isImage(record.fileUrl) ? (
+              <img
+                src={record.fileUrl}
+                alt={record.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <FileText className="text-cyan-600" size={34} />
+            )}
+          </div>
+
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-50 text-cyan-700 font-black text-xs mb-2">
+              <ShieldCheck size={14} />
+              {typeLabel}
+            </div>
+
+            <h3 className="font-black text-xl text-slate-950 truncate">
+              {record.title}
+            </h3>
+
+            <div className="flex flex-wrap gap-3 mt-2 text-sm text-slate-500">
+              <span className="inline-flex items-center gap-1">
+                <CalendarCheck size={15} />
+                {record.uploadedAt
+                  ? new Date(record.uploadedAt).toLocaleString()
+                  : "Uploaded"}
+              </span>
+
+              {record.fileName && (
+                <span className="truncate max-w-[280px]">
+                  {record.fileName}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <a
+            href={record.fileUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="bg-cyan-600 text-white px-4 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-cyan-700"
+          >
+            <Eye size={16} />
+            Open
+          </a>
+
+          <a
+            href={record.fileUrl}
+            download
+            className="bg-slate-950 text-white px-4 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-cyan-700"
+          >
+            <Download size={16} />
+            Download
+          </a>
+
+          <button
+            onClick={() => deleteRecord(record.id)}
+            className="bg-red-600 text-white px-4 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-red-700"
+          >
+            <Trash2 size={16} />
+            Delete
+          </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function MiniStat({ title, value, icon: Icon }) {
+  return (
+    <div className="min-w-[90px] bg-slate-50 rounded-2xl border border-slate-100 p-3">
+      <div className="w-9 h-9 rounded-xl bg-cyan-50 flex items-center justify-center mb-2">
+        <Icon className="text-cyan-600" size={18} />
+      </div>
+
+      <p className="text-xl font-black text-slate-950">{value}</p>
+
+      <p className="text-xs text-slate-500 font-bold">{title}</p>
     </div>
   );
 }

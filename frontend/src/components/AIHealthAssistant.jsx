@@ -6,6 +6,9 @@ import {
   AlertCircle,
   Stethoscope,
   Loader2,
+  ShieldCheck,
+  Search,
+  CalendarCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
@@ -31,8 +34,7 @@ export default function AIHealthAssistant() {
       });
 
       setResult({
-        condition:
-          res.data.condition || "General Health Concern",
+        condition: res.data.condition || "General Health Concern",
         specialist:
           res.data.specialization ||
           res.data.specialist ||
@@ -104,159 +106,222 @@ export default function AIHealthAssistant() {
     }
 
     navigate(
-      `/doctors?specialization=${encodeURIComponent(
-        result.specialist
-      )}`
+      `/doctors?specialization=${encodeURIComponent(result.specialist)}`
     );
   };
 
   return (
-    <section className="relative py-24 bg-gradient-to-b from-white via-blue-50/30 to-slate-50 overflow-hidden">
-      <div className="absolute top-0 left-0 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-300/20 rounded-full blur-3xl" />
-
-      <div className="relative max-w-7xl mx-auto px-6">
-        <div className="text-center mb-14">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 border border-blue-100">
-            <Brain size={18} className="text-blue-600" />
-            <span className="font-semibold text-blue-700">
-              AI Health Assistant
-            </span>
-          </div>
-
-          <h2 className="text-4xl md:text-5xl font-black text-slate-900 mt-6">
-            Describe Your Symptoms
-          </h2>
-
-          <p className="text-slate-500 text-lg mt-4 max-w-3xl mx-auto">
-            Get instant guidance, suggested specialization and book the right
-            doctor in seconds.
-          </p>
-        </div>
-
-        <div className="bg-white rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden">
-          <div className="grid lg:grid-cols-2">
-            <div className="p-8 lg:p-10">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center">
-                  <Sparkles className="text-cyan-500" size={28} />
-                </div>
-
-                <div>
-                  <h3 className="text-2xl font-black text-slate-900">
-                    Symptom Analysis
-                  </h3>
-
-                  <p className="text-sm text-slate-500">
-                    Example: fever, headache, body pain, chest pain
-                  </p>
-                </div>
-              </div>
-
-              <textarea
-                rows="6"
-                value={symptoms}
-                onChange={(e) => setSymptoms(e.target.value)}
-                placeholder="Example: I have fever, headache and body pain for 3 days..."
-                className="w-full border border-slate-200 rounded-2xl p-5 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 resize-none text-slate-800"
-              />
-
-              <button
-                onClick={analyzeSymptoms}
-                disabled={loading}
-                className="mt-5 flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-black hover:scale-[1.02] transition disabled:bg-slate-400 disabled:scale-100"
-              >
-                {loading ? (
-                  <Loader2 className="animate-spin" size={19} />
-                ) : (
-                  <Brain size={19} />
-                )}
-                {loading ? "Analyzing..." : "Analyze Symptoms"}
-                {!loading && <ArrowRight size={18} />}
-              </button>
-
-              <p className="text-xs text-slate-400 mt-4">
-                This tool is for guidance only and is not a medical diagnosis.
-              </p>
+    <section className="py-20 bg-[#f4fbff]">
+      <div className="max-w-[1450px] mx-auto px-6">
+        <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-10 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-5">
+              <Brain size={17} />
+              AI HEALTH ASSISTANT
             </div>
 
-            <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-900 text-white p-8 lg:p-10">
-              <h3 className="text-2xl font-black mb-6">
-                AI Recommendation
-              </h3>
+            <h2 className="text-4xl md:text-5xl font-black text-slate-950 leading-tight">
+              Get smart guidance
+              <span className="block text-cyan-600">
+                for your symptoms
+              </span>
+            </h2>
 
-              {!result ? (
-                <div className="h-full min-h-[340px] flex items-center justify-center text-center text-blue-100">
-                  Enter symptoms and let MediCare guide you to the right
-                  specialist.
-                </div>
-              ) : (
-                <div className="space-y-5">
-                  <div className="bg-white/10 border border-white/10 rounded-2xl p-5">
-                    <p className="text-sm text-blue-100">
-                      Possible Condition
+            <p className="text-slate-500 text-lg mt-5 max-w-2xl leading-relaxed">
+              Describe your symptoms and MediCare helps you understand the
+              possible concern, urgency level and the right specialist to visit.
+            </p>
+
+            <div className="grid sm:grid-cols-3 gap-4 mt-8">
+              <StepCard
+                icon={Search}
+                title="Describe"
+                desc="Enter symptoms"
+              />
+
+              <StepCard
+                icon={Brain}
+                title="Analyze"
+                desc="Get guidance"
+              />
+
+              <StepCard
+                icon={CalendarCheck}
+                title="Book"
+                desc="Find doctor"
+              />
+            </div>
+
+            <p className="mt-6 text-sm text-slate-400 leading-relaxed">
+              This tool is for guidance only and is not a medical diagnosis.
+              Always consult a qualified doctor for treatment decisions.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
+            <div className="grid xl:grid-cols-2">
+              <div className="p-7 lg:p-8">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center">
+                    <Sparkles className="text-cyan-600" size={26} />
+                  </div>
+
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-950">
+                      Symptom Analysis
+                    </h3>
+
+                    <p className="text-sm text-slate-500">
+                      Example: fever, headache, body pain
                     </p>
+                  </div>
+                </div>
 
-                    <h4 className="text-2xl font-black mt-2">
-                      {result.condition}
-                    </h4>
+                <textarea
+                  rows="7"
+                  value={symptoms}
+                  onChange={(e) => setSymptoms(e.target.value)}
+                  placeholder="Example: I have fever, headache and body pain for 3 days..."
+                  className="w-full border border-slate-200 rounded-2xl p-5 bg-slate-50 outline-none focus:ring-2 focus:ring-cyan-500 resize-none text-slate-800"
+                />
 
-                    {result.advice && (
-                      <p className="text-blue-100 mt-3 leading-relaxed">
-                        {result.advice}
+                <button
+                  onClick={analyzeSymptoms}
+                  disabled={loading}
+                  className="mt-5 w-full flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-cyan-600 text-white font-black hover:bg-cyan-700 transition disabled:bg-slate-400"
+                >
+                  {loading ? (
+                    <Loader2 className="animate-spin" size={19} />
+                  ) : (
+                    <Brain size={19} />
+                  )}
+
+                  {loading ? "Analyzing..." : "Analyze Symptoms"}
+
+                  {!loading && <ArrowRight size={18} />}
+                </button>
+
+                <button
+                  onClick={() => navigate("/symptom-checker")}
+                  className="mt-3 w-full border border-cyan-600 text-cyan-700 py-4 rounded-2xl font-black hover:bg-cyan-50 transition"
+                >
+                  Open Full Symptom Checker
+                </button>
+              </div>
+
+              <div className="bg-slate-50 border-t xl:border-t-0 xl:border-l border-slate-100 p-7 lg:p-8">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center border border-slate-100">
+                    <ShieldCheck className="text-emerald-600" size={26} />
+                  </div>
+
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-950">
+                      Recommendation
+                    </h3>
+
+                    <p className="text-sm text-slate-500">
+                      Suggested care path
+                    </p>
+                  </div>
+                </div>
+
+                {!result ? (
+                  <div className="min-h-[330px] flex items-center justify-center text-center border border-dashed border-slate-200 rounded-3xl bg-white p-8">
+                    <div>
+                      <Brain
+                        size={42}
+                        className="text-cyan-600 mx-auto mb-4"
+                      />
+
+                      <p className="font-black text-slate-950">
+                        Enter symptoms to get guidance
                       </p>
-                    )}
+
+                      <p className="text-sm text-slate-500 mt-2">
+                        MediCare will suggest a specialist and next step.
+                      </p>
+                    </div>
                   </div>
+                ) : (
+                  <div className="space-y-4">
+                    <ResultCard
+                      label="Possible Condition"
+                      value={result.condition}
+                      desc={result.advice}
+                    />
 
-                  <div className="bg-white/10 border border-white/10 rounded-2xl p-5">
-                    <p className="text-sm text-blue-100">
-                      Recommended Specialist
-                    </p>
+                    <ResultCard
+                      label="Recommended Specialist"
+                      value={result.specialist}
+                      icon={Stethoscope}
+                    />
 
-                    <h4 className="text-2xl font-black mt-2 flex items-center gap-2">
-                      <Stethoscope size={22} />
-                      {result.specialist}
-                    </h4>
+                    <div
+                      className={`rounded-2xl p-5 border ${
+                        result.urgency === "High"
+                          ? "bg-red-50 border-red-100 text-red-700"
+                          : result.urgency === "Medium"
+                          ? "bg-yellow-50 border-yellow-100 text-yellow-700"
+                          : "bg-emerald-50 border-emerald-100 text-emerald-700"
+                      }`}
+                    >
+                      <p className="text-sm font-semibold">
+                        Urgency Level
+                      </p>
+
+                      <h4 className="text-2xl font-black mt-2 flex items-center gap-2">
+                        <AlertCircle size={22} />
+                        {result.urgency}
+                      </h4>
+                    </div>
+
+                    <button
+                      onClick={bookRecommendedDoctor}
+                      className="w-full bg-slate-950 text-white py-4 rounded-2xl font-black hover:bg-cyan-700 transition"
+                    >
+                      Book {result.specialist} Doctor
+                    </button>
                   </div>
-
-                  <div
-                    className={`rounded-2xl p-5 border ${
-                      result.urgency === "High"
-                        ? "bg-red-500/20 border-red-300/30"
-                        : result.urgency === "Medium"
-                        ? "bg-yellow-500/20 border-yellow-300/30"
-                        : "bg-emerald-500/20 border-emerald-300/30"
-                    }`}
-                  >
-                    <p className="text-sm text-blue-100">
-                      Urgency Level
-                    </p>
-
-                    <h4 className="text-2xl font-black mt-2 flex items-center gap-2">
-                      <AlertCircle size={22} />
-                      {result.urgency}
-                    </h4>
-                  </div>
-
-                  <button
-                    onClick={bookRecommendedDoctor}
-                    className="w-full mt-3 bg-white text-blue-700 py-4 rounded-2xl font-black hover:bg-blue-50 transition"
-                  >
-                    Book {result.specialist} Doctor
-                  </button>
-
-                  <button
-                    onClick={() => navigate("/symptom-checker")}
-                    className="w-full bg-white/10 border border-white/20 text-white py-4 rounded-2xl font-black hover:bg-white/20 transition"
-                  >
-                    Open Full Symptom Checker
-                  </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function StepCard({ icon: Icon, title, desc }) {
+  return (
+    <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+      <Icon className="text-cyan-600 mb-3" size={23} />
+      <p className="font-black text-slate-950">{title}</p>
+      <p className="text-xs text-slate-500 font-semibold mt-1">
+        {desc}
+      </p>
+    </div>
+  );
+}
+
+function ResultCard({ label, value, desc, icon: Icon }) {
+  return (
+    <div className="rounded-2xl p-5 bg-white border border-slate-100">
+      <p className="text-sm text-slate-500 font-semibold">
+        {label}
+      </p>
+
+      <h4 className="text-2xl font-black mt-2 text-slate-950 flex items-center gap-2">
+        {Icon && <Icon size={22} className="text-cyan-600" />}
+        {value}
+      </h4>
+
+      {desc && (
+        <p className="text-slate-500 mt-3 leading-relaxed">
+          {desc}
+        </p>
+      )}
+    </div>
   );
 }

@@ -6,6 +6,9 @@ import {
   Bell,
   CalendarDays,
   ArrowRight,
+  Stethoscope,
+  FlaskConical,
+  Hospital,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -14,135 +17,129 @@ export default function HomeFeatures() {
 
   const features = [
     {
-      title: "Video Consultations",
-      description:
-        "Connect with doctors securely from anywhere through HD video consultations.",
-      icon: Video,
-      color:
-        "from-blue-600 to-cyan-500",
+      title: "Find Doctors",
+      description: "Search verified doctors by specialty and book appointments instantly.",
+      icon: Stethoscope,
       path: "/doctors",
     },
-
+    {
+      title: "Video Consultation",
+      description: "Consult trusted doctors online from the comfort of your home.",
+      icon: Video,
+      path: "/doctors",
+    },
     {
       title: "AI Symptom Checker",
-      description:
-        "Describe symptoms and instantly discover the right specialist.",
+      description: "Describe symptoms and get guidance to find the right specialist.",
       icon: Brain,
-      color:
-        "from-purple-600 to-fuchsia-500",
       path: "/symptom-checker",
     },
-
     {
       title: "Medical Records",
-      description:
-        "Upload reports, scans and prescriptions securely in one place.",
+      description: "Upload and manage reports, scans and prescriptions securely.",
       icon: FileText,
-      color:
-        "from-emerald-600 to-teal-500",
       path: "/patient/medical-records",
     },
-
+    {
+      title: "Lab Tests",
+      description: "Explore health packages and diagnostic test options easily.",
+      icon: FlaskConical,
+      path: "/lab-tests",
+    },
+    {
+      title: "Hospitals",
+      description: "Discover trusted hospitals and available specialists near you.",
+      icon: Hospital,
+      path: "/hospitals",
+    },
     {
       title: "Digital Prescriptions",
-      description:
-        "Receive prescriptions online and access them anytime.",
+      description: "Access doctor prescriptions online anytime from your account.",
       icon: Pill,
-      color:
-        "from-orange-500 to-amber-500",
       path: "/patient/prescriptions",
     },
-
     {
-      title: "Real-Time Notifications",
-      description:
-        "Get updates for appointments, prescriptions and approvals instantly.",
+      title: "Notifications",
+      description: "Get updates for appointments, prescriptions and approvals instantly.",
       icon: Bell,
-      color:
-        "from-rose-600 to-pink-500",
       path: "/notifications",
     },
-
     {
-      title: "Smart Appointment Calendar",
-      description:
-        "Manage appointments using a modern scheduling experience.",
+      title: "Smart Calendar",
+      description: "Manage doctor appointments with a simple scheduling experience.",
       icon: CalendarDays,
-      color:
-        "from-indigo-600 to-blue-500",
       path: "/doctors",
     },
   ];
 
   return (
-    <section className="relative py-24 bg-white overflow-hidden">
-      <div className="absolute top-0 right-0 w-96 h-96 bg-blue-100 rounded-full blur-3xl opacity-40" />
-
-      <div className="relative max-w-7xl mx-auto px-6">
-        <div className="text-center mb-16">
-          <span className="inline-flex px-4 py-2 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-100">
-            Why Choose MediCare
-          </span>
-
-          <h2 className="text-4xl md:text-5xl font-black text-slate-900 mt-6">
-            Everything You Need
-            <span className="block text-blue-600">
-              For Better Healthcare
+    <section className="relative py-20 bg-white">
+      <div className="max-w-[1450px] mx-auto px-6">
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-12">
+          <div>
+            <span className="inline-flex px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm">
+              MEDICARE SERVICES
             </span>
-          </h2>
 
-          <p className="max-w-3xl mx-auto text-slate-500 text-lg mt-5">
-            MediCare combines appointments, consultations,
-            AI guidance, prescriptions and records into one
-            powerful healthcare ecosystem.
-          </p>
+            <h2 className="text-4xl md:text-5xl font-black text-slate-950 mt-5">
+              One place for all your
+              <span className="block text-cyan-600">
+                healthcare needs
+              </span>
+            </h2>
+
+            <p className="max-w-2xl text-slate-500 text-lg mt-5 leading-relaxed">
+              Book appointments, consult doctors online, manage health records,
+              track prescriptions and access smart healthcare features.
+            </p>
+          </div>
+
+          <button
+            onClick={() => navigate("/doctors")}
+            className="inline-flex items-center justify-center gap-2 bg-slate-950 text-white px-6 py-4 rounded-2xl font-black hover:bg-cyan-700 transition"
+          >
+            View All Services
+            <ArrowRight size={18} />
+          </button>
         </div>
 
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-7">
+        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
           {features.map((feature) => {
             const Icon = feature.icon;
 
             return (
-              <div
+              <button
                 key={feature.title}
-                className="group relative"
+                onClick={() => navigate(feature.path)}
+                className="group text-left bg-white border border-slate-100 rounded-[1.7rem] p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition"
               >
-                <div
-                  className={`absolute -inset-0.5 rounded-[2rem] bg-gradient-to-r ${feature.color} opacity-0 group-hover:opacity-40 blur transition duration-500`}
-                />
-
-                <div className="relative bg-white rounded-[2rem] border border-slate-100 shadow-xl p-7 h-full group-hover:-translate-y-2 transition duration-500">
-                  <div
-                    className={`w-16 h-16 rounded-3xl bg-gradient-to-r ${feature.color} flex items-center justify-center shadow-xl`}
-                  >
+                <div className="flex items-start gap-5">
+                  <div className="w-14 h-14 rounded-2xl bg-cyan-50 flex items-center justify-center shrink-0 group-hover:bg-cyan-600 transition">
                     <Icon
-                      size={30}
-                      className="text-white"
+                      size={28}
+                      className="text-cyan-600 group-hover:text-white transition"
                     />
                   </div>
 
-                  <h3 className="text-2xl font-black text-slate-900 mt-6">
-                    {feature.title}
-                  </h3>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-950">
+                      {feature.title}
+                    </h3>
 
-                  <p className="text-slate-500 mt-4 leading-relaxed">
-                    {feature.description}
-                  </p>
+                    <p className="text-slate-500 mt-2 leading-relaxed">
+                      {feature.description}
+                    </p>
 
-                  <button
-                    onClick={() =>
-                      navigate(feature.path)
-                    }
-                    className="mt-6 flex items-center gap-2 text-blue-600 font-black"
-                  >
-                    Explore Feature
-                    <ArrowRight
-                      size={18}
-                      className="group-hover:translate-x-1 transition"
-                    />
-                  </button>
+                    <div className="mt-4 inline-flex items-center gap-2 text-cyan-600 font-black">
+                      Explore
+                      <ArrowRight
+                        size={17}
+                        className="group-hover:translate-x-1 transition"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

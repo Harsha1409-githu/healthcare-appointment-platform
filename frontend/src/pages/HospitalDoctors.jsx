@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Stethoscope,
   UserPlus,
@@ -10,6 +10,13 @@ import {
   ShieldCheck,
   XCircle,
   Building2,
+  Search,
+  Filter,
+  Loader2,
+  Eye,
+  EyeOff,
+  UsersRound,
+  Activity,
 } from "lucide-react";
 import api from "../api/axios";
 
@@ -22,6 +29,11 @@ export default function HospitalDoctors() {
 
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [form, setForm] = useState({
     doctorName: "",
@@ -38,26 +50,51 @@ export default function HospitalDoctors() {
     fetchDoctors();
   }, []);
 
-  const fetchDoctors = () => {
-    setLoading(true);
+  const fetchDoctors = async () => {
+    try {
+      setLoading(true);
 
-    api
-      .get("/doctor")
-      .then((res) => {
-        const allDoctors = res.data || [];
+      const res = await api.get("/doctor");
+      const allDoctors = res.data || [];
 
-        const hospitalDoctors = hospitalUser?.id
-          ? allDoctors.filter(
-              (doctor) =>
-                doctor.hospital?.id === hospitalUser.id
-            )
-          : [];
+      const hospitalDoctors = hospitalUser?.id
+        ? allDoctors.filter(
+            (doctor) => doctor.hospital?.id === hospitalUser.id
+          )
+        : [];
 
-        setDoctors(hospitalDoctors);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      setDoctors(hospitalDoctors);
+    } catch (error) {
+      console.error("Fetch doctors error:", error);
+      setDoctors([]);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const filteredDoctors = doctors.filter((doctor) => {
+    const matchesSearch = `${doctor.doctorName || ""} ${
+      doctor.specialization || ""
+    } ${doctor.email || ""} ${doctor.mobile || ""}`
+      .toLowerCase()
+      .includes(search.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "ALL" ||
+      (statusFilter === "ACTIVE" && doctor.isActive) ||
+      (statusFilter === "INACTIVE" && !doctor.isActive);
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const stats = useMemo(
+    () => ({
+      total: doctors.length,
+      active: doctors.filter((doctor) => doctor.isActive).length,
+      inactive: doctors.filter((doctor) => !doctor.isActive).length,
+    }),
+    [doctors]
+  );
 
   const handleChange = (e) => {
     setForm({
@@ -74,13 +111,18 @@ export default function HospitalDoctors() {
       return;
     }
 
+    if (Number(form.experience) < 0 || Number(form.consultationFee) < 0) {
+      alert("Experience and fee must be valid numbers");
+      return;
+    }
+
     try {
+      setSaving(true);
+
       await api.post("/doctor", {
         ...form,
         experience: Number(form.experience),
-        consultationFee: Number(
-          form.consultationFee
-        ),
+        consultationFee: Number(form.consultationFee),
         hospitalId: hospitalUser.id,
       });
 
@@ -99,18 +141,15 @@ export default function HospitalDoctors() {
 
       fetchDoctors();
     } catch (error) {
-      console.error(error);
-      alert(
-        error.response?.data?.message ||
-          "Failed to add doctor"
-      );
+      console.error("Add doctor error:", error);
+      alert(error.response?.data?.message || "Failed to add doctor");
+    } finally {
+      setSaving(false);
     }
   };
 
   const deactivateDoctor = async (id) => {
-    const confirmDelete = window.confirm(
-      "Deactivate this doctor?"
-    );
+    const confirmDelete = window.confirm("Deactivate this doctor?");
 
     if (!confirmDelete) return;
 
@@ -118,7 +157,7 @@ export default function HospitalDoctors() {
       await api.delete(`/doctor/${id}`);
       fetchDoctors();
     } catch (error) {
-      console.error(error);
+      console.error("Deactivate doctor error:", error);
       alert("Failed to deactivate doctor");
     }
   };
@@ -128,50 +167,48 @@ export default function HospitalDoctors() {
       await api.patch(`/doctor/${id}/reactivate`);
       fetchDoctors();
     } catch (error) {
-      console.error(error);
+      console.error("Reactivate doctor error:", error);
       alert("Failed to reactivate doctor");
     }
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-slate-50 via-blue-50/40 to-white">
-      <div className="absolute top-0 left-0 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl" />
-      <div className="absolute top-40 right-0 w-96 h-96 bg-cyan-300/20 rounded-full blur-3xl" />
+    <div className="min-h-screen bg-[#f4fbff]">
+      <div className="max-w-[1450px] mx-auto px-6 py-8">
+        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
+            <div>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
+                <Building2 size={17} />
+                {hospitalUser?.hospitalName || "Hospital Portal"}
+              </div>
 
-      <div className="relative max-w-7xl mx-auto px-6 py-10">
-        {/* Header */}
-        <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-900 p-8 md:p-10 text-white shadow-2xl mb-8">
-          <div className="absolute -top-20 -right-20 w-80 h-80 bg-cyan-400/20 rounded-full blur-3xl" />
+              <h1 className="text-4xl md:text-5xl font-black text-slate-950">
+                Doctor Management
+              </h1>
 
-          <div className="relative">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur mb-5">
-              <Building2 size={18} className="text-cyan-300" />
-              <span className="text-sm font-semibold">
-                {hospitalUser?.hospitalName ||
-                  "Hospital Portal"}
-              </span>
+              <p className="text-slate-500 mt-3 max-w-2xl text-lg leading-relaxed">
+                Add doctors, manage credentials, activate or deactivate
+                specialists, and keep your hospital team updated.
+              </p>
             </div>
 
-            <h1 className="text-4xl md:text-5xl font-black tracking-tight">
-              Doctor Management
-            </h1>
-
-            <p className="text-blue-100 mt-3 max-w-2xl">
-              Add doctors, manage credentials, activate or deactivate
-              specialists, and keep your hospital team updated.
-            </p>
+            <div className="grid grid-cols-3 gap-3">
+              <MiniStat icon={UsersRound} title="Total" value={stats.total} />
+              <MiniStat icon={ShieldCheck} title="Active" value={stats.active} />
+              <MiniStat icon={XCircle} title="Inactive" value={stats.inactive} />
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* Add Doctor Form */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-xl border border-white p-6 md:p-8 mb-8">
+        <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 md:p-8 mb-8">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg">
-              <UserPlus className="text-white" size={24} />
+            <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center">
+              <UserPlus className="text-cyan-600" size={25} />
             </div>
 
             <div>
-              <h2 className="text-2xl font-black text-slate-900">
+              <h2 className="text-2xl font-black text-slate-950">
                 Add New Doctor
               </h2>
 
@@ -244,154 +281,183 @@ export default function HospitalDoctors() {
               icon={Mail}
             />
 
-            <Input
+            <PasswordInput
               name="password"
-              type="password"
-              placeholder="Doctor Password"
               value={form.password}
               onChange={handleChange}
-              icon={ShieldCheck}
+              showPassword={showPassword}
+              setShowPassword={setShowPassword}
             />
 
             <button
               type="submit"
-              className="lg:col-span-1 bg-gradient-to-r from-blue-600 to-cyan-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-100 hover:scale-[1.02] transition"
+              disabled={saving}
+              className="bg-cyan-600 text-white py-4 rounded-2xl font-black hover:bg-cyan-700 transition flex items-center justify-center gap-2 disabled:bg-slate-400"
             >
-              Add Doctor
+              {saving ? (
+                <>
+                  <Loader2 size={19} className="animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <UserPlus size={19} />
+                  Add Doctor
+                </>
+              )}
             </button>
           </form>
-        </div>
+        </section>
 
-        {/* Doctors List */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-xl border border-white p-6 md:p-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+        <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 md:p-8">
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5 mb-6">
             <div>
-              <h2 className="text-2xl font-black text-slate-900">
+              <h2 className="text-2xl font-black text-slate-950">
                 Hospital Doctors
               </h2>
 
               <p className="text-slate-500 text-sm">
-                {doctors.length} doctors linked to this hospital
+                Showing {filteredDoctors.length} of {doctors.length} doctors
               </p>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 md:w-80">
+                <Search size={18} className="text-cyan-600" />
+
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search doctors..."
+                  className="w-full bg-transparent outline-none text-slate-800"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
+                <Filter size={18} className="text-cyan-600" />
+
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="bg-transparent outline-none font-bold text-slate-700"
+                >
+                  <option value="ALL">All Status</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                </select>
+              </div>
             </div>
           </div>
 
           {loading ? (
-            <p className="text-slate-500">Loading doctors...</p>
-          ) : doctors.length === 0 ? (
-            <div className="text-center py-14">
-              <div className="w-20 h-20 rounded-3xl bg-blue-50 flex items-center justify-center mx-auto mb-5">
-                <Stethoscope
-                  className="text-blue-600"
-                  size={36}
-                />
+            <div className="bg-slate-50 rounded-2xl p-10 text-center text-slate-500">
+              <Loader2 className="mx-auto animate-spin text-cyan-600 mb-3" />
+              Loading doctors...
+            </div>
+          ) : filteredDoctors.length === 0 ? (
+            <div className="text-center py-14 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="w-20 h-20 rounded-3xl bg-cyan-50 flex items-center justify-center mx-auto mb-5">
+                <Stethoscope className="text-cyan-600" size={36} />
               </div>
 
-              <h3 className="text-2xl font-black text-slate-900">
+              <h3 className="text-2xl font-black text-slate-950">
                 No doctors found
               </h3>
 
               <p className="text-slate-500 mt-2">
-                Add your first doctor using the form above.
+                Add a doctor or adjust your search/filter.
               </p>
             </div>
           ) : (
             <div className="grid gap-5">
-              {doctors.map((doctor) => (
-                <div
+              {filteredDoctors.map((doctor) => (
+                <DoctorRow
                   key={doctor.id}
-                  className="group relative"
-                >
-                  <div className="absolute -inset-0.5 rounded-[2rem] bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400 opacity-0 group-hover:opacity-40 blur transition duration-500" />
-
-                  <div className="relative bg-white rounded-[2rem] p-6 border border-slate-100 shadow-lg group-hover:-translate-y-1 transition duration-500">
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-                      <div className="flex gap-4">
- <img
-  src={
-    doctor.profileImage ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      doctor.doctorName
-    )}&background=0f172a&color=fff&bold=true`
-  }
-  alt={doctor.doctorName}
-  className="w-20 h-20 rounded-3xl shadow-lg object-cover border-4 border-slate-100"
-/>
-
-                        <div>
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <h3 className="text-2xl font-black text-slate-900">
-                              {doctor.doctorName}
-                            </h3>
-
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                doctor.isActive
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {doctor.isActive
-                                ? "ACTIVE"
-                                : "INACTIVE"}
-                            </span>
-                          </div>
-
-                          <p className="text-blue-600 font-bold mt-1">
-                            {doctor.specialization}
-                          </p>
-
-                          <p className="text-slate-500 text-sm mt-1">
-                            {doctor.qualification}
-                          </p>
-
-                          <div className="flex flex-wrap gap-2 mt-3">
-                            <Badge>
-                              {doctor.experience} Years
-                            </Badge>
-
-                            <Badge>
-                              ₹{doctor.consultationFee}
-                            </Badge>
-
-                            <Badge>
-                              {doctor.mobile}
-                            </Badge>
-
-                            <Badge>{doctor.email}</Badge>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        {doctor.isActive ? (
-                          <button
-                            onClick={() =>
-                              deactivateDoctor(doctor.id)
-                            }
-                            className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-2xl font-bold transition"
-                          >
-                            <XCircle size={18} />
-                            Deactivate
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() =>
-                              reactivateDoctor(doctor.id)
-                            }
-                            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-2xl font-bold transition"
-                          >
-                            <ShieldCheck size={18} />
-                            Reactivate
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  doctor={doctor}
+                  deactivateDoctor={deactivateDoctor}
+                  reactivateDoctor={reactivateDoctor}
+                />
               ))}
             </div>
           )}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function DoctorRow({ doctor, deactivateDoctor, reactivateDoctor }) {
+  return (
+    <div className="group relative">
+      <div className="absolute -inset-0.5 rounded-[2rem] bg-gradient-to-r from-cyan-500 via-blue-500 to-emerald-400 opacity-0 group-hover:opacity-30 blur transition duration-500" />
+
+      <div className="relative bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm group-hover:-translate-y-1 group-hover:shadow-xl transition duration-500">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+          <div className="flex gap-4 min-w-0">
+            <img
+              src={
+                doctor.profileImage ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                  doctor.doctorName || "Doctor"
+                )}&background=0891b2&color=fff&bold=true`
+              }
+              alt={doctor.doctorName}
+              className="w-20 h-20 rounded-3xl shadow-sm object-cover border border-slate-100 shrink-0"
+            />
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h3 className="text-2xl font-black text-slate-950">
+                  {doctor.doctorName}
+                </h3>
+
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-black ${
+                    doctor.isActive
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                      : "bg-red-50 text-red-700 border border-red-100"
+                  }`}
+                >
+                  {doctor.isActive ? "ACTIVE" : "INACTIVE"}
+                </span>
+              </div>
+
+              <p className="text-cyan-600 font-black mt-1">
+                {doctor.specialization || "Specialist"}
+              </p>
+
+              <p className="text-slate-500 text-sm mt-1">
+                {doctor.qualification || "Qualification not added"}
+              </p>
+
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Badge>{doctor.experience || 0} Years</Badge>
+                <Badge>₹{doctor.consultationFee || 0}</Badge>
+                <Badge>{doctor.mobile || "Mobile not added"}</Badge>
+                <Badge>{doctor.email || "Email not added"}</Badge>
+              </div>
+            </div>
+          </div>
+
+          <div className="shrink-0">
+            {doctor.isActive ? (
+              <button
+                onClick={() => deactivateDoctor(doctor.id)}
+                className="w-full xl:w-auto flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-2xl font-black transition"
+              >
+                <XCircle size={18} />
+                Deactivate
+              </button>
+            ) : (
+              <button
+                onClick={() => reactivateDoctor(doctor.id)}
+                className="w-full xl:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-2xl font-black transition"
+              >
+                <ShieldCheck size={18} />
+                Reactivate
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -407,8 +473,8 @@ function Input({
   type = "text",
 }) {
   return (
-    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-500 transition">
-      <Icon size={19} className="text-blue-600" />
+    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-cyan-500 transition">
+      <Icon size={19} className="text-cyan-600 shrink-0" />
 
       <input
         name={name}
@@ -423,10 +489,55 @@ function Input({
   );
 }
 
+function PasswordInput({
+  name,
+  value,
+  onChange,
+  showPassword,
+  setShowPassword,
+}) {
+  return (
+    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-cyan-500 transition">
+      <ShieldCheck size={19} className="text-cyan-600 shrink-0" />
+
+      <input
+        name={name}
+        type={showPassword ? "text" : "password"}
+        placeholder="Doctor Password"
+        value={value}
+        onChange={onChange}
+        className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
+        required
+      />
+
+      <button
+        type="button"
+        onClick={() => setShowPassword(!showPassword)}
+        className="text-slate-400 hover:text-cyan-600"
+      >
+        {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+      </button>
+    </div>
+  );
+}
+
 function Badge({ children }) {
   return (
     <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">
       {children}
     </span>
+  );
+}
+
+function MiniStat({ icon: Icon, title, value }) {
+  return (
+    <div className="min-w-[100px] bg-slate-50 rounded-2xl border border-slate-100 p-3">
+      <div className="w-9 h-9 rounded-xl bg-cyan-50 flex items-center justify-center mb-2">
+        <Icon className="text-cyan-600" size={18} />
+      </div>
+
+      <p className="text-xl font-black text-slate-950">{value}</p>
+      <p className="text-xs text-slate-500 font-bold">{title}</p>
+    </div>
   );
 }

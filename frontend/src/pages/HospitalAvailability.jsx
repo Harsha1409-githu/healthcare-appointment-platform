@@ -14,6 +14,9 @@ import {
   UserRound,
   CheckCircle2,
   XCircle,
+  Loader2,
+  Building2,
+  ShieldCheck,
 } from "lucide-react";
 import api from "../api/axios";
 
@@ -29,10 +32,13 @@ export default function HospitalAvailability() {
   const [doctors, setDoctors] = useState([]);
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [doctorLoading, setDoctorLoading] = useState(true);
+
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+
   const [search, setSearch] = useState("");
 
   const [form, setForm] = useState({
@@ -48,11 +54,17 @@ export default function HospitalAvailability() {
   }, []);
 
   useEffect(() => {
-    if (form.doctorId) fetchSlots(form.doctorId);
+    if (form.doctorId) {
+      fetchSlots(form.doctorId);
+    } else {
+      setSlots([]);
+    }
   }, [form.doctorId]);
 
   const fetchDoctors = async () => {
     try {
+      setDoctorLoading(true);
+
       const res = await api.get("/doctor");
 
       const hospitalDoctors = (res.data || []).filter(
@@ -71,6 +83,9 @@ export default function HospitalAvailability() {
       }
     } catch (err) {
       console.error("Doctor API error:", err);
+      setDoctors([]);
+    } finally {
+      setDoctorLoading(false);
     }
   };
 
@@ -80,6 +95,7 @@ export default function HospitalAvailability() {
       setSlots(res.data || []);
     } catch (err) {
       console.error("Slots API error:", err);
+      setSlots([]);
     }
   };
 
@@ -98,6 +114,11 @@ export default function HospitalAvailability() {
       return;
     }
 
+    if (form.startTime >= form.endTime) {
+      alert("End time must be after start time");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -109,6 +130,7 @@ export default function HospitalAvailability() {
       alert("Availability saved successfully");
     } catch (error) {
       console.error("Availability error:", error);
+
       alert(
         error.response?.data?.message ||
           "Failed to save availability"
@@ -136,6 +158,7 @@ export default function HospitalAvailability() {
       fetchSlots(form.doctorId);
     } catch (error) {
       console.error("Slot generation error:", error);
+
       alert(
         error.response?.data?.message ||
           "Failed to generate slots"
@@ -150,7 +173,7 @@ export default function HospitalAvailability() {
   );
 
   const filteredDoctors = doctors.filter((doctor) =>
-    `${doctor.doctorName} ${doctor.specialization}`
+    `${doctor.doctorName || ""} ${doctor.specialization || ""}`
       .toLowerCase()
       .includes(search.toLowerCase())
   );
@@ -160,7 +183,9 @@ export default function HospitalAvailability() {
 
   const selectedDateSlots = slots
     .filter((slot) => slot.date === selectedDate)
-    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    .sort((a, b) =>
+      String(a.startTime || "").localeCompare(String(b.startTime || ""))
+    );
 
   const selectedOpenSlots = selectedDateSlots.filter(
     (slot) => slot.isAvailable
@@ -189,8 +214,7 @@ export default function HospitalAvailability() {
         date,
         dateKey,
         isCurrentMonth: date.getMonth() === month,
-        isToday:
-          dateKey === new Date().toISOString().split("T")[0],
+        isToday: dateKey === new Date().toISOString().split("T")[0],
         total: daySlots.length,
         available: daySlots.filter((slot) => slot.isAvailable).length,
         booked: daySlots.filter((slot) => !slot.isAvailable).length,
@@ -212,23 +236,21 @@ export default function HospitalAvailability() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="bg-slate-950 text-white">
-        <div className="max-w-[1500px] mx-auto px-6 py-10">
-          <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
+    <div className="min-h-screen bg-[#f4fbff]">
+      <div className="max-w-[1500px] mx-auto px-6 py-8">
+        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
             <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/10 mb-5">
-                <CalendarDays size={18} className="text-cyan-300" />
-                <span className="text-sm font-bold">
-                  Hospital Schedule Management
-                </span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
+                <Building2 size={17} />
+                Hospital Schedule Management
               </div>
 
-              <h1 className="text-4xl md:text-5xl font-black">
+              <h1 className="text-4xl md:text-5xl font-black text-slate-950">
                 Availability Calendar
               </h1>
 
-              <p className="text-slate-300 mt-3 max-w-3xl">
+              <p className="text-slate-500 mt-3 max-w-3xl text-lg leading-relaxed">
                 Manage doctor working hours, generate slots, and monitor daily
                 booking capacity in one organized calendar view.
               </p>
@@ -240,11 +262,9 @@ export default function HospitalAvailability() {
               <TopStat label="Booked" value={bookedSlots.length} />
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <div className="max-w-[1500px] mx-auto px-6 py-8">
-        <div className="grid xl:grid-cols-[360px_1fr] gap-6">
+        <div className="grid xl:grid-cols-[370px_1fr] gap-6">
           <aside className="space-y-6">
             <Card>
               <SectionTitle
@@ -254,7 +274,8 @@ export default function HospitalAvailability() {
               />
 
               <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 mb-4">
-                <Search size={18} className="text-blue-600" />
+                <Search size={18} className="text-cyan-600" />
+
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -264,9 +285,14 @@ export default function HospitalAvailability() {
               </div>
 
               <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
-                {filteredDoctors.length === 0 ? (
+                {doctorLoading ? (
+                  <div className="text-center text-slate-500 py-6">
+                    <Loader2 className="mx-auto animate-spin text-cyan-600 mb-2" />
+                    Loading doctors...
+                  </div>
+                ) : filteredDoctors.length === 0 ? (
                   <p className="text-center text-slate-500 py-6">
-                    No doctors found
+                    No active doctors found
                   </p>
                 ) : (
                   filteredDoctors.map((doctor) => (
@@ -281,8 +307,8 @@ export default function HospitalAvailability() {
                       }
                       className={`w-full flex items-center gap-3 p-3 rounded-2xl border text-left transition ${
                         form.doctorId === doctor.id
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white hover:bg-blue-50 border-slate-200 text-slate-800"
+                          ? "bg-cyan-600 text-white border-cyan-600"
+                          : "bg-white hover:bg-cyan-50 border-slate-200 text-slate-800"
                       }`}
                     >
                       <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 flex items-center justify-center shrink-0">
@@ -301,10 +327,11 @@ export default function HospitalAvailability() {
                         <p className="font-black truncate">
                           {doctor.doctorName}
                         </p>
+
                         <p
                           className={`text-xs truncate ${
                             form.doctorId === doctor.id
-                              ? "text-blue-100"
+                              ? "text-cyan-100"
                               : "text-slate-500"
                           }`}
                         >
@@ -369,10 +396,19 @@ export default function HospitalAvailability() {
 
                 <button
                   disabled={loading || doctors.length === 0}
-                  className="w-full flex items-center justify-center gap-2 bg-slate-950 text-white py-4 rounded-2xl font-black hover:bg-blue-700 transition disabled:bg-slate-400"
+                  className="w-full flex items-center justify-center gap-2 bg-slate-950 text-white py-4 rounded-2xl font-black hover:bg-cyan-700 transition disabled:bg-slate-400"
                 >
-                  <Save size={18} />
-                  {loading ? "Saving..." : "Save Availability"}
+                  {loading ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={18} />
+                      Save Availability
+                    </>
+                  )}
                 </button>
               </form>
             </Card>
@@ -387,10 +423,19 @@ export default function HospitalAvailability() {
               <button
                 onClick={generateSlots}
                 disabled={loading || doctors.length === 0}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white py-4 rounded-2xl font-black hover:scale-[1.02] transition disabled:bg-slate-400 disabled:scale-100"
+                className="w-full flex items-center justify-center gap-2 bg-cyan-600 text-white py-4 rounded-2xl font-black hover:bg-cyan-700 transition disabled:bg-slate-400"
               >
-                <Sparkles size={18} />
-                {loading ? "Generating..." : `Generate for ${selectedDate}`}
+                {loading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={18} />
+                    Generate for {selectedDate}
+                  </>
+                )}
               </button>
 
               <p className="text-xs text-slate-500 mt-4 leading-relaxed">
@@ -407,16 +452,19 @@ export default function HospitalAvailability() {
                 label="Selected Date"
                 value={selectedDate}
               />
+
               <Metric
                 icon={CheckCircle2}
                 label="Available"
                 value={selectedOpenSlots.length}
               />
+
               <Metric
                 icon={XCircle}
                 label="Booked"
                 value={selectedBookedSlots.length}
               />
+
               <Metric
                 icon={Clock}
                 label="Total Slots"
@@ -428,9 +476,10 @@ export default function HospitalAvailability() {
               <div className="p-6 border-b border-slate-100">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
                   <div>
-                    <h2 className="text-3xl font-black text-slate-900">
+                    <h2 className="text-3xl font-black text-slate-950">
                       {monthTitle}
                     </h2>
+
                     <p className="text-slate-500 mt-1">
                       {selectedDoctor
                         ? `${selectedDoctor.doctorName} • ${selectedDoctor.specialization}`
@@ -449,12 +498,11 @@ export default function HospitalAvailability() {
                     <button
                       onClick={() => {
                         const today = new Date();
+
                         setCalendarDate(today);
-                        setSelectedDate(
-                          today.toISOString().split("T")[0]
-                        );
+                        setSelectedDate(today.toISOString().split("T")[0]);
                       }}
-                      className="px-5 py-3 rounded-2xl bg-slate-950 text-white font-bold"
+                      className="px-5 py-3 rounded-2xl bg-slate-950 text-white font-black"
                     >
                       Today
                     </button>
@@ -469,7 +517,7 @@ export default function HospitalAvailability() {
                     <button
                       onClick={() => fetchSlots(form.doctorId)}
                       disabled={!form.doctorId}
-                      className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 text-white font-bold disabled:bg-slate-400"
+                      className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-cyan-600 text-white font-black disabled:bg-slate-400"
                     >
                       <RefreshCw size={18} />
                       Refresh
@@ -496,7 +544,7 @@ export default function HospitalAvailability() {
                     onClick={() => setSelectedDate(day.dateKey)}
                     className={`min-h-[128px] p-3 border-r border-b border-slate-100 text-left transition ${
                       selectedDate === day.dateKey
-                        ? "bg-blue-50 ring-2 ring-blue-500 ring-inset"
+                        ? "bg-cyan-50 ring-2 ring-cyan-500 ring-inset"
                         : day.isCurrentMonth
                         ? "bg-white hover:bg-slate-50"
                         : "bg-slate-50/70 text-slate-300"
@@ -506,7 +554,7 @@ export default function HospitalAvailability() {
                       <span
                         className={`w-8 h-8 rounded-xl flex items-center justify-center font-black ${
                           day.isToday
-                            ? "bg-blue-600 text-white"
+                            ? "bg-cyan-600 text-white"
                             : "text-slate-800"
                         }`}
                       >
@@ -526,6 +574,7 @@ export default function HospitalAvailability() {
                           {day.available > 0 && (
                             <div className="h-2 flex-1 rounded-full bg-emerald-500" />
                           )}
+
                           {day.booked > 0 && (
                             <div className="h-2 flex-1 rounded-full bg-red-500" />
                           )}
@@ -544,9 +593,10 @@ export default function HospitalAvailability() {
             <Card>
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900">
+                  <h2 className="text-2xl font-black text-slate-950">
                     Slots on {selectedDate}
                   </h2>
+
                   <p className="text-sm text-slate-500">
                     Monitor available and booked appointment times.
                   </p>
@@ -555,10 +605,12 @@ export default function HospitalAvailability() {
 
               {selectedDateSlots.length === 0 ? (
                 <div className="text-center py-12 rounded-2xl bg-slate-50 border border-slate-100">
-                  <Clock className="text-blue-600 mx-auto mb-4" size={40} />
-                  <h3 className="text-xl font-black text-slate-900">
+                  <Clock className="text-cyan-600 mx-auto mb-4" size={40} />
+
+                  <h3 className="text-xl font-black text-slate-950">
                     No slots for this date
                   </h3>
+
                   <p className="text-slate-500 mt-2">
                     Select this date and generate slots.
                   </p>
@@ -576,9 +628,10 @@ export default function HospitalAvailability() {
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="font-black text-slate-900">
+                          <p className="font-black text-slate-950">
                             {slot.startTime}
                           </p>
+
                           <p className="text-sm text-slate-500">
                             {slot.startTime} - {slot.endTime}
                           </p>
@@ -599,6 +652,31 @@ export default function HospitalAvailability() {
                 </div>
               )}
             </Card>
+
+            <div className="bg-cyan-600 rounded-[2rem] p-6 text-white flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-2 bg-white/10 border border-white/10 rounded-full px-4 py-2 text-sm font-black mb-3">
+                  <ShieldCheck size={16} />
+                  Availability Tip
+                </div>
+
+                <h3 className="text-2xl font-black">
+                  Keep schedules updated daily
+                </h3>
+
+                <p className="text-cyan-100 mt-2">
+                  Patients can only book generated open slots for active doctors.
+                </p>
+              </div>
+
+              <button
+                onClick={() => fetchSlots(form.doctorId)}
+                disabled={!form.doctorId}
+                className="bg-white text-cyan-700 px-6 py-3 rounded-2xl font-black disabled:bg-slate-200"
+              >
+                Refresh Slots
+              </button>
+            </div>
           </main>
         </div>
       </div>
@@ -608,11 +686,14 @@ export default function HospitalAvailability() {
 
 function TopStat({ label, value }) {
   return (
-    <div className="rounded-2xl bg-white/10 border border-white/10 p-4">
-      <p className="text-xs font-bold uppercase text-slate-300">
+    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
+      <p className="text-xs font-bold uppercase text-slate-500">
         {label}
       </p>
-      <p className="text-3xl font-black mt-1">{value}</p>
+
+      <p className="text-3xl font-black mt-1 text-slate-950">
+        {value}
+      </p>
     </div>
   );
 }
@@ -620,7 +701,7 @@ function TopStat({ label, value }) {
 function Card({ children, noPadding = false }) {
   return (
     <div
-      className={`bg-white rounded-[2rem] shadow-xl border border-slate-100 ${
+      className={`bg-white rounded-[2rem] shadow-sm border border-slate-100 ${
         noPadding ? "" : "p-6"
       }`}
     >
@@ -632,14 +713,15 @@ function Card({ children, noPadding = false }) {
 function SectionTitle({ icon: Icon, title, subtitle }) {
   return (
     <div className="flex items-center gap-3 mb-5">
-      <div className="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center">
-        <Icon className="text-blue-600" size={22} />
+      <div className="w-11 h-11 rounded-2xl bg-cyan-50 flex items-center justify-center">
+        <Icon className="text-cyan-600" size={22} />
       </div>
 
       <div>
-        <h2 className="text-xl font-black text-slate-900">
+        <h2 className="text-xl font-black text-slate-950">
           {title}
         </h2>
+
         <p className="text-sm text-slate-500">{subtitle}</p>
       </div>
     </div>
@@ -648,17 +730,18 @@ function SectionTitle({ icon: Icon, title, subtitle }) {
 
 function Metric({ icon: Icon, label, value }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow p-5">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
       <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center">
-          <Icon className="text-blue-600" size={22} />
+        <div className="w-11 h-11 rounded-2xl bg-cyan-50 flex items-center justify-center">
+          <Icon className="text-cyan-600" size={22} />
         </div>
 
         <div>
-          <p className="text-xs font-bold text-slate-400 uppercase">
+          <p className="text-xs font-black text-slate-400 uppercase">
             {label}
           </p>
-          <p className="text-xl font-black text-slate-900 break-all">
+
+          <p className="text-xl font-black text-slate-950 break-all">
             {value}
           </p>
         </div>
@@ -676,8 +759,8 @@ function InputField({
   placeholder,
 }) {
   return (
-    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-500 transition">
-      <Icon size={19} className="text-blue-600" />
+    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-cyan-500 transition">
+      <Icon size={19} className="text-cyan-600" />
 
       <input
         type={type}
@@ -700,8 +783,8 @@ function SelectField({
   children,
 }) {
   return (
-    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-500 transition">
-      <Icon size={19} className="text-blue-600" />
+    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-cyan-500 transition">
+      <Icon size={19} className="text-cyan-600" />
 
       <select
         name={name}

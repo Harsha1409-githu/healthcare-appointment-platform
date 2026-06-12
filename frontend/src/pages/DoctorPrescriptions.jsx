@@ -1,21 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   FileText,
-  Download,
-  Printer,
   Search,
-  Stethoscope,
-  CalendarCheck,
-  ClipboardList,
-  Pill,
-  NotebookPen,
-  ShieldCheck,
   Filter,
+  Pill,
+  ClipboardList,
+  CalendarCheck,
+  UserRound,
+  Download,
   Eye,
+  Stethoscope,
 } from "lucide-react";
 import api from "../api/axios";
 
-export default function MyPrescriptions() {
+export default function DoctorPrescriptions() {
+  const doctor = JSON.parse(localStorage.getItem("doctorUser") || "null");
+
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -26,48 +26,38 @@ export default function MyPrescriptions() {
 
   const fetchPrescriptions = async () => {
     try {
-      const res = await api.get("/prescription/my");
+      if (!doctor?.id) return;
+
+      const res = await api.get(`/prescription/doctor/${doctor.id}`);
       setPrescriptions(res.data || []);
     } catch (error) {
-      console.error("Prescription API error:", error);
+      console.error("Doctor prescriptions error:", error);
+      setPrescriptions([]);
     } finally {
       setLoading(false);
     }
   };
 
   const filtered = prescriptions.filter((item) =>
-    `${item.doctor?.doctorName || ""} ${item.doctor?.specialization || ""} ${
+    `${item.patient?.fullName || ""} ${item.patientName || ""} ${
       item.diagnosis || ""
     } ${item.medicines || ""}`
       .toLowerCase()
       .includes(search.toLowerCase())
   );
 
-  const stats = useMemo(() => {
-    return {
+  const stats = useMemo(
+    () => ({
       total: prescriptions.length,
-      doctors: new Set(
-        prescriptions.map((p) => p.doctor?.id || p.doctor?.doctorName)
+      patients: new Set(
+        prescriptions.map(
+          (p) => p.patient?.id || p.patient?.fullName || p.patientName
+        )
       ).size,
       withNotes: prescriptions.filter((p) => p.notes).length,
-    };
-  }, [prescriptions]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#f4fbff] flex items-center justify-center">
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center mx-auto mb-4">
-            <FileText className="text-cyan-600 animate-pulse" size={34} />
-          </div>
-
-          <p className="text-slate-500 font-semibold">
-            Loading prescriptions...
-          </p>
-        </div>
-      </div>
-    );
-  }
+    }),
+    [prescriptions]
+  );
 
   return (
     <div className="min-h-screen bg-[#f4fbff]">
@@ -77,23 +67,23 @@ export default function MyPrescriptions() {
             <div>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
                 <FileText size={17} />
-                DIGITAL PRESCRIPTIONS
+                DOCTOR PRESCRIPTIONS
               </div>
 
               <h1 className="text-4xl md:text-5xl font-black text-slate-950">
-                My Prescriptions
+                Prescriptions Created
               </h1>
 
               <p className="text-slate-500 mt-3 max-w-2xl text-lg leading-relaxed">
-                View doctor prescriptions, diagnosis, medicines, notes and
-                download prescription PDFs anytime.
+                View prescriptions you created for patients after completed
+                consultations.
               </p>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
               <MiniStat title="Total" value={stats.total} icon={ClipboardList} />
-              <MiniStat title="Doctors" value={stats.doctors} icon={Stethoscope} />
-              <MiniStat title="Notes" value={stats.withNotes} icon={Notes} />
+              <MiniStat title="Patients" value={stats.patients} icon={UserRound} />
+              <MiniStat title="Notes" value={stats.withNotes} icon={FileText} />
             </div>
           </div>
         </section>
@@ -105,7 +95,7 @@ export default function MyPrescriptions() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search doctor, diagnosis or medicines..."
+              placeholder="Search patient, diagnosis or medicines..."
               className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
             />
 
@@ -113,20 +103,18 @@ export default function MyPrescriptions() {
           </div>
         </section>
 
-        {prescriptions.length === 0 ? (
-          <EmptyPrescriptions />
+        {loading ? (
+          <EmptyState text="Loading prescriptions..." />
+        ) : prescriptions.length === 0 ? (
+          <EmptyState
+            title="No prescriptions created yet"
+            text="Create prescriptions from completed appointments in your dashboard."
+          />
         ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-10 text-center">
-            <FileText className="mx-auto text-slate-300 mb-4" size={44} />
-
-            <h3 className="font-black text-xl text-slate-950">
-              No matching prescriptions
-            </h3>
-
-            <p className="text-slate-500 mt-2">
-              Try searching with doctor name, diagnosis or medicine.
-            </p>
-          </div>
+          <EmptyState
+            title="No matching prescriptions"
+            text="Try searching with patient name, diagnosis or medicine."
+          />
         ) : (
           <div className="grid gap-5">
             {filtered.map((prescription) => (
@@ -147,6 +135,12 @@ function PrescriptionCard({ prescription }) {
     prescription.id
   }/pdf`;
 
+  const patientName =
+    prescription.patient?.fullName ||
+    prescription.appointment?.patientName ||
+    prescription.patientName ||
+    "Patient";
+
   return (
     <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition overflow-hidden">
       <div className="p-6">
@@ -157,21 +151,17 @@ function PrescriptionCard({ prescription }) {
                 <FileText className="text-cyan-600" size={30} />
               </div>
 
-              <div className="min-w-0">
+              <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-black text-xs mb-2">
-                  <ShieldCheck size={14} />
-                  Doctor Verified
+                  <Stethoscope size={14} />
+                  Doctor Issued
                 </div>
 
                 <h2 className="text-2xl font-black text-slate-950">
-                  {prescription.doctor?.doctorName || "Doctor"}
+                  {patientName}
                 </h2>
 
-                <p className="text-cyan-700 font-black mt-1">
-                  {prescription.doctor?.specialization || "Specialist"}
-                </p>
-
-                <p className="text-slate-500 text-sm mt-2 flex items-center gap-2">
+                <p className="text-slate-500 mt-2 flex items-center gap-2">
                   <CalendarCheck size={16} className="text-cyan-600" />
                   {prescription.createdAt
                     ? new Date(prescription.createdAt).toLocaleDateString()
@@ -198,7 +188,7 @@ function PrescriptionCard({ prescription }) {
             {prescription.notes && (
               <div className="mt-4">
                 <InfoBox
-                  icon={Notes}
+                  icon={FileText}
                   title="Doctor Notes"
                   content={prescription.notes}
                 />
@@ -240,14 +230,6 @@ function PrescriptionCard({ prescription }) {
                 <Download size={18} />
                 Download PDF
               </a>
-
-              <button
-                onClick={() => window.print()}
-                className="w-full border border-cyan-600 text-cyan-700 py-4 rounded-2xl font-black hover:bg-cyan-50 transition flex items-center justify-center gap-2"
-              >
-                <Printer size={18} />
-                Print
-              </button>
             </div>
           </div>
         </div>
@@ -269,9 +251,7 @@ function InfoBox({ icon: Icon, title, content, pre }) {
           {content}
         </pre>
       ) : (
-        <p className="text-slate-700 leading-relaxed">
-          {content}
-        </p>
+        <p className="text-slate-700 leading-relaxed">{content}</p>
       )}
     </div>
   );
@@ -284,31 +264,21 @@ function MiniStat({ title, value, icon: Icon }) {
         <Icon className="text-cyan-600" size={18} />
       </div>
 
-      <p className="text-xl font-black text-slate-950">
-        {value}
-      </p>
-
-      <p className="text-xs text-slate-500 font-bold">
-        {title}
-      </p>
+      <p className="text-xl font-black text-slate-950">{value}</p>
+      <p className="text-xs text-slate-500 font-bold">{title}</p>
     </div>
   );
 }
 
-function EmptyPrescriptions() {
+function EmptyState({ title = "Please wait", text }) {
   return (
-    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-10 text-center">
+    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-12 text-center">
       <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center mx-auto mb-4">
-        <FileText className="text-cyan-600" size={32} />
+        <FileText className="text-cyan-600" size={34} />
       </div>
 
-      <h3 className="text-2xl font-black text-slate-950">
-        No prescriptions found
-      </h3>
-
-      <p className="text-slate-500 mt-2">
-        Your doctor prescriptions will appear here after consultations.
-      </p>
+      <h3 className="text-2xl font-black text-slate-950">{title}</h3>
+      <p className="text-slate-500 mt-2">{text}</p>
     </div>
   );
 }

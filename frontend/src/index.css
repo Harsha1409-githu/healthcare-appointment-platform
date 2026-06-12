@@ -1,3 +1,296 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global App Styles */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #f4fbff;
+  color: #0f172a;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+img {
+  max-width: 100%;
+  object-fit: cover;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  transition: all 0.25s ease;
+}
+
+/* App Containers */
+
+.app-page {
+  min-height: 100vh;
+  background: #f4fbff;
+}
+
+.app-container {
+  max-width: 1450px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.app-container-wide {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+/* Cards */
+
+.ui-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 28px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+  transition: all 0.25s ease;
+}
+
+.ui-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+}
+
+.ui-section {
+  background: white;
+  border-radius: 32px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
+/* Titles */
+
+.ui-title {
+  font-size: clamp(34px, 4vw, 56px);
+  font-weight: 900;
+  line-height: 1.1;
+  color: #020617;
+}
+
+.ui-heading {
+  font-size: clamp(26px, 3vw, 40px);
+  font-weight: 900;
+  line-height: 1.15;
+  color: #020617;
+}
+
+.ui-subtitle {
+  font-size: 17px;
+  color: #64748b;
+  line-height: 1.8;
+}
+
+/* Buttons */
+
+.ui-btn-primary {
+  background: #0891b2;
+  color: white;
+  padding: 14px 24px;
+  border-radius: 18px;
+  font-weight: 800;
+}
+
+.ui-btn-primary:hover {
+  background: #0e7490;
+  transform: translateY(-1px);
+}
+
+.ui-btn-dark {
+  background: #020617;
+  color: white;
+  padding: 14px 24px;
+  border-radius: 18px;
+  font-weight: 800;
+}
+
+.ui-btn-dark:hover {
+  background: #0f172a;
+}
+
+.ui-btn-danger {
+  background: #dc2626;
+  color: white;
+  padding: 14px 24px;
+  border-radius: 18px;
+  font-weight: 800;
+}
+
+.ui-btn-danger:hover {
+  background: #b91c1c;
+}
+
+/* Inputs */
+
+.ui-input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  outline: none;
+}
+
+.ui-input:focus {
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
+}
+
+/* Tables */
+
+.ui-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ui-table th {
+  background: #f8fafc;
+  padding: 16px;
+  text-align: left;
+  font-weight: 800;
+  color: #475569;
+}
+
+.ui-table td {
+  padding: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* Badges */
+
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #ecfeff;
+  color: #0e7490;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* Scrollbar */
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Mobile */
+
+@media (max-width: 768px) {
+  .app-container,
+  .app-container-wide {
+    padding: 20px 16px;
+  }
+
+  .ui-title {
+    font-size: 34px;
+  }
+
+  .ui-heading {
+    font-size: 26px;
+  }
+
+  .ui-subtitle {
+    font-size: 15px;
+  }
+}
+/* ===========================
+   MediCare Global UI Override
+=========================== */
+
+body {
+  zoom: 0.92;
+  background: #f4fbff;
+}
+
+.max-w-7xl,
+.max-w-6xl,
+.max-w-5xl,
+.max-w-\[1450px\],
+.max-w-\[1500px\],
+.max-w-\[1600px\] {
+  max-width: 1280px !important;
+}
+
+.shadow-lg,
+.shadow-xl,
+.shadow-2xl {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
+}
+
+.rounded-\[2rem\] {
+  border-radius: 24px !important;
+}
+
+.text-6xl {
+  font-size: 3rem !important;
+}
+
+.text-5xl {
+  font-size: 2.5rem !important;
+}
+
+.text-4xl {
+  font-size: 2rem !important;
+}
+
+img {
+  object-fit: cover;
+}
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
