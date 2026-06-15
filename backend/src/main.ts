@@ -7,18 +7,19 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: true, // ✅ allows ANY frontend (5173, 5174, etc.)
+    origin: true,
     credentials: true,
   });
 
   app.useGlobalInterceptors(
-  new ClassSerializerInterceptor(
-    app.get(Reflector),
-  ),
-);
+    new ClassSerializerInterceptor(
+      app.get(Reflector),
+    ),
+  );
 
   await app.listen(
-  process.env.PORT || 3000,
-);
+    process.env.PORT || 3000,
+    '0.0.0.0',
+  );
 }
 bootstrap();

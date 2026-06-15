@@ -3,23 +3,21 @@ import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Post('hospital/login')
-hospitalLogin(
-  @Body()
-  body: {
-    email: string;
-    password: string;
-  },
-) {
-  return this.authService.hospitalLogin(
-    body.email,
-    body.password,
-  );
-}
+  hospitalLogin(
+    @Body()
+    body: {
+      email: string;
+      password: string;
+    },
+  ) {
+    return this.authService.hospitalLogin(
+      body.email,
+      body.password,
+    );
+  }
 
   @Post('register')
   register(
@@ -48,6 +46,32 @@ hospitalLogin(
     return this.authService.login(
       body.email,
       body.password,
+    );
+  }
+
+  // DEV OTP SEND
+  @Post('patient/send-otp')
+  sendPatientOtp(
+    @Body()
+    body: {
+      mobile: string;
+    },
+  ) {
+    return this.authService.sendPatientOtp(body.mobile);
+  }
+
+  // DEV OTP VERIFY + REAL JWT
+  @Post('patient/verify-otp')
+  verifyPatientOtp(
+    @Body()
+    body: {
+      mobile: string;
+      otp: string;
+    },
+  ) {
+    return this.authService.verifyPatientOtp(
+      body.mobile,
+      body.otp,
     );
   }
 }

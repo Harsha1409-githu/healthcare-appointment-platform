@@ -7,6 +7,7 @@ import {
   Patch,
   UseGuards,
   Req,
+  BadRequestException,
 } from '@nestjs/common';
 
 import { AppointmentService } from './appointment.service';
@@ -19,14 +20,18 @@ export class AppointmentController {
     private readonly appointmentService: AppointmentService,
   ) {}
 
-  @UseGuards(JwtAuthGuard)
+  // TEMP DEV MODE: public booking for OTP testing
   @Post()
-  book(@Body() dto: CreateAppointmentDto, @Req() req: any) {
-    return this.appointmentService.bookAppointment(
-      dto,
-      req.user.sub,
-    );
+book(@Body() dto: CreateAppointmentDto) {
+  if (!dto.patientId) {
+    throw new BadRequestException('patientId is required');
   }
+
+  return this.appointmentService.bookAppointment(
+    dto,
+    dto.patientId,
+  );
+}
 
   @Get()
   getAll() {
@@ -53,14 +58,14 @@ export class AppointmentController {
       req.user.sub,
     );
   }
-  
+
   @UseGuards(JwtAuthGuard)
-@Get('hospital/analytics')
-getHospitalAnalytics(@Req() req: any) {
-  return this.appointmentService.getHospitalAnalytics(
-    req.user.sub,
-  );
-}
+  @Get('hospital/analytics')
+  getHospitalAnalytics(@Req() req: any) {
+    return this.appointmentService.getHospitalAnalytics(
+      req.user.sub,
+    );
+  }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')
