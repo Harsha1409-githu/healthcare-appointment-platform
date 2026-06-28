@@ -18,25 +18,26 @@ export class MailService {
   }) {
     await this.mailerService.sendMail({
       to: data.to,
-      subject: 'Appointment Confirmed - MediCare',
+      subject: 'Appointment Confirmed - TryDoc',
       html: `
         <h2>Appointment Confirmed ✅</h2>
         <p>Hello ${data.patientName},</p>
 
-        <p>Your appointment has been successfully booked.</p>
+        <p>Welcome to TryDoc.
+Your appointment has been booked successfully.</p>
 
         <hr />
 
         <p><strong>Doctor:</strong> ${data.doctorName}</p>
         <p><strong>Specialization:</strong> ${data.specialization}</p>
-        <p><strong>Hospital:</strong> ${data.hospitalName || 'MediCare Hospital'}</p>
+        <p><strong>Hospital:</strong> ${data.hospitalName || 'TryDoc Hospital'}</p>
         <p><strong>Date:</strong> ${data.date}</p>
         <p><strong>Time:</strong> ${data.startTime} - ${data.endTime}</p>
         <p><strong>Consultation Fee:</strong> ₹${data.fee}</p>
 
         <hr />
 
-        <p>Thank you for using MediCare.</p>
+        <p>Thank you for using TryDoc.</p>
       `,
     });
   }
@@ -50,7 +51,7 @@ export class MailService {
   }) {
     await this.mailerService.sendMail({
       to: data.to,
-      subject: 'Appointment Cancelled - MediCare',
+      subject: 'Appointment Cancelled - TryDoc',
       html: `
         <h2>Appointment Cancelled ❌</h2>
 
@@ -66,10 +67,10 @@ export class MailService {
 
         <hr />
 
-        <p>You can login to MediCare and book another available slot.</p>
+        <p>You can login to TryDoc and book another available slot.</p>
 
         <p>Regards,</p>
-        <p><strong>MediCare Team</strong></p>
+        <p><strong>TryDoc Team</strong></p>
       `,
     });
   }
@@ -81,7 +82,7 @@ export class MailService {
   }) {
     await this.mailerService.sendMail({
       to: data.to,
-      subject: 'Consultation Completed - MediCare',
+      subject: 'Consultation Completed - TryDoc',
       html: `
         <h2>Consultation Completed ✅</h2>
 
@@ -99,7 +100,7 @@ export class MailService {
         <hr />
 
         <p>Regards,</p>
-        <p><strong>MediCare Team</strong></p>
+        <p><strong>TryDoc Team</strong></p>
       `,
     });
   }
@@ -111,7 +112,7 @@ export class MailService {
   }) {
     await this.mailerService.sendMail({
       to: data.to,
-      subject: 'Your Prescription is Ready - MediCare',
+      subject: 'Your Prescription is Ready - TryDoc',
       html: `
         <h2>Prescription Ready 💊</h2>
 
@@ -119,7 +120,7 @@ export class MailService {
 
         <p>
           Your prescription from Dr. ${data.doctorName}
-          is now available in your MediCare account.
+          is now available in your TryDoc account.
         </p>
 
         <p>
@@ -129,7 +130,7 @@ export class MailService {
         <hr />
 
         <p>Regards,</p>
-        <p><strong>MediCare Team</strong></p>
+        <p><strong>TryDoc Team</strong></p>
       `,
     });
   }
@@ -140,20 +141,20 @@ export class MailService {
 }) {
   await this.mailerService.sendMail({
     to: data.to,
-    subject: 'Hospital Account Approved - MediCare',
+    subject: 'Hospital Account Approved - TryDoc',
     html: `
       <h2>Hospital Account Approved ✅</h2>
 
       <p>Hello ${data.hospitalName},</p>
 
-      <p>Your hospital account has been approved by the MediCare admin team.</p>
+      <p>Your hospital account has been approved by the TryDoc admin team.</p>
 
       <p>You can now login and start managing doctors, availability and appointments.</p>
 
       <hr />
 
       <p>Regards,</p>
-      <p><strong>MediCare Team</strong></p>
+      <p><strong>TryDoc Team</strong></p>
     `,
   });
 }
@@ -164,20 +165,20 @@ async sendHospitalRejected(data: {
 }) {
   await this.mailerService.sendMail({
     to: data.to,
-    subject: 'Hospital Account Rejected - MediCare',
+    subject: 'Hospital Account Rejected - TryDoc',
     html: `
       <h2>Hospital Account Rejected ❌</h2>
 
       <p>Hello ${data.hospitalName},</p>
 
-      <p>Your hospital registration request was rejected by the MediCare admin team.</p>
+      <p>Your hospital registration request was rejected by the TryDoc admin team.</p>
 
       <p>Please verify your hospital details and contact support if you think this was a mistake.</p>
 
       <hr />
 
       <p>Regards,</p>
-      <p><strong>MediCare Team</strong></p>
+      <p><strong>TryDoc Team</strong></p>
     `,
   });
 }

@@ -6,7 +6,6 @@ import {
   Phone,
   MapPin,
   Save,
-  ShieldCheck,
   Camera,
   Stethoscope,
   GraduationCap,
@@ -15,8 +14,11 @@ import {
   Building2,
   Lock,
   Activity,
-  BadgeCheck,
   Loader2,
+  LogOut,
+  ChevronRight,
+  CalendarCheck,
+  Clock,
 } from "lucide-react";
 import api from "../api/axios";
 
@@ -45,11 +47,25 @@ export default function DoctorMyProfile() {
     loadProfile();
   }, []);
 
+  const syncDoctorUser = (doctorData) => {
+    const currentDoctor = JSON.parse(
+      localStorage.getItem("doctorUser") || "{}"
+    );
+
+    const updatedDoctor = {
+      ...currentDoctor,
+      ...doctorData,
+    };
+
+    localStorage.setItem("doctorUser", JSON.stringify(updatedDoctor));
+    window.dispatchEvent(new Event("doctorProfileUpdated"));
+  };
+
   const loadProfile = async () => {
     try {
       const res = await api.get("/doctor/profile/me");
 
-      setProfile({
+      const data = {
         doctorName: res.data.doctorName || "",
         email: res.data.email || "",
         mobile: res.data.mobile || "",
@@ -61,9 +77,11 @@ export default function DoctorMyProfile() {
         state: res.data.state || "",
         hospitalName: res.data.hospital?.hospitalName || "",
         profileImage: res.data.profileImage || "",
-      });
+      };
 
-      setPreviewImage(res.data.profileImage || "");
+      setProfile(data);
+      setPreviewImage(data.profileImage);
+      syncDoctorUser(res.data);
     } catch (error) {
       console.error("Doctor profile error:", error);
       alert("Failed to load doctor profile");
@@ -92,7 +110,6 @@ export default function DoctorMyProfile() {
 
   const handleImagePreview = async (e) => {
     const file = e.target.files?.[0];
-
     if (!file) return;
 
     const formData = new FormData();
@@ -105,22 +122,24 @@ export default function DoctorMyProfile() {
         },
       });
 
-      setPreviewImage(res.data.profileImage);
+      const uploadedImage =
+        res.data.profileImage ||
+        res.data.url ||
+        res.data.secure_url ||
+        res.data?.data?.profileImage ||
+        "";
+
+      setPreviewImage(uploadedImage);
 
       setProfile((prev) => ({
         ...prev,
-        profileImage: res.data.profileImage,
+        profileImage: uploadedImage,
       }));
 
-      localStorage.setItem(
-        "doctorUser",
-        JSON.stringify({
-          ...JSON.parse(localStorage.getItem("doctorUser") || "{}"),
-          ...res.data,
-        })
-      );
-
-      window.dispatchEvent(new Event("doctorProfileUpdated"));
+      syncDoctorUser({
+        ...res.data,
+        profileImage: uploadedImage,
+      });
 
       alert("Doctor photo uploaded successfully");
     } catch (error) {
@@ -155,15 +174,10 @@ export default function DoctorMyProfile() {
         state: profile.state,
       });
 
-      localStorage.setItem(
-        "doctorUser",
-        JSON.stringify({
-          ...JSON.parse(localStorage.getItem("doctorUser") || "{}"),
-          ...res.data,
-        })
-      );
-
-      window.dispatchEvent(new Event("doctorProfileUpdated"));
+      syncDoctorUser({
+        ...res.data,
+        profileImage: profile.profileImage,
+      });
 
       alert("Doctor profile updated successfully");
     } catch (error) {
@@ -174,163 +188,172 @@ export default function DoctorMyProfile() {
     }
   };
 
+  const logout = () => {
+    localStorage.removeItem("doctorToken");
+    localStorage.removeItem("doctorUser");
+    navigate("/doctor/login");
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4fbff] flex items-center justify-center">
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center mx-auto mb-4">
-            <Loader2 className="text-cyan-600 animate-spin" size={34} />
-          </div>
-
-          <p className="text-slate-500 font-semibold">
+      <main className="min-h-screen bg-[#f4f8fb] flex items-center justify-center px-4">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 text-center">
+          <Loader2 className="text-cyan-600 animate-spin mx-auto" size={36} />
+          <p className="text-slate-500 font-semibold mt-3">
             Loading doctor profile...
           </p>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f4fbff]">
-      <div className="max-w-[1450px] mx-auto px-6 py-8">
-        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
-          <div className="grid lg:grid-cols-[1fr_360px] gap-8 items-center">
-            <div className="flex flex-col md:flex-row md:items-center gap-6">
-              <div className="relative w-28 h-28 shrink-0">
-                {previewImage ? (
-                  <img
-                    src={previewImage}
-                    alt="Doctor"
-                    className="w-28 h-28 rounded-[2rem] object-cover border border-slate-100 shadow-sm"
-                  />
-                ) : (
-                  <div className="w-28 h-28 rounded-[2rem] bg-cyan-50 border border-cyan-100 flex items-center justify-center">
-                    <Stethoscope size={48} className="text-cyan-600" />
-                  </div>
-                )}
+    <form onSubmit={saveProfile} className="min-h-screen bg-[#f4f8fb] pb-32">
+      <div className="max-w-md mx-auto px-4 pt-4">
+        <header className="mb-3">
+          <div className="inline-flex items-center gap-1.5 text-cyan-700 font-black text-xs">
+            <Stethoscope size={15} />
+            DOCTOR PROFILE
+          </div>
 
-                <label className="absolute -bottom-2 -right-2 bg-cyan-600 text-white p-3 rounded-2xl shadow-lg cursor-pointer hover:bg-cyan-700 transition">
-                  <Camera size={18} />
+          <h1 className="text-2xl font-black text-slate-950 mt-1">
+            My Profile
+          </h1>
 
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImagePreview}
-                    className="hidden"
-                  />
-                </label>
-              </div>
+          <p className="text-sm text-slate-500 font-semibold">
+            Manage your professional details.
+          </p>
+        </header>
 
-              <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
-                  <ShieldCheck size={17} />
-                  DOCTOR PROFILE
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+          <div className="flex gap-4">
+            <div className="relative w-20 h-20 shrink-0">
+              {previewImage ? (
+                <img
+                  src={previewImage}
+                  alt="Doctor"
+                  className="w-20 h-20 rounded-3xl object-cover border border-slate-100"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-3xl bg-cyan-50 border border-cyan-100 flex items-center justify-center">
+                  <Stethoscope size={36} className="text-cyan-600" />
                 </div>
+              )}
 
-                <h1 className="text-4xl md:text-5xl font-black text-slate-950">
-                  {profile.doctorName || "Doctor Profile"}
-                </h1>
+              <label className="absolute -bottom-2 -right-2 bg-cyan-600 text-white p-2 rounded-xl shadow cursor-pointer active:scale-95 transition">
+                <Camera size={16} />
 
-                <p className="text-slate-500 mt-3 text-lg">
-                  Manage your professional healthcare profile, consultation
-                  details and account security.
-                </p>
-              </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImagePreview}
+                  className="hidden"
+                />
+              </label>
             </div>
 
-            <div className="bg-slate-50 rounded-3xl border border-slate-100 p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-500 font-semibold">
-                    Profile Completion
-                  </p>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xl font-black text-slate-950 truncate">
+                Dr. {profile.doctorName || "Doctor"}
+              </h2>
 
-                  <h3 className="text-3xl font-black text-slate-950 mt-1">
-                    {profileCompletion}%
-                  </h3>
-                </div>
-
-                <div className="w-14 h-14 rounded-2xl bg-cyan-50 flex items-center justify-center">
-                  <Activity className="text-cyan-600" size={28} />
-                </div>
-              </div>
-
-              <div className="mt-5 h-3 bg-white rounded-full overflow-hidden border border-slate-100">
-                <div
-                  className="h-full bg-cyan-600 rounded-full transition-all"
-                  style={{ width: `${profileCompletion}%` }}
-                />
-              </div>
-
-              <p className="text-xs text-slate-500 mt-3">
-                Complete all details to improve your doctor visibility.
+              <p className="text-sm text-cyan-700 font-black truncate mt-1">
+                {profile.specialization || "Specialization not set"}
               </p>
+
+              <p className="text-xs text-slate-500 truncate mt-1">
+                {profile.hospitalName || "Hospital not linked"}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            <MiniStat
+              label="Experience"
+              value={profile.experience ? `${profile.experience} Yrs` : "0 Yrs"}
+            />
+
+            <MiniStat
+              label="Fee"
+              value={
+                profile.consultationFee ? `₹${profile.consultationFee}` : "₹0"
+              }
+            />
+
+            <MiniStat label="City" value={profile.city || "Not Set"} />
+          </div>
+
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="font-bold text-slate-500">
+                Profile completion
+              </span>
+
+              <span className="font-black text-cyan-700">
+                {profileCompletion}%
+              </span>
+            </div>
+
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-cyan-600 rounded-full"
+                style={{ width: `${profileCompletion}%` }}
+              />
             </div>
           </div>
         </section>
 
-        <div className="grid lg:grid-cols-[1fr_360px] gap-8">
-          <form
-            onSubmit={saveProfile}
-            className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 md:p-8"
-          >
-            <div className="flex items-center gap-3 mb-7">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center">
-                <Stethoscope className="text-cyan-600" size={25} />
-              </div>
+        <section className="grid grid-cols-3 gap-2 mt-3">
+          <QuickLink
+            icon={Activity}
+            title="Dashboard"
+            onClick={() => navigate("/doctor/dashboard")}
+          />
 
-              <div>
-                <h2 className="text-2xl font-black text-slate-950">
-                  Professional Information
-                </h2>
+          <QuickLink
+            icon={CalendarCheck}
+            title="Bookings"
+            onClick={() => navigate("/doctor/appointments")}
+          />
 
-                <p className="text-slate-500">
-                  Keep your doctor profile updated for better patient trust.
-                </p>
-              </div>
-            </div>
+          <QuickLink
+            icon={Clock}
+            title="Calendar"
+            onClick={() => navigate("/doctor/calendar")}
+          />
+        </section>
 
-            <div className="grid md:grid-cols-2 gap-5">
-              <Input
-                icon={UserRound}
-                label="Doctor Name"
-                name="doctorName"
-                value={profile.doctorName}
-                onChange={handleChange}
-              />
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <h2 className="text-lg font-black text-slate-950 mb-4">
+            Professional Details
+          </h2>
 
-              <Input
-                icon={Mail}
-                label="Email"
-                name="email"
-                value={profile.email}
-                disabled
-              />
+          <div className="space-y-3">
+            <Input
+              icon={UserRound}
+              label="Doctor Name"
+              name="doctorName"
+              value={profile.doctorName}
+              onChange={handleChange}
+            />
 
-              <Input
-                icon={Phone}
-                label="Mobile"
-                name="mobile"
-                value={profile.mobile}
-                onChange={handleChange}
-              />
+            <Input
+              icon={Stethoscope}
+              label="Specialization"
+              name="specialization"
+              value={profile.specialization}
+              onChange={handleChange}
+            />
 
-              <Input
-                icon={Stethoscope}
-                label="Specialization"
-                name="specialization"
-                value={profile.specialization}
-                onChange={handleChange}
-              />
+            <Input
+              icon={GraduationCap}
+              label="Qualification"
+              name="qualification"
+              value={profile.qualification}
+              onChange={handleChange}
+            />
 
-              <Input
-                icon={GraduationCap}
-                label="Qualification"
-                name="qualification"
-                value={profile.qualification}
-                onChange={handleChange}
-              />
-
+            <div className="grid grid-cols-2 gap-3">
               <Input
                 icon={BriefcaseMedical}
                 label="Experience"
@@ -342,21 +365,47 @@ export default function DoctorMyProfile() {
 
               <Input
                 icon={IndianRupee}
-                label="Consultation Fee"
+                label="Fee"
                 name="consultationFee"
                 type="number"
                 value={profile.consultationFee}
                 onChange={handleChange}
               />
+            </div>
+          </div>
+        </section>
 
-              <Input
-                icon={Building2}
-                label="Hospital"
-                name="hospitalName"
-                value={profile.hospitalName}
-                disabled
-              />
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <h2 className="text-lg font-black text-slate-950 mb-4">
+            Contact & Location
+          </h2>
 
+          <div className="space-y-3">
+            <Input
+              icon={Mail}
+              label="Email"
+              name="email"
+              value={profile.email}
+              disabled
+            />
+
+            <Input
+              icon={Phone}
+              label="Mobile"
+              name="mobile"
+              value={profile.mobile}
+              onChange={handleChange}
+            />
+
+            <Input
+              icon={Building2}
+              label="Hospital"
+              name="hospitalName"
+              value={profile.hospitalName}
+              disabled
+            />
+
+            <div className="grid grid-cols-2 gap-3">
               <Input
                 icon={MapPin}
                 label="City"
@@ -373,137 +422,96 @@ export default function DoctorMyProfile() {
                 onChange={handleChange}
               />
             </div>
+          </div>
+        </section>
 
-            <div className="mt-8 flex justify-end">
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex items-center gap-2 bg-cyan-600 text-white px-6 py-4 rounded-2xl font-black hover:bg-cyan-700 transition disabled:bg-gray-400"
-              >
-                <Save size={19} />
-                {saving ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-          </form>
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <MenuItem
+            icon={Lock}
+            title="Change Password"
+            subtitle="Update account security"
+            onClick={() => navigate("/doctor/change-password")}
+          />
 
-          <aside className="space-y-5">
-            <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center">
-                  <BadgeCheck className="text-emerald-600" size={25} />
-                </div>
-
-                <div>
-                  <h2 className="text-xl font-black text-slate-950">
-                    Profile Summary
-                  </h2>
-
-                  <p className="text-sm text-slate-500">
-                    Public doctor details
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <SummaryItem
-                  label="Specialization"
-                  value={profile.specialization || "Not Set"}
-                />
-
-                <SummaryItem
-                  label="Experience"
-                  value={
-                    profile.experience
-                      ? `${profile.experience} Years`
-                      : "Not Set"
-                  }
-                />
-
-                <SummaryItem
-                  label="Fee"
-                  value={
-                    profile.consultationFee
-                      ? `₹${profile.consultationFee}`
-                      : "Not Set"
-                  }
-                />
-
-                <SummaryItem
-                  label="Hospital"
-                  value={profile.hospitalName || "Not Set"}
-                />
-
-                <SummaryItem
-                  label="Location"
-                  value={
-                    profile.city || profile.state
-                      ? `${profile.city || "-"}, ${profile.state || "-"}`
-                      : "Not Set"
-                  }
-                />
-              </div>
+          <button
+            type="button"
+            onClick={logout}
+            className="w-full flex items-center gap-3 py-3 text-left border-t border-slate-100 mt-2"
+          >
+            <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+              <LogOut className="text-red-600" size={20} />
             </div>
 
-            <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center">
-                  <Lock className="text-red-600" size={24} />
-                </div>
-
-                <div>
-                  <h2 className="text-xl font-black text-slate-950">
-                    Security
-                  </h2>
-
-                  <p className="text-sm text-slate-500">
-                    Protect your account
-                  </p>
-                </div>
-              </div>
-
-              <p className="text-slate-500 text-sm leading-relaxed mb-5">
-                Update your password regularly to keep your doctor account
-                secure.
-              </p>
-
-              <button
-                onClick={() => navigate("/doctor/change-password")}
-                className="w-full bg-red-600 text-white px-6 py-3 rounded-2xl font-black hover:bg-red-700 transition"
-              >
-                Change Password
-              </button>
-            </div>
-
-            <div className="bg-cyan-600 rounded-[2rem] shadow-sm p-6 text-white">
-              <ShieldCheck className="mb-4" size={28} />
-
-              <h2 className="text-xl font-black">
-                Verified Doctor Profile
-              </h2>
-
-              <p className="text-cyan-100 text-sm mt-2 leading-relaxed">
-                Updated profiles help patients trust your consultation details
-                and book appointments faster.
+            <div className="flex-1">
+              <h3 className="font-black text-red-600 text-sm">Logout</h3>
+              <p className="text-xs text-slate-500">
+                Sign out from doctor account
               </p>
             </div>
-          </aside>
+
+            <ChevronRight size={18} className="text-slate-400" />
+          </button>
+        </section>
+      </div>
+
+      <div className="fixed bottom-4 left-0 right-0 z-40 px-4">
+        <div className="max-w-md mx-auto">
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black shadow-lg disabled:bg-gray-400 flex items-center justify-center gap-2 active:scale-95 transition"
+          >
+            <Save size={18} />
+            {saving ? "Updating..." : "Save Profile"}
+          </button>
         </div>
       </div>
+    </form>
+  );
+}
+
+function MiniStat({ label, value }) {
+  return (
+    <div className="bg-slate-50 rounded-2xl border border-slate-100 p-3 text-center">
+      <p className="text-sm font-black text-slate-950 truncate">{value}</p>
+
+      <p className="text-[10px] text-slate-500 font-bold mt-1">{label}</p>
     </div>
   );
 }
 
-function SummaryItem({ label, value }) {
+function QuickLink({ icon: Icon, title, onClick }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-      <p className="text-sm text-slate-500 font-semibold">
-        {label}
-      </p>
+    <button
+      type="button"
+      onClick={onClick}
+      className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3 text-center active:scale-95 transition"
+    >
+      <Icon className="text-cyan-600 mx-auto" size={21} />
 
-      <p className="font-black text-slate-950 text-right">
-        {value}
-      </p>
-    </div>
+      <p className="text-[11px] font-black text-slate-800 mt-2">{title}</p>
+    </button>
+  );
+}
+
+function MenuItem({ icon: Icon, title, subtitle, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center gap-3 py-3 text-left"
+    >
+      <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center">
+        <Icon className="text-cyan-600" size={20} />
+      </div>
+
+      <div className="flex-1">
+        <h3 className="font-black text-slate-900 text-sm">{title}</h3>
+        <p className="text-xs text-slate-500">{subtitle}</p>
+      </div>
+
+      <ChevronRight size={18} className="text-slate-400" />
+    </button>
   );
 }
 
@@ -518,18 +526,16 @@ function Input({
 }) {
   return (
     <label>
-      <p className="text-sm font-black text-slate-700 mb-2">
-        {label}
-      </p>
+      <p className="text-xs font-black text-slate-700 mb-1.5">{label}</p>
 
       <div
-        className={`flex items-center gap-3 border rounded-2xl px-4 py-3 ${
+        className={`flex items-center gap-3 border rounded-2xl px-3 py-3 ${
           disabled
             ? "bg-slate-100 border-slate-200"
             : "bg-slate-50 border-slate-200 focus-within:ring-2 focus-within:ring-cyan-500"
         }`}
       >
-        <Icon size={19} className="text-cyan-600" />
+        <Icon size={17} className="text-cyan-600 shrink-0" />
 
         <input
           name={name}
@@ -537,7 +543,7 @@ function Input({
           value={value}
           onChange={onChange}
           disabled={disabled}
-          className="w-full bg-transparent outline-none text-slate-800 disabled:text-slate-500"
+          className="w-full bg-transparent outline-none text-sm text-slate-800 disabled:text-slate-500"
         />
       </div>
     </label>

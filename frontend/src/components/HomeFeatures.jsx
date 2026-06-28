@@ -78,7 +78,7 @@ export default function HomeFeatures() {
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-12">
           <div>
             <span className="inline-flex px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm">
-              MEDICARE SERVICES
+              TryDoc SERVICES
             </span>
 
             <h2 className="text-4xl md:text-5xl font-black text-slate-950 mt-5">

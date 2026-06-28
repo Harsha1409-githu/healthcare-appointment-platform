@@ -83,7 +83,7 @@ export default function AdminLogin() {
 
             <p className="text-cyan-100 mt-6 text-lg leading-relaxed">
               Manage hospitals, doctors, approvals, platform analytics and
-              MediCare operations from one secure workspace.
+              TryDoc operations from one secure workspace.
             </p>
 
             <div className="mt-10 space-y-4">
@@ -103,7 +103,7 @@ export default function AdminLogin() {
               </h3>
 
               <p className="text-cyan-100 text-sm mt-2 leading-relaxed">
-                This dashboard is protected for authorized MediCare platform
+                This dashboard is protected for authorized TryDoc platform
                 administrators.
               </p>
             </div>
@@ -122,7 +122,7 @@ export default function AdminLogin() {
               </h2>
 
               <p className="text-slate-500 mt-3">
-                Access your MediCare admin dashboard
+                Access your TryDoc admin dashboard
               </p>
             </div>
 

@@ -9,6 +9,7 @@ import { PrescriptionController } from './prescription.controller';
 import { Appointment } from '../appointment/appointment.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MailModule } from '../mail/mail.module';
+import { PrescriptionPdfService } from './prescription-pdf.service';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { MailModule } from '../mail/mail.module';
   providers: [
     PrescriptionService,
     JwtAuthGuard,
+    PrescriptionPdfService
   ],
 })
 export class PrescriptionModule {}

@@ -3,43 +3,37 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import PDFDocument from 'pdfkit';
+import * as QRCode from 'qrcode';
+import { Response } from 'express';
 
 import { Prescription } from './prescription.entity';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
-
 import {
   Appointment,
   AppointmentStatus,
 } from '../appointment/appointment.entity';
-
-import PDFDocument from 'pdfkit';
-import { Response } from 'express';
 import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class PrescriptionService {
   constructor(
-  @InjectRepository(Prescription)
-  private prescriptionRepo: Repository<Prescription>,
+    @InjectRepository(Prescription)
+    private prescriptionRepo: Repository<Prescription>,
 
-  @InjectRepository(Appointment)
-  private appointmentRepo: Repository<Appointment>,
+    @InjectRepository(Appointment)
+    private appointmentRepo: Repository<Appointment>,
 
-  private readonly mailService: MailService,
-) {}
+    private readonly mailService: MailService,
+  ) {}
 
   async createPrescription(dto: CreatePrescriptionDto) {
     const appointment = await this.appointmentRepo.findOne({
-      where: {
-        id: dto.appointmentId,
-      },
+      where: { id: dto.appointmentId },
       relations: {
-        doctor: {
-          hospital: true,
-        },
+        doctor: { hospital: true },
         patient: true,
         slot: true,
       },
@@ -49,31 +43,22 @@ export class PrescriptionService {
       throw new NotFoundException('Appointment not found');
     }
 
-    if (appointment.status !== AppointmentStatus.COMPLETED) {
-      throw new BadRequestException(
-        'Prescription can be added only after appointment is completed',
-      );
-    }
-
     if (!appointment.patient) {
-      throw new BadRequestException(
-        'Appointment is not linked with patient',
-      );
+      throw new BadRequestException('Appointment is not linked with patient');
     }
 
-    const existingPrescription =
-      await this.prescriptionRepo.findOne({
-        where: {
-          appointment: {
-            id: dto.appointmentId,
-          },
-        },
-      });
+    const existingPrescription = await this.prescriptionRepo.findOne({
+      where: {
+        appointment: { id: dto.appointmentId },
+      },
+    });
 
     if (existingPrescription) {
-      throw new BadRequestException(
-        'Prescription already exists for this appointment',
-      );
+      existingPrescription.diagnosis = dto.diagnosis;
+      existingPrescription.medicines = dto.medicines;
+      existingPrescription.notes = dto.notes || '';
+      const updated = await this.prescriptionRepo.save(existingPrescription);
+      return updated;
     }
 
     const prescription = this.prescriptionRepo.create({
@@ -82,89 +67,69 @@ export class PrescriptionService {
       patient: appointment.patient,
       diagnosis: dto.diagnosis,
       medicines: dto.medicines,
-      notes: dto.notes,
+      notes: dto.notes || '',
     });
 
-    const savedPrescription =
-  await this.prescriptionRepo.save(prescription);
+    const savedPrescription = await this.prescriptionRepo.save(prescription);
 
-try {
-  await this.mailService.sendPrescriptionReady({
-    to: appointment.patient.email,
-    patientName: appointment.patient.fullName,
-    doctorName: appointment.doctor.doctorName,
-  });
-} catch (error) {
-  console.error('Prescription email failed:', error);
-}
+    appointment.prescriptionCompleted = true;
+    await this.appointmentRepo.save(appointment);
 
-return savedPrescription;
+    try {
+      await this.mailService.sendPrescriptionReady({
+        to: appointment.patient.email,
+        patientName: appointment.patient.fullName,
+        doctorName: appointment.doctor.doctorName,
+      });
+    } catch (error) {
+      console.error('Prescription email failed:', error);
+    }
+
+    return savedPrescription;
   }
 
   async getAllPrescriptions() {
     return this.prescriptionRepo.find({
       relations: {
         appointment: true,
-        doctor: {
-          hospital: true,
-        },
+        doctor: { hospital: true },
         patient: true,
       },
-      order: {
-        id: 'DESC',
-      },
+      order: { id: 'DESC' },
     });
   }
 
   async getMyPrescriptions(patientId: string) {
     return this.prescriptionRepo.find({
-      where: {
-        patient: {
-          id: patientId,
-        },
-      },
+      where: { patient: { id: patientId } },
       relations: {
         appointment: true,
-        doctor: {
-          hospital: true,
-        },
+        doctor: { hospital: true },
         patient: true,
       },
-      order: {
-        id: 'DESC',
-      },
+      order: { id: 'DESC' },
     });
   }
 
   async getByAppointment(appointmentId: number) {
     return this.prescriptionRepo.findOne({
       where: {
-        appointment: {
-          id: appointmentId,
-        },
+        appointment: { id: appointmentId },
       },
       relations: {
         appointment: true,
-        doctor: {
-          hospital: true,
-        },
+        doctor: { hospital: true },
         patient: true,
       },
     });
   }
 
-  async generatePdf(id: number, res: Response) {
+  async findOne(id: number) {
     const prescription = await this.prescriptionRepo.findOne({
-      where: {
-        id,
-      },
+      where: { id },
       relations: {
-        appointment: {
-          slot: true,
-        },
-        doctor: {
-          hospital: true,
-        },
+        appointment: { slot: true },
+        doctor: { hospital: true },
         patient: true,
       },
     });
@@ -173,162 +138,223 @@ return savedPrescription;
       throw new NotFoundException('Prescription not found');
     }
 
-    const hospitalName =
-      prescription.doctor?.hospital?.hospitalName ||
-      'MediCare Hospital';
+    return prescription;
+  }
 
-    const appointmentDate =
-      prescription.appointment?.slot?.date || '-';
+  async generatePdf(id: number, res: Response) {
+    const prescription = await this.findOne(id);
 
-    const appointmentTime = prescription.appointment?.slot
-      ? `${prescription.appointment.slot.startTime} - ${prescription.appointment.slot.endTime}`
+    const hospital = prescription.doctor?.hospital;
+    const doctor = prescription.doctor;
+    const patient = prescription.patient;
+    const appointment = prescription.appointment;
+
+    const hospitalName = hospital?.hospitalName || 'TryDoc Hospital';
+    const prescriptionNo = `TRD-RX-${String(prescription.id).padStart(6, '0')}`;
+
+    const appointmentDate = appointment?.slot?.date || '-';
+    const appointmentTime = appointment?.slot
+      ? `${appointment.slot.startTime} - ${appointment.slot.endTime}`
       : '-';
 
+    const qrUrl = `https://trydoc.co/rx/${prescriptionNo}`;
+    const qrDataUrl = await QRCode.toDataURL(qrUrl);
+    const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64');
+
     const doc = new PDFDocument({
-      margin: 50,
+      size: 'A4',
+      margin: 45,
     });
 
     res.setHeader('Content-Type', 'application/pdf');
-
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename=prescription-${id}.pdf`,
+      `attachment; filename=trydoc-prescription-${prescriptionNo}.pdf`,
     );
 
     doc.pipe(res);
 
+    this.header(doc, hospitalName);
+
+    this.infoBox(doc, 'Doctor Details', [
+      `Doctor: Dr. ${doctor?.doctorName || '-'}`,
+      `Specialization: ${doctor?.specialization || '-'}`,
+      `Qualification: ${doctor?.qualification || '-'}`,
+      `Experience: ${doctor?.experience || 0} years`,
+      `Hospital: ${hospitalName}`,
+    ]);
+
+    this.infoBox(doc, 'Patient Details', [
+      `Name: ${patient?.fullName || '-'}`,
+      `Age / Gender: ${patient?.age || '-'} / ${patient?.gender || '-'}`,
+      `Mobile: ${patient?.mobile || '-'}`,
+      `Date: ${appointmentDate}`,
+      `Time: ${appointmentTime}`,
+    ]);
+
+    this.sectionTitle(doc, 'Diagnosis');
+    doc.fontSize(11).fillColor('#0f172a').text(prescription.diagnosis || '-');
+    doc.moveDown(1);
+
+    this.sectionTitle(doc, 'Medicines');
+    this.medicineTable(doc, prescription.medicines || '-');
+
+    this.sectionTitle(doc, 'Advice / Notes');
+    doc.fontSize(10).fillColor('#0f172a').text(prescription.notes || '-');
+    doc.moveDown(1.5);
+
+    const signatureY = doc.y + 10;
+
     doc
-      .fontSize(24)
-      .text(hospitalName.toUpperCase(), {
+      .fontSize(10)
+      .fillColor('#0f172a')
+      .text('Doctor Signature', 45, signatureY);
+
+    doc
+      .strokeColor('#94a3b8')
+      .moveTo(45, signatureY + 35)
+      .lineTo(220, signatureY + 35)
+      .stroke();
+
+    doc
+      .fontSize(10)
+      .fillColor('#0f172a')
+      .text(`Dr. ${doctor?.doctorName || '-'}`, 45, signatureY + 45);
+
+    doc.image(qrBuffer, 430, signatureY, {
+      width: 90,
+      height: 90,
+    });
+
+    doc
+      .fontSize(8)
+      .fillColor('#64748b')
+      .text('Scan to verify', 432, signatureY + 92, {
+        width: 90,
         align: 'center',
       });
 
+    doc.moveDown(7);
+
     doc
-      .fontSize(11)
-      .text('Digital Medical Prescription', {
+      .strokeColor('#e2e8f0')
+      .moveTo(45, 760)
+      .lineTo(550, 760)
+      .stroke();
+
+    doc
+      .fontSize(8)
+      .fillColor('#64748b')
+      .text(
+        `${prescriptionNo} • Generated by TryDoc • Smart Healthcare for Everyone`,
+        45,
+        770,
+        { align: 'center', width: 510 },
+      );
+
+    doc
+      .fontSize(8)
+      .fillColor('#64748b')
+      .text('This is an electronically generated prescription.', {
         align: 'center',
+        width: 510,
       });
+
+    doc.end();
+  }
+
+  private header(doc: PDFKit.PDFDocument, hospitalName: string) {
+    doc
+      .fontSize(26)
+      .fillColor('#0891b2')
+      .text('TryDoc', { align: 'center' });
+
+    doc
+      .fontSize(10)
+      .fillColor('#475569')
+      .text('Smart Healthcare for Everyone', { align: 'center' });
+
+    doc.moveDown(0.6);
+
+    doc
+      .fontSize(17)
+      .fillColor('#0f172a')
+      .text(hospitalName, { align: 'center' });
+
+    doc
+      .fontSize(10)
+      .fillColor('#64748b')
+      .text('Digital Medical Prescription', { align: 'center' });
 
     doc.moveDown(1);
 
     doc
-      .fontSize(10)
-      .text(
-        'Generated by MediCare Smart Healthcare Platform',
-        {
-          align: 'center',
-        },
-      );
+      .strokeColor('#e2e8f0')
+      .moveTo(45, doc.y)
+      .lineTo(550, doc.y)
+      .stroke();
 
-    doc.moveDown(2);
+    doc.moveDown(1);
+  }
 
-    doc.fontSize(12).text(`Prescription ID: ${prescription.id}`);
-
-    doc.text(
-      `Generated Date: ${new Date(
-        prescription.createdAt,
-      ).toLocaleDateString()}`,
-    );
-
-    doc.text(`Appointment Date: ${appointmentDate}`);
-    doc.text(`Appointment Time: ${appointmentTime}`);
-
-    doc.moveDown();
-
-    doc.fontSize(15).text('Patient Details', {
-      underline: true,
-    });
+  private sectionTitle(doc: PDFKit.PDFDocument, title: string) {
+    doc
+      .fontSize(13)
+      .fillColor('#0891b2')
+      .text(title, { underline: true });
 
     doc.moveDown(0.5);
+  }
+
+  private infoBox(doc: PDFKit.PDFDocument, title: string, lines: string[]) {
+    const startY = doc.y;
+
+    doc
+      .roundedRect(45, startY, 510, 105, 10)
+      .fillAndStroke('#f8fafc', '#e2e8f0');
 
     doc
       .fontSize(12)
-      .text(
-        `Patient: ${prescription.patient?.fullName || '-'}`,
-      );
+      .fillColor('#0891b2')
+      .text(title, 60, startY + 12);
 
-    doc.text(`Mobile: ${prescription.patient?.mobile || '-'}`);
+    let y = startY + 34;
 
-    doc.text(`Email: ${prescription.patient?.email || '-'}`);
+    lines.forEach((line) => {
+      doc.fontSize(9).fillColor('#0f172a').text(line, 60, y);
+      y += 14;
+    });
 
-    doc.moveDown();
+    doc.y = startY + 120;
+  }
 
-    doc.fontSize(15).text('Doctor Details', {
-      underline: true,
+  private medicineTable(doc: PDFKit.PDFDocument, medicinesText: string) {
+    const medicines = String(medicinesText)
+      .split('\n')
+      .map((m) => m.trim())
+      .filter(Boolean);
+
+    if (medicines.length === 0) {
+      doc.fontSize(10).fillColor('#0f172a').text('-');
+      doc.moveDown(1);
+      return;
+    }
+
+    medicines.forEach((medicine, index) => {
+      doc
+        .roundedRect(45, doc.y, 510, 34, 8)
+        .fillAndStroke('#f8fafc', '#e2e8f0');
+
+      doc
+        .fontSize(10)
+        .fillColor('#0f172a')
+        .text(`${index + 1}. ${medicine}`, 58, doc.y + 10, {
+          width: 480,
+        });
+
+      doc.y += 45;
     });
 
     doc.moveDown(0.5);
-
-    doc
-      .fontSize(12)
-      .text(
-        `Doctor: ${
-          prescription.doctor?.doctorName || '-'
-        }`,
-      );
-
-    doc.text(
-      `Specialization: ${
-        prescription.doctor?.specialization || '-'
-      }`,
-    );
-
-    doc.text(
-      `Qualification: ${
-        prescription.doctor?.qualification || '-'
-      }`,
-    );
-
-    doc.moveDown();
-
-    doc.fontSize(15).text('Diagnosis', {
-      underline: true,
-    });
-
-    doc.moveDown(0.5);
-
-    doc
-      .fontSize(12)
-      .text(prescription.diagnosis || '-');
-
-    doc.moveDown();
-
-    doc.fontSize(15).text('Medicines', {
-      underline: true,
-    });
-
-    doc.moveDown(0.5);
-
-    doc
-      .fontSize(12)
-      .text(prescription.medicines || '-');
-
-    doc.moveDown();
-
-    doc.fontSize(15).text('Notes', {
-      underline: true,
-    });
-
-    doc.moveDown(0.5);
-
-    doc.fontSize(12).text(prescription.notes || '-');
-
-    doc.moveDown(3);
-
-    doc.text('Doctor Signature: ____________________');
-
-    doc.moveDown(2);
-
-    doc
-      .fontSize(9)
-      .fillColor('gray')
-      .text(
-        'This is a digitally generated prescription. Please consult your doctor before changing any medication.',
-        {
-          align: 'center',
-        },
-      );
-
-    doc.end();
   }
 }

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
+  ArrowLeft,
   Stethoscope,
   UserPlus,
   BadgeCheck,
@@ -11,16 +13,20 @@ import {
   XCircle,
   Building2,
   Search,
-  Filter,
   Loader2,
   Eye,
   EyeOff,
   UsersRound,
-  Activity,
+  Copy,
+  X,
+  Plus,
+  CalendarDays,
 } from "lucide-react";
 import api from "../api/axios";
 
 export default function HospitalDoctors() {
+  const navigate = useNavigate();
+
   const hospitalUser = JSON.parse(
     localStorage.getItem("hospitalUser") ||
       localStorage.getItem("user") ||
@@ -34,6 +40,8 @@ export default function HospitalDoctors() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [showPassword, setShowPassword] = useState(false);
+  const [showAddSheet, setShowAddSheet] = useState(false);
+  const [createdDoctor, setCreatedDoctor] = useState(null);
 
   const [form, setForm] = useState({
     doctorName: "",
@@ -58,9 +66,7 @@ export default function HospitalDoctors() {
       const allDoctors = res.data || [];
 
       const hospitalDoctors = hospitalUser?.id
-        ? allDoctors.filter(
-            (doctor) => doctor.hospital?.id === hospitalUser.id
-          )
+        ? allDoctors.filter((doctor) => doctor.hospital?.id === hospitalUser.id)
         : [];
 
       setDoctors(hospitalDoctors);
@@ -72,21 +78,6 @@ export default function HospitalDoctors() {
     }
   };
 
-  const filteredDoctors = doctors.filter((doctor) => {
-    const matchesSearch = `${doctor.doctorName || ""} ${
-      doctor.specialization || ""
-    } ${doctor.email || ""} ${doctor.mobile || ""}`
-      .toLowerCase()
-      .includes(search.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === "ALL" ||
-      (statusFilter === "ACTIVE" && doctor.isActive) ||
-      (statusFilter === "INACTIVE" && !doctor.isActive);
-
-    return matchesSearch && matchesStatus;
-  });
-
   const stats = useMemo(
     () => ({
       total: doctors.length,
@@ -96,10 +87,38 @@ export default function HospitalDoctors() {
     [doctors]
   );
 
+  const filteredDoctors = doctors.filter((doctor) => {
+    const text = `${doctor.doctorName || ""} ${doctor.specialization || ""} ${
+      doctor.email || ""
+    } ${doctor.mobile || ""}`.toLowerCase();
+
+    const matchesSearch = text.includes(search.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "ALL" ||
+      (statusFilter === "ACTIVE" && doctor.isActive) ||
+      (statusFilter === "INACTIVE" && !doctor.isActive);
+
+    return matchesSearch && matchesStatus;
+  });
+
   const handleChange = (e) => {
     setForm({
       ...form,
       [e.target.name]: e.target.value,
+    });
+  };
+
+  const resetForm = () => {
+    setForm({
+      doctorName: "",
+      specialization: "",
+      experience: "",
+      qualification: "",
+      consultationFee: "",
+      mobile: "",
+      email: "",
+      password: "",
     });
   };
 
@@ -119,26 +138,21 @@ export default function HospitalDoctors() {
     try {
       setSaving(true);
 
-      await api.post("/doctor", {
+      const res = await api.post("/doctor", {
         ...form,
         experience: Number(form.experience),
         consultationFee: Number(form.consultationFee),
         hospitalId: hospitalUser.id,
       });
 
-      alert("Doctor added successfully");
-
-      setForm({
-        doctorName: "",
-        specialization: "",
-        experience: "",
-        qualification: "",
-        consultationFee: "",
-        mobile: "",
-        email: "",
-        password: "",
+      setCreatedDoctor({
+        ...res.data,
+        email: form.email,
+        password: form.password,
       });
 
+      resetForm();
+      setShowAddSheet(false);
       fetchDoctors();
     } catch (error) {
       console.error("Add doctor error:", error);
@@ -149,9 +163,7 @@ export default function HospitalDoctors() {
   };
 
   const deactivateDoctor = async (id) => {
-    const confirmDelete = window.confirm("Deactivate this doctor?");
-
-    if (!confirmDelete) return;
+    if (!window.confirm("Deactivate this doctor?")) return;
 
     try {
       await api.delete(`/doctor/${id}`);
@@ -173,71 +185,298 @@ export default function HospitalDoctors() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4fbff]">
-      <div className="max-w-[1450px] mx-auto px-6 py-8">
-        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
-                <Building2 size={17} />
-                {hospitalUser?.hospitalName || "Hospital Portal"}
-              </div>
+    <main className="min-h-screen bg-[#f4f8fb] px-4 pt-4 pb-28">
+      <div className="max-w-md mx-auto">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 text-cyan-700 font-black text-sm mb-3"
+        >
+          <ArrowLeft size={17} />
+          Back
+        </button>
 
-              <h1 className="text-4xl md:text-5xl font-black text-slate-950">
-                Doctor Management
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-cyan-50 flex items-center justify-center shrink-0">
+              <Building2 className="text-cyan-600" size={28} />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-cyan-700 font-black">
+                HOSPITAL DOCTORS
+              </p>
+
+              <h1 className="text-xl font-black text-slate-950 truncate">
+                {hospitalUser?.hospitalName || "Doctor Management"}
               </h1>
 
-              <p className="text-slate-500 mt-3 max-w-2xl text-lg leading-relaxed">
-                Add doctors, manage credentials, activate or deactivate
-                specialists, and keep your hospital team updated.
+              <p className="text-sm text-slate-500 truncate">
+                Manage doctors, credentials and slots
               </p>
             </div>
+          </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <MiniStat icon={UsersRound} title="Total" value={stats.total} />
-              <MiniStat icon={ShieldCheck} title="Active" value={stats.active} />
-              <MiniStat icon={XCircle} title="Inactive" value={stats.inactive} />
-            </div>
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            <MiniStat icon={UsersRound} title="Total" value={stats.total} />
+            <MiniStat icon={ShieldCheck} title="Active" value={stats.active} />
+            <MiniStat icon={XCircle} title="Inactive" value={stats.inactive} />
           </div>
         </section>
 
-        <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 md:p-8 mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center">
-              <UserPlus className="text-cyan-600" size={25} />
-            </div>
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-3">
+            <Search size={18} className="text-cyan-600 shrink-0" />
 
-            <div>
-              <h2 className="text-2xl font-black text-slate-950">
-                Add New Doctor
-              </h2>
-
-              <p className="text-slate-500 text-sm">
-                Doctor login credentials will be created automatically.
-              </p>
-            </div>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search doctors, speciality, email"
+              className="w-full bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400"
+            />
           </div>
 
-          <form
-            onSubmit={addDoctor}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-4"
-          >
-            <Input
-              name="doctorName"
-              placeholder="Doctor Name"
-              value={form.doctorName}
-              onChange={handleChange}
-              icon={Stethoscope}
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <FilterChip
+              label="All"
+              active={statusFilter === "ALL"}
+              onClick={() => setStatusFilter("ALL")}
             />
 
-            <Input
-              name="specialization"
-              placeholder="Specialization"
-              value={form.specialization}
-              onChange={handleChange}
-              icon={BadgeCheck}
+            <FilterChip
+              label="Active"
+              active={statusFilter === "ACTIVE"}
+              onClick={() => setStatusFilter("ACTIVE")}
             />
 
+            <FilterChip
+              label="Inactive"
+              active={statusFilter === "INACTIVE"}
+              onClick={() => setStatusFilter("INACTIVE")}
+            />
+          </div>
+        </section>
+
+        <section className="mt-3">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <div>
+              <h2 className="text-lg font-black text-slate-950">
+                Doctors
+              </h2>
+
+              <p className="text-xs text-slate-500">
+                {filteredDoctors.length} of {doctors.length} doctors
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={fetchDoctors}
+              className="text-cyan-600 text-xs font-black"
+            >
+              Refresh
+            </button>
+          </div>
+
+          {loading ? (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 text-center">
+              <Loader2 className="mx-auto animate-spin text-cyan-600 mb-3" />
+              <p className="text-sm text-slate-500 font-bold">
+                Loading doctors...
+              </p>
+            </div>
+          ) : filteredDoctors.length === 0 ? (
+            <EmptyDoctors />
+          ) : (
+            <div className="space-y-3">
+              {filteredDoctors.map((doctor) => (
+                <DoctorCard
+                  key={doctor.id}
+                  doctor={doctor}
+                  navigate={navigate}
+                  deactivateDoctor={deactivateDoctor}
+                  reactivateDoctor={reactivateDoctor}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowAddSheet(true)}
+        className="fixed right-5 bottom-24 z-40 w-16 h-16 rounded-full bg-cyan-600 text-white shadow-2xl flex items-center justify-center active:scale-95 transition"
+      >
+        <Plus size={30} />
+      </button>
+
+      {showAddSheet && (
+        <AddDoctorSheet
+          form={form}
+          handleChange={handleChange}
+          addDoctor={addDoctor}
+          saving={saving}
+          showPassword={showPassword}
+          setShowPassword={setShowPassword}
+          onClose={() => setShowAddSheet(false)}
+        />
+      )}
+
+      {createdDoctor && (
+        <CredentialsModal
+          doctor={createdDoctor}
+          onClose={() => setCreatedDoctor(null)}
+        />
+      )}
+    </main>
+  );
+}
+
+function DoctorCard({ doctor, navigate, deactivateDoctor, reactivateDoctor }) {
+  return (
+    <div className="bg-white border border-slate-100 shadow-sm rounded-3xl p-3">
+      <div className="flex gap-3">
+        <img
+          src={
+            doctor.profileImage ||
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(
+              doctor.doctorName || "Doctor"
+            )}&background=0891b2&color=fff&bold=true`
+          }
+          alt={doctor.doctorName}
+          className="w-16 h-16 rounded-2xl object-cover border border-slate-100 shrink-0"
+        />
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="text-sm font-black text-slate-950 truncate">
+                {doctor.doctorName || "Doctor"}
+              </h3>
+
+              <p className="text-xs text-cyan-700 font-black truncate">
+                {doctor.specialization || "Specialist"}
+              </p>
+            </div>
+
+            <span
+              className={`px-2 py-1 rounded-full text-[10px] font-black shrink-0 ${
+                doctor.isActive
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-red-50 text-red-700"
+              }`}
+            >
+              {doctor.isActive ? "ACTIVE" : "INACTIVE"}
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-500 mt-1 truncate">
+            {doctor.qualification || "Qualification not added"}
+          </p>
+
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <Badge>{doctor.experience || 0} Years</Badge>
+            <Badge>₹{doctor.consultationFee || 0}</Badge>
+            <Badge>{doctor.mobile || "No mobile"}</Badge>
+            <Badge>{doctor.email || "No email"}</Badge>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <button
+              type="button"
+              onClick={() => navigate(`/doctor/${doctor.id}`)}
+              className="bg-slate-950 text-white py-2 rounded-xl text-xs font-black"
+            >
+              Profile
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate(`/hospital/doctor/${doctor.id}/slots`)}
+              className="bg-cyan-600 text-white py-2 rounded-xl text-xs font-black"
+            >
+              Slots
+            </button>
+
+            {doctor.isActive ? (
+              <button
+                type="button"
+                onClick={() => deactivateDoctor(doctor.id)}
+                className="bg-red-600 text-white py-2 rounded-xl text-xs font-black"
+              >
+                Disable
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => reactivateDoctor(doctor.id)}
+                className="bg-emerald-600 text-white py-2 rounded-xl text-xs font-black"
+              >
+                Enable
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AddDoctorSheet({
+  form,
+  handleChange,
+  addDoctor,
+  saving,
+  showPassword,
+  setShowPassword,
+  onClose,
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-end">
+      <div className="bg-white w-full max-w-md mx-auto rounded-t-[2rem] max-h-[88vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-slate-100 p-4 rounded-t-[2rem] z-10">
+          <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4" />
+
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-black text-slate-950">
+                Add Doctor
+              </h2>
+
+              <p className="text-sm text-slate-500">
+                Create doctor login credentials
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={addDoctor} className="p-4 space-y-3 pb-8">
+          <Input
+            name="doctorName"
+            placeholder="Doctor Name"
+            value={form.doctorName}
+            onChange={handleChange}
+            icon={Stethoscope}
+          />
+
+          <Input
+            name="specialization"
+            placeholder="Specialization"
+            value={form.specialization}
+            onChange={handleChange}
+            icon={BadgeCheck}
+          />
+
+          <div className="grid grid-cols-2 gap-3">
             <Input
               name="experience"
               type="number"
@@ -248,233 +487,155 @@ export default function HospitalDoctors() {
             />
 
             <Input
-              name="qualification"
-              placeholder="Qualification"
-              value={form.qualification}
-              onChange={handleChange}
-              icon={GraduationCap}
-            />
-
-            <Input
               name="consultationFee"
               type="number"
-              placeholder="Consultation Fee"
+              placeholder="Fee"
               value={form.consultationFee}
               onChange={handleChange}
               icon={IndianRupee}
             />
-
-            <Input
-              name="mobile"
-              placeholder="Mobile"
-              value={form.mobile}
-              onChange={handleChange}
-              icon={Phone}
-            />
-
-            <Input
-              name="email"
-              type="email"
-              placeholder="Doctor Email"
-              value={form.email}
-              onChange={handleChange}
-              icon={Mail}
-            />
-
-            <PasswordInput
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              showPassword={showPassword}
-              setShowPassword={setShowPassword}
-            />
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-cyan-600 text-white py-4 rounded-2xl font-black hover:bg-cyan-700 transition flex items-center justify-center gap-2 disabled:bg-slate-400"
-            >
-              {saving ? (
-                <>
-                  <Loader2 size={19} className="animate-spin" />
-                  Adding...
-                </>
-              ) : (
-                <>
-                  <UserPlus size={19} />
-                  Add Doctor
-                </>
-              )}
-            </button>
-          </form>
-        </section>
-
-        <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 md:p-8">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5 mb-6">
-            <div>
-              <h2 className="text-2xl font-black text-slate-950">
-                Hospital Doctors
-              </h2>
-
-              <p className="text-slate-500 text-sm">
-                Showing {filteredDoctors.length} of {doctors.length} doctors
-              </p>
-            </div>
-
-            <div className="flex flex-col md:flex-row gap-3">
-              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 md:w-80">
-                <Search size={18} className="text-cyan-600" />
-
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search doctors..."
-                  className="w-full bg-transparent outline-none text-slate-800"
-                />
-              </div>
-
-              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-                <Filter size={18} className="text-cyan-600" />
-
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-transparent outline-none font-bold text-slate-700"
-                >
-                  <option value="ALL">All Status</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="INACTIVE">Inactive</option>
-                </select>
-              </div>
-            </div>
           </div>
 
-          {loading ? (
-            <div className="bg-slate-50 rounded-2xl p-10 text-center text-slate-500">
-              <Loader2 className="mx-auto animate-spin text-cyan-600 mb-3" />
-              Loading doctors...
-            </div>
-          ) : filteredDoctors.length === 0 ? (
-            <div className="text-center py-14 bg-slate-50 rounded-2xl border border-slate-100">
-              <div className="w-20 h-20 rounded-3xl bg-cyan-50 flex items-center justify-center mx-auto mb-5">
-                <Stethoscope className="text-cyan-600" size={36} />
-              </div>
+          <Input
+            name="qualification"
+            placeholder="Qualification"
+            value={form.qualification}
+            onChange={handleChange}
+            icon={GraduationCap}
+          />
 
-              <h3 className="text-2xl font-black text-slate-950">
-                No doctors found
-              </h3>
+          <Input
+            name="mobile"
+            placeholder="Mobile"
+            value={form.mobile}
+            onChange={handleChange}
+            icon={Phone}
+          />
 
-              <p className="text-slate-500 mt-2">
-                Add a doctor or adjust your search/filter.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-5">
-              {filteredDoctors.map((doctor) => (
-                <DoctorRow
-                  key={doctor.id}
-                  doctor={doctor}
-                  deactivateDoctor={deactivateDoctor}
-                  reactivateDoctor={reactivateDoctor}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+          <Input
+            name="email"
+            type="email"
+            placeholder="Doctor Email"
+            value={form.email}
+            onChange={handleChange}
+            icon={Mail}
+          />
+
+          <PasswordInput
+            name="password"
+            value={form.password}
+            onChange={handleChange}
+            showPassword={showPassword}
+            setShowPassword={setShowPassword}
+          />
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-2 disabled:bg-slate-400 active:scale-95 transition"
+          >
+            {saving ? (
+              <>
+                <Loader2 size={19} className="animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <UserPlus size={19} />
+                Create Doctor
+              </>
+            )}
+          </button>
+        </form>
       </div>
     </div>
   );
 }
 
-function DoctorRow({ doctor, deactivateDoctor, reactivateDoctor }) {
+function CredentialsModal({ doctor, onClose }) {
+  const text = `Doctor Login Credentials\n\nName: ${
+    doctor.doctorName || "Doctor"
+  }\nEmail: ${doctor.email}\nPassword: ${doctor.password}`;
+
+  const copyCredentials = async () => {
+    await navigator.clipboard.writeText(text);
+    alert("Credentials copied");
+  };
+
   return (
-    <div className="group relative">
-      <div className="absolute -inset-0.5 rounded-[2rem] bg-gradient-to-r from-cyan-500 via-blue-500 to-emerald-400 opacity-0 group-hover:opacity-30 blur transition duration-500" />
+    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center px-4">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-md overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-black text-slate-950">
+              Doctor Created
+            </h2>
 
-      <div className="relative bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm group-hover:-translate-y-1 group-hover:shadow-xl transition duration-500">
-        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
-          <div className="flex gap-4 min-w-0">
-            <img
-              src={
-                doctor.profileImage ||
-                `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                  doctor.doctorName || "Doctor"
-                )}&background=0891b2&color=fff&bold=true`
-              }
-              alt={doctor.doctorName}
-              className="w-20 h-20 rounded-3xl shadow-sm object-cover border border-slate-100 shrink-0"
-            />
-
-            <div className="min-w-0">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h3 className="text-2xl font-black text-slate-950">
-                  {doctor.doctorName}
-                </h3>
-
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-black ${
-                    doctor.isActive
-                      ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                      : "bg-red-50 text-red-700 border border-red-100"
-                  }`}
-                >
-                  {doctor.isActive ? "ACTIVE" : "INACTIVE"}
-                </span>
-              </div>
-
-              <p className="text-cyan-600 font-black mt-1">
-                {doctor.specialization || "Specialist"}
-              </p>
-
-              <p className="text-slate-500 text-sm mt-1">
-                {doctor.qualification || "Qualification not added"}
-              </p>
-
-              <div className="flex flex-wrap gap-2 mt-3">
-                <Badge>{doctor.experience || 0} Years</Badge>
-                <Badge>₹{doctor.consultationFee || 0}</Badge>
-                <Badge>{doctor.mobile || "Mobile not added"}</Badge>
-                <Badge>{doctor.email || "Email not added"}</Badge>
-              </div>
-            </div>
+            <p className="text-sm text-slate-500">
+              Save these login details
+            </p>
           </div>
 
-          <div className="shrink-0">
-            {doctor.isActive ? (
-              <button
-                onClick={() => deactivateDoctor(doctor.id)}
-                className="w-full xl:w-auto flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-2xl font-black transition"
-              >
-                <XCircle size={18} />
-                Deactivate
-              </button>
-            ) : (
-              <button
-                onClick={() => reactivateDoctor(doctor.id)}
-                className="w-full xl:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-2xl font-black transition"
-              >
-                <ShieldCheck size={18} />
-                Reactivate
-              </button>
-            )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-4">
+          <div className="bg-cyan-50 border border-cyan-100 rounded-3xl p-4">
+            <p className="text-xs font-black text-cyan-700">
+              DOCTOR LOGIN
+            </p>
+
+            <h3 className="text-lg font-black text-slate-950 mt-2">
+              {doctor.doctorName || "Doctor"}
+            </h3>
+
+            <p className="text-sm text-slate-600 mt-2">
+              Email: <b>{doctor.email}</b>
+            </p>
+
+            <p className="text-sm text-slate-600 mt-1">
+              Password: <b>{doctor.password}</b>
+            </p>
           </div>
+
+          <button
+            type="button"
+            onClick={copyCredentials}
+            className="mt-4 w-full bg-cyan-600 text-white py-3.5 rounded-2xl font-black flex items-center justify-center gap-2"
+          >
+            <Copy size={18} />
+            Copy Credentials
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function Input({
-  icon: Icon,
-  name,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-}) {
+function FilterChip({ label, active, onClick }) {
   return (
-    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-cyan-500 transition">
-      <Icon size={19} className="text-cyan-600 shrink-0" />
+    <button
+      type="button"
+      onClick={onClick}
+      className={`py-2.5 rounded-2xl text-xs font-black transition ${
+        active ? "bg-cyan-600 text-white" : "bg-slate-50 text-slate-600"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function Input({ icon: Icon, name, value, onChange, placeholder, type = "text" }) {
+  return (
+    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-3 focus-within:ring-2 focus-within:ring-cyan-500">
+      <Icon size={18} className="text-cyan-600 shrink-0" />
 
       <input
         name={name}
@@ -482,7 +643,7 @@ function Input({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
-        className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
+        className="w-full bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400"
         required
       />
     </div>
@@ -497,8 +658,8 @@ function PasswordInput({
   setShowPassword,
 }) {
   return (
-    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-cyan-500 transition">
-      <ShieldCheck size={19} className="text-cyan-600 shrink-0" />
+    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-3 focus-within:ring-2 focus-within:ring-cyan-500">
+      <ShieldCheck size={18} className="text-cyan-600 shrink-0" />
 
       <input
         name={name}
@@ -506,16 +667,16 @@ function PasswordInput({
         placeholder="Doctor Password"
         value={value}
         onChange={onChange}
-        className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
+        className="w-full bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400"
         required
       />
 
       <button
         type="button"
         onClick={() => setShowPassword(!showPassword)}
-        className="text-slate-400 hover:text-cyan-600"
+        className="text-slate-400"
       >
-        {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
       </button>
     </div>
   );
@@ -523,7 +684,7 @@ function PasswordInput({
 
 function Badge({ children }) {
   return (
-    <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">
+    <span className="px-2 py-1 rounded-lg bg-slate-50 border border-slate-100 text-slate-600 text-[10px] font-bold truncate">
       {children}
     </span>
   );
@@ -531,13 +692,32 @@ function Badge({ children }) {
 
 function MiniStat({ icon: Icon, title, value }) {
   return (
-    <div className="min-w-[100px] bg-slate-50 rounded-2xl border border-slate-100 p-3">
-      <div className="w-9 h-9 rounded-xl bg-cyan-50 flex items-center justify-center mb-2">
-        <Icon className="text-cyan-600" size={18} />
-      </div>
+    <div className="bg-slate-50 rounded-2xl border border-slate-100 p-3 text-center">
+      <Icon className="text-cyan-600 mx-auto" size={19} />
 
-      <p className="text-xl font-black text-slate-950">{value}</p>
-      <p className="text-xs text-slate-500 font-bold">{title}</p>
+      <p className="text-lg font-black text-slate-950 mt-1">
+        {value}
+      </p>
+
+      <p className="text-[10px] text-slate-500 font-bold">
+        {title}
+      </p>
+    </div>
+  );
+}
+
+function EmptyDoctors() {
+  return (
+    <div className="text-center py-10 bg-white rounded-3xl border border-slate-100 shadow-sm">
+      <Stethoscope className="text-cyan-600 mx-auto" size={34} />
+
+      <h3 className="text-lg font-black text-slate-950 mt-3">
+        No doctors found
+      </h3>
+
+      <p className="text-sm text-slate-500 mt-1">
+        Add a doctor or adjust your search.
+      </p>
     </div>
   );
 }

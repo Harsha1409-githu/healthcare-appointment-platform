@@ -122,7 +122,7 @@ export default function AdminDoctors() {
 
               <p className="text-slate-500 mt-3 max-w-2xl text-lg leading-relaxed">
                 View doctors, check hospital mapping, and activate or
-                deactivate doctor profiles across MediCare.
+                deactivate doctor profiles across TryDoc.
               </p>
             </div>
 

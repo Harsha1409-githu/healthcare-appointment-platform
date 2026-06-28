@@ -1,0 +1,9 @@
+{
+  "appId": "com.TryDoc.app",
+  "appName": "TryDoc",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true
+  }
+}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   HeartPulse,
   Mail,
@@ -17,8 +17,6 @@ import {
 import api from "../api/axios";
 
 export default function Login() {
-  const navigate = useNavigate();
-
   const [mode, setMode] = useState("login");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -47,7 +45,11 @@ export default function Login() {
     localStorage.removeItem("adminUser");
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("selectedProfile");
   };
+
+ window.location.replace("/patient/select-profile");
+
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -62,9 +64,7 @@ export default function Login() {
       localStorage.setItem("patientToken", res.data.access_token);
       localStorage.setItem("patientUser", JSON.stringify(res.data.user));
 
-      window.dispatchEvent(new Event("patientProfileUpdated"));
-
-      navigate("/patient/dashboard");
+      goToProfileSelect();
     } catch (error) {
       alert(error.response?.data?.message || "Invalid email or password");
     } finally {
@@ -85,9 +85,7 @@ export default function Login() {
       localStorage.setItem("patientToken", res.data.access_token);
       localStorage.setItem("patientUser", JSON.stringify(res.data.user));
 
-      window.dispatchEvent(new Event("patientProfileUpdated"));
-
-      navigate("/patient/dashboard");
+      goToProfileSelect();
     } catch (error) {
       alert(error.response?.data?.message || "Registration failed");
     } finally {
@@ -108,7 +106,7 @@ export default function Login() {
 
             <h1 className="text-5xl font-black leading-tight">
               Welcome to
-              <span className="block text-cyan-300">MediCare</span>
+              <span className="block text-cyan-300">TryDoc</span>
             </h1>
 
             <p className="text-cyan-100 mt-6 text-lg leading-relaxed">
@@ -136,7 +134,7 @@ export default function Login() {
             </h2>
 
             <p className="text-slate-500 mt-3">
-              Login or create your MediCare account
+              Login or create your TryDoc account
             </p>
           </div>
 
@@ -171,7 +169,6 @@ export default function Login() {
               <Input
                 icon={Mail}
                 label="Email"
-                name="email"
                 type="email"
                 value={loginForm.email}
                 onChange={(e) =>
@@ -196,7 +193,6 @@ export default function Login() {
               <Input
                 icon={UserRound}
                 label="Full Name"
-                name="fullName"
                 value={registerForm.fullName}
                 onChange={(e) =>
                   setRegisterForm({
@@ -210,7 +206,6 @@ export default function Login() {
               <Input
                 icon={Mail}
                 label="Email"
-                name="email"
                 type="email"
                 value={registerForm.email}
                 onChange={(e) =>
@@ -225,7 +220,6 @@ export default function Login() {
               <Input
                 icon={Phone}
                 label="Mobile"
-                name="mobile"
                 value={registerForm.mobile}
                 onChange={(e) =>
                   setRegisterForm({
@@ -250,7 +244,6 @@ export default function Login() {
 
               <div className="grid md:grid-cols-3 gap-4">
                 <select
-                  name="gender"
                   value={registerForm.gender}
                   onChange={(e) =>
                     setRegisterForm({

@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
 import {
-  Stethoscope,
   BadgeCheck,
   Star,
   IndianRupee,
@@ -13,13 +11,21 @@ import {
   Clock,
   ShieldCheck,
   MessageSquare,
-  ArrowRight,
   Video,
+  Loader2,
+  Users,
 } from "lucide-react";
 import api from "../api/axios";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 
 export default function DoctorProfile() {
   const { id } = useParams();
+
+  const [searchParams] = useSearchParams();
+
+const [consultType, setConsultType] = useState(
+  searchParams.get("type") === "VIDEO" ? "VIDEO" : "IN_PERSON"
+);
 
   const [doctor, setDoctor] = useState(null);
   const [slots, setSlots] = useState([]);
@@ -28,28 +34,36 @@ export default function DoctorProfile() {
     averageRating: 0,
     totalReviews: 0,
   });
-
   const [loading, setLoading] = useState(true);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+ 
 
   useEffect(() => {
     const loadDoctorProfile = async () => {
       try {
+        setLoading(true);
+
         const doctorRes = await api.get(`/doctor/${id}`);
         setDoctor(doctorRes.data);
 
-        try {
-          const slotRes = await api.get(`/slot/doctor/${id}/available`);
-          setSlots(slotRes.data || []);
-        } catch (slotErr) {
-          console.error("Slot API error:", slotErr);
-          setSlots([]);
-        }
+        const slotRes = await api.get(
+          `/slot/doctor/${id}/available?type=${consultType}`
+        );
+
+       const now = new Date();
+
+const availableSlots = (slotRes.data || []).filter((slot) => {
+  const slotDateTime = new Date(`${slot.date}T${slot.startTime}`);
+  return slotDateTime > now;
+});
+
+setSlots(availableSlots);
+setSelectedSlot(availableSlots[0] || null);
 
         try {
           const reviewRes = await api.get(`/review/doctor/${id}`);
           setReviews(reviewRes.data || []);
-        } catch (reviewErr) {
-          console.error("Review API error:", reviewErr);
+        } catch {
           setReviews([]);
         }
 
@@ -61,15 +75,14 @@ export default function DoctorProfile() {
               totalReviews: 0,
             }
           );
-        } catch (summaryErr) {
-          console.error("Summary API error:", summaryErr);
+        } catch {
           setRatingSummary({
             averageRating: 0,
             totalReviews: 0,
           });
         }
-      } catch (doctorErr) {
-        console.error("Doctor API error:", doctorErr);
+      } catch (error) {
+        console.error("Doctor API error:", error);
         setDoctor(null);
       } finally {
         setLoading(false);
@@ -77,30 +90,27 @@ export default function DoctorProfile() {
     };
 
     loadDoctorProfile();
-  }, [id]);
+  }, [id, consultType]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4fbff] flex items-center justify-center">
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center mx-auto mb-4">
-            <Stethoscope className="text-cyan-600 animate-pulse" size={34} />
-          </div>
-          <p className="text-slate-500 font-semibold">
+      <main className="min-h-screen bg-[#f4f8fb] flex items-center justify-center px-4">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 text-center">
+          <Loader2 className="text-cyan-600 animate-spin mx-auto" size={34} />
+          <p className="text-slate-500 font-bold mt-3">
             Loading doctor profile...
           </p>
         </div>
-      </div>
+      </main>
     );
   }
 
   if (!doctor) {
     return (
-      <div className="min-h-screen bg-[#f4fbff] flex items-center justify-center">
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 text-center">
-          <p className="text-red-500 font-black text-xl">
-            Doctor not found
-          </p>
+      <main className="min-h-screen bg-[#f4f8fb] flex items-center justify-center px-4">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 text-center">
+          <p className="text-red-500 font-black text-lg">Doctor not found</p>
+
           <Link
             to="/doctors"
             className="inline-flex mt-5 px-5 py-3 rounded-2xl bg-cyan-600 text-white font-black"
@@ -108,345 +118,402 @@ export default function DoctorProfile() {
             Back to Doctors
           </Link>
         </div>
-      </div>
+      </main>
     );
   }
 
-  const averageRating = Number(ratingSummary.averageRating || 0).toFixed(1);
+  const averageRating = Number(ratingSummary.averageRating || 4.8).toFixed(1);
+  const totalReviews = ratingSummary.totalReviews || reviews.length || 0;
+  const availableToday = slots.length > 0;
+
+  const consultationFee =
+    consultType === "VIDEO"
+      ? Math.max(Number(doctor.consultationFee || 0) - 100, 0)
+      : Number(doctor.consultationFee || 0);
 
   return (
-    <div className="bg-[#f4fbff] min-h-screen">
-      <section className="bg-white border-b border-slate-100">
-        <div className="max-w-[1450px] mx-auto px-6 py-10">
-          <Link
-            to="/doctors"
-            className="inline-flex items-center gap-2 text-cyan-700 font-black mb-6"
-          >
-            ← Back to Doctors
-          </Link>
+    <main className="min-h-screen bg-[#f4f8fb] px-4 pt-4 pb-36">
+      <div className="max-w-md mx-auto">
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+          <div className="flex gap-3">
+            <div className="relative shrink-0">
+              <img
+                src={
+                  doctor.profileImage ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                    doctor.doctorName || "Doctor"
+                  )}&background=0891b2&color=fff&bold=true&size=220`
+                }
+                alt={doctor.doctorName}
+                className="w-24 h-24 rounded-[1.7rem] object-cover border border-slate-100"
+              />
 
-          <div className="grid lg:grid-cols-[1fr_360px] gap-8 items-start">
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6">
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="relative shrink-0">
-                  <img
-                    src={
-                      doctor.profileImage ||
-                      `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                        doctor.doctorName || "Doctor"
-                      )}&background=0891b2&color=fff&bold=true&size=220`
-                    }
-                    alt={doctor.doctorName}
-                    className="w-36 h-36 rounded-[2rem] object-cover border border-slate-100 shadow-sm"
-                  />
-
-                  <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center border-4 border-white">
-                    <BadgeCheck size={19} className="text-white" />
-                  </div>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-black text-xs mb-3">
-                    <ShieldCheck size={14} />
-                    Verified Doctor
-                  </div>
-
-                  <h1 className="text-4xl font-black text-slate-950">
-                    {doctor.doctorName}
-                  </h1>
-
-                  <p className="text-cyan-700 text-xl font-black mt-2">
-                    {doctor.specialization || "Specialist"}
-                  </p>
-
-                  <div className="grid sm:grid-cols-2 gap-4 mt-6">
-                    <InfoItem
-                      icon={GraduationCap}
-                      label="Qualification"
-                      value={doctor.qualification || "Not Available"}
-                    />
-
-                    <InfoItem
-                      icon={Award}
-                      label="Experience"
-                      value={`${doctor.experience || 0}+ Years`}
-                    />
-
-                    <InfoItem
-                      icon={Building2}
-                      label="Hospital"
-                      value={
-                        doctor.hospital?.hospitalName ||
-                        "Hospital Not Available"
-                      }
-                    />
-
-                    <InfoItem
-                      icon={MapPin}
-                      label="Location"
-                      value={`${doctor.city || ""}${
-                        doctor.state ? `, ${doctor.state}` : ""
-                      }`}
-                    />
-                  </div>
-                </div>
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center border-2 border-white">
+                <BadgeCheck size={15} className="text-white" />
               </div>
             </div>
 
-            <aside className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 lg:sticky lg:top-24">
-              <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5">
-                <p className="text-sm text-slate-500 font-semibold">
+            <div className="min-w-0 flex-1">
+              <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 font-black text-[10px]">
+                <ShieldCheck size={12} />
+                Verified Doctor
+              </div>
+
+              <h1 className="text-xl font-black text-slate-950 truncate mt-2">
+                {doctor.doctorName}
+              </h1>
+
+              <p className="text-sm text-cyan-700 font-black truncate">
+                {doctor.specialization || "Specialist"}
+              </p>
+
+              <p className="text-xs text-slate-500 mt-1 truncate">
+                {doctor.qualification || "Qualification not available"}
+              </p>
+
+              <div className="mt-2 flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 bg-yellow-50 text-yellow-700 px-2 py-1 rounded-full text-[11px] font-black">
+                  <Star size={12} className="fill-yellow-500 text-yellow-500" />
+                  {averageRating}
+                </span>
+
+                <span className="text-[11px] text-slate-500 font-bold">
+                  {totalReviews} reviews
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2 mt-4 overflow-x-auto">
+            <Chip>
+              <Award size={12} />
+              {doctor.experience || 0}+ Years
+            </Chip>
+
+            <Chip success={availableToday}>
+              <Clock size={12} />
+              {availableToday ? "Available Today" : "No Slots"}
+            </Chip>
+
+            <Chip>
+              <Star size={12} />
+              {averageRating} Rating
+            </Chip>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-3 gap-2 mt-3">
+          <MiniStat
+            icon={Award}
+            value={`${doctor.experience || 0}+`}
+            label="Years Exp"
+          />
+
+          <MiniStat icon={Star} value={averageRating} label="Rating" />
+
+          <MiniStat
+            icon={Users}
+            value={`${Math.max(totalReviews * 12, 100)}+`}
+            label="Patients"
+          />
+        </section>
+
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <h2 className="text-lg font-black text-slate-950">
+            Consultation Details
+          </h2>
+
+          <div className="bg-slate-50 rounded-2xl border border-slate-100 p-3 mt-3">
+            <InfoLine
+              icon={Building2}
+              label="Hospital"
+              value={doctor.hospital?.hospitalName || "Hospital Not Available"}
+            />
+
+            <InfoLine
+              icon={MapPin}
+              label="Location"
+              value={`${doctor.city || doctor.hospital?.city || "Available"}${
+                doctor.state ? `, ${doctor.state}` : ""
+              }`}
+            />
+
+            <InfoLine
+              icon={GraduationCap}
+              label="Qualification"
+              value={doctor.qualification || "Not Available"}
+            />
+          </div>
+        </section>
+
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <div className="bg-slate-100 rounded-2xl p-1 flex">
+            <button
+              type="button"
+              onClick={() => setConsultType("IN_PERSON")}
+              className={`flex-1 py-3 rounded-xl text-sm font-black transition ${
+                consultType === "IN_PERSON"
+                  ? "bg-white text-slate-950 shadow-sm"
+                  : "text-slate-500"
+              }`}
+            >
+              🏥 In-Person
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setConsultType("VIDEO")}
+              className={`flex-1 py-3 rounded-xl text-sm font-black transition ${
+                consultType === "VIDEO"
+                  ? "bg-white text-slate-950 shadow-sm"
+                  : "text-slate-500"
+              }`}
+            >
+              🎥 Video-Consult
+            </button>
+          </div>
+
+          <div className="bg-white border border-slate-100 rounded-3xl p-4 mt-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-500 font-bold">
                   Consultation Fee
                 </p>
 
-                <div className="flex items-center text-4xl font-black text-slate-950 mt-2">
-                  <IndianRupee size={28} />
-                  {doctor.consultationFee || 0}
+                <div className="flex items-center text-2xl font-black text-slate-950 mt-1">
+                  <IndianRupee size={20} />
+                  {consultationFee}
                 </div>
-
-                <p className="text-sm text-emerald-700 font-black mt-3 flex items-center gap-2">
-                  <CalendarCheck size={17} />
-                  Instant appointment booking
-                </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mt-4">
-                <MiniStat
-                  icon={Star}
-                  value={averageRating}
-                  label={`${ratingSummary.totalReviews || 0} Reviews`}
-                />
-
-                <MiniStat
-                  icon={Video}
-                  value="Online"
-                  label="Video Consult"
-                />
-              </div>
-
-              {slots.length > 0 ? (
-                <Link to={`/book/${doctor.id}/${slots[0].id}`}>
-                  <button className="mt-5 w-full bg-cyan-600 text-white py-4 rounded-2xl font-black hover:bg-cyan-700 transition flex items-center justify-center gap-2">
-                    Book Appointment
-                    <ArrowRight size={18} />
-                  </button>
-                </Link>
-              ) : (
-                <button
-                  disabled
-                  className="mt-5 w-full bg-slate-300 text-white py-4 rounded-2xl font-black cursor-not-allowed"
-                >
-                  No Slots Available
-                </button>
-              )}
-
-              <Link to="/doctors">
-                <button className="mt-3 w-full border border-cyan-600 text-cyan-700 py-4 rounded-2xl font-black hover:bg-cyan-50 transition">
-                  View Similar Doctors
-                </button>
-              </Link>
-            </aside>
+              <span
+                className={`px-3 py-2 rounded-2xl text-xs font-black ${
+                  consultType === "VIDEO"
+                    ? "bg-blue-50 text-blue-700"
+                    : "bg-emerald-50 text-emerald-700"
+                }`}
+              >
+                {consultType === "VIDEO"
+                  ? "Video-Consult"
+                  : "In-Person Visit"}
+              </span>
+            </div>
           </div>
-        </div>
-      </section>
 
-      <div className="max-w-[1450px] mx-auto px-6 py-8">
-        <div className="grid lg:grid-cols-[1fr_360px] gap-8">
-          <main className="space-y-8">
-            <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center">
-                  <CalendarCheck className="text-cyan-600" size={25} />
-                </div>
+          <div className="flex items-center justify-between mt-5 mb-3">
+            <div>
+              <h2 className="text-lg font-black text-slate-950">
+                Available Slots
+              </h2>
 
-                <div>
-                  <h2 className="text-2xl font-black text-slate-950">
-                    Available Slots
-                  </h2>
-                  <p className="text-slate-500">
-                    Choose a convenient time and book instantly
-                  </p>
-                </div>
-              </div>
+              <p className="text-xs text-slate-500 font-bold">
+                {consultType === "VIDEO"
+                  ? "Online consultation timings"
+                  : "Hospital visit timings"}
+              </p>
+            </div>
 
-              {slots.length === 0 ? (
-                <div className="border border-dashed border-slate-200 rounded-3xl p-10 text-center">
-                  <Clock className="text-cyan-600 mx-auto mb-4" size={38} />
-                  <p className="font-black text-slate-950">
-                    No slots available
-                  </p>
-                  <p className="text-slate-500 mt-2">
-                    Please check again later or view similar doctors.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-4">
-                  {slots.map((slot) => (
-                    <div
-                      key={slot.id}
-                      className="border border-slate-100 bg-slate-50 rounded-3xl p-5"
+            <span className="text-xs font-black text-cyan-700 bg-cyan-50 px-3 py-1 rounded-full">
+              {slots.length} Slots
+            </span>
+          </div>
+
+          {slots.length === 0 ? (
+            <div className="border border-dashed border-slate-200 rounded-3xl p-6 text-center">
+              <Clock className="text-cyan-600 mx-auto mb-3" size={30} />
+
+              <p className="font-black text-slate-950">No slots available</p>
+
+              <p className="text-sm text-slate-500 mt-1">
+                {consultType === "VIDEO"
+                  ? "No video-consult slots available."
+                  : "No in-person slots available."}
+              </p>
+            </div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {slots.map((slot) => {
+                const active = selectedSlot?.id === slot.id;
+
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    onClick={() => setSelectedSlot(slot)}
+                    className={`min-w-[150px] rounded-3xl p-4 border text-left active:scale-95 transition ${
+                      active
+                        ? "bg-cyan-600 border-cyan-600 text-white"
+                        : "bg-white border-slate-200 text-slate-950"
+                    }`}
+                  >
+                    <p className="text-xl font-black">{slot.startTime}</p>
+
+                    <p
+                      className={`text-xs mt-1 ${
+                        active ? "text-cyan-50" : "text-slate-500"
+                      }`}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center border border-slate-100">
-                          <Clock size={21} className="text-cyan-600" />
-                        </div>
+                      {slot.date}
+                    </p>
 
-                        <div>
-                          <p className="font-black text-slate-950">
-                            {slot.date}
-                          </p>
-
-                          <p className="text-slate-500 mt-1">
-                            {slot.startTime} - {slot.endTime}
-                          </p>
-                        </div>
-                      </div>
-
-                      <Link to={`/book/${doctor.id}/${slot.id}`}>
-                        <button className="mt-5 w-full bg-cyan-600 text-white py-3 rounded-2xl font-black hover:bg-cyan-700 transition">
-                          Book This Slot
-                        </button>
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-yellow-50 flex items-center justify-center">
-                  <Star className="text-yellow-500" size={25} />
-                </div>
-
-                <div>
-                  <h2 className="text-2xl font-black text-slate-950">
-                    Patient Reviews
-                  </h2>
-                  <p className="text-slate-500">
-                    Feedback from verified patients
-                  </p>
-                </div>
-              </div>
-
-              {reviews.length === 0 ? (
-                <div className="border border-dashed border-slate-200 rounded-3xl p-10 text-center">
-                  <MessageSquare
-                    className="text-cyan-600 mx-auto mb-4"
-                    size={38}
-                  />
-                  <p className="font-black text-slate-950">
-                    No reviews yet
-                  </p>
-                  <p className="text-slate-500 mt-2">
-                    Patient reviews will appear here after consultations.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {reviews.map((review) => (
-                    <div
-                      key={review.id}
-                      className="border border-slate-100 rounded-3xl p-5 bg-slate-50"
+                    <p
+                      className={`text-[11px] mt-2 font-black ${
+                        active ? "text-cyan-50" : "text-cyan-700"
+                      }`}
                     >
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <p className="font-black text-slate-950">
-                            {review.patient?.fullName || "Anonymous"}
-                          </p>
+                      Ends {slot.endTime}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
-                          <p className="text-sm text-slate-500">
-                            Verified Patient
-                          </p>
-                        </div>
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-lg font-black text-slate-950">
+                {averageRating} Patient Experience
+              </h2>
 
-                        <div className="flex items-center gap-1 bg-yellow-50 text-yellow-600 px-3 py-1.5 rounded-full font-black border border-yellow-100">
-                          <Star size={15} className="fill-yellow-500" />
-                          {review.rating}/5
-                        </div>
-                      </div>
+              <p className="text-xs text-slate-500 font-bold">
+                Based on {totalReviews} verified reviews
+              </p>
+            </div>
 
-                      <p className="text-slate-600 leading-relaxed mt-4">
-                        {review.comment}
+            <div className="w-12 h-12 rounded-2xl bg-yellow-50 flex items-center justify-center">
+              <Star className="text-yellow-500 fill-yellow-500" size={24} />
+            </div>
+          </div>
+
+          {reviews.length === 0 ? (
+            <div className="border border-dashed border-slate-200 rounded-3xl p-6 text-center">
+              <MessageSquare className="text-cyan-600 mx-auto mb-3" size={30} />
+
+              <p className="font-black text-slate-950">No reviews yet</p>
+
+              <p className="text-sm text-slate-500 mt-1">
+                Reviews will appear after consultations.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {reviews.slice(0, 3).map((review) => (
+                <div
+                  key={review.id}
+                  className="bg-slate-50 border border-slate-100 rounded-2xl p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-black text-slate-950 text-sm">
+                        {review.patient?.fullName || "Anonymous"}
+                      </p>
+
+                      <p className="text-xs text-slate-500">
+                        Verified Patient
                       </p>
                     </div>
-                  ))}
+
+                    <span className="inline-flex items-center gap-1 bg-yellow-50 text-yellow-700 px-2 py-1 rounded-full text-xs font-black">
+                      <Star
+                        size={12}
+                        className="fill-yellow-500 text-yellow-500"
+                      />
+                      {review.rating}/5
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-slate-600 leading-relaxed mt-3">
+                    {review.comment}
+                  </p>
                 </div>
-              )}
-            </section>
-          </main>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
 
-          <aside className="space-y-5">
-            <TrustCard
-              icon={ShieldCheck}
-              title="Verified Profile"
-              desc="Doctor details are reviewed before listing."
-            />
+      <div className="fixed bottom-4 left-0 right-0 z-40 px-4">
+        <div className="max-w-md mx-auto bg-white border border-slate-200 rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] p-3">
+          {selectedSlot ? (
+            <div className="flex items-center gap-3">
+              <div className="min-w-[82px]">
+                <p className="text-[10px] text-slate-500 font-bold">
+                  Payable
+                </p>
 
-            <TrustCard
-              icon={CalendarCheck}
-              title="Instant Booking"
-              desc="Select available slots and confirm appointment quickly."
-            />
+                <div className="flex items-center text-lg font-black text-slate-950">
+                  <IndianRupee size={16} />
+                  {consultationFee}
+                </div>
+              </div>
 
-            <TrustCard
-              icon={Video}
-              title="Online Consultation"
-              desc="Video consultation support is available for eligible appointments."
-            />
-          </aside>
+              <Link
+                to={`/book/${doctor.id}/${selectedSlot.id}?type=${consultType}`}
+                className={`flex-1 py-3 rounded-2xl text-center font-black text-white active:scale-95 transition ${
+                  consultType === "VIDEO"
+                    ? "bg-blue-600"
+                    : "bg-emerald-600"
+                }`}
+              >
+                Continue Booking
+              </Link>
+            </div>
+          ) : (
+            <button
+              disabled
+              className="w-full bg-slate-300 text-white py-3 rounded-2xl font-black text-sm"
+            >
+              No Slots
+            </button>
+          )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 
-function InfoItem({ icon: Icon, label, value }) {
+function Chip({ children, success }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl bg-slate-50 border border-slate-100 p-4">
-      <Icon className="text-cyan-600 shrink-0 mt-0.5" size={20} />
-
-      <div className="min-w-0">
-        <p className="text-xs text-slate-500 font-semibold">
-          {label}
-        </p>
-
-        <p className="font-black text-slate-800 mt-1 truncate">
-          {value || "Not Available"}
-        </p>
-      </div>
-    </div>
+    <span
+      className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black ${
+        success
+          ? "bg-emerald-50 text-emerald-700"
+          : "bg-cyan-50 text-cyan-700"
+      }`}
+    >
+      {children}
+    </span>
   );
 }
 
 function MiniStat({ icon: Icon, value, label }) {
   return (
-    <div className="rounded-2xl bg-white border border-slate-100 p-4 text-center">
-      <Icon className="text-cyan-600 mx-auto mb-2" size={22} />
-      <p className="font-black text-slate-950">
-        {value}
-      </p>
-      <p className="text-xs text-slate-500 font-semibold mt-1">
-        {label}
-      </p>
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3 text-center">
+      <Icon className="text-cyan-600 mx-auto mb-1.5" size={19} />
+
+      <p className="font-black text-slate-950 text-sm">{value}</p>
+
+      <p className="text-[11px] text-slate-500 font-bold">{label}</p>
     </div>
   );
 }
 
-function TrustCard({ icon: Icon, title, desc }) {
+function InfoLine({ icon: Icon, label, value }) {
   return (
-    <div className="bg-white rounded-[1.5rem] border border-slate-100 shadow-sm p-5">
-      <div className="w-11 h-11 rounded-2xl bg-cyan-50 flex items-center justify-center mb-4">
-        <Icon className="text-cyan-600" size={22} />
+    <div className="flex items-center gap-3 py-3 border-b border-slate-100 last:border-b-0">
+      <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shrink-0 border border-slate-100">
+        <Icon className="text-cyan-600" size={19} />
       </div>
 
-      <h3 className="font-black text-slate-950">
-        {title}
-      </h3>
+      <div className="min-w-0">
+        <p className="text-xs text-slate-500 font-bold">{label}</p>
 
-      <p className="text-slate-500 text-sm mt-2 leading-relaxed">
-        {desc}
-      </p>
+        <p className="font-black text-slate-900 text-sm truncate">
+          {value || "Not Available"}
+        </p>
+      </div>
     </div>
   );
 }

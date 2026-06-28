@@ -24,9 +24,7 @@ export class AvailabilityController {
 
   @Get('doctor/:doctorId')
   getByDoctor(@Param('doctorId') doctorId: string) {
-    return this.availabilityService.getAvailabilityByDoctor(
-      doctorId,
-    );
+    return this.availabilityService.getAvailabilityByDoctor(doctorId);
   }
 
   @Patch(':id')

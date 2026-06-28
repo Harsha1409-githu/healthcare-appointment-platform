@@ -1,20 +1,23 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Send,
   Stethoscope,
   UserRound,
-  MoreVertical,
-  Smile,
   ShieldCheck,
   CheckCheck,
-  Sparkles,
+  Loader2,
+  Paperclip,
 } from "lucide-react";
 import { io } from "socket.io-client";
 import api from "../api/axios";
 
-const socket = io("http://localhost:3000");
+const SOCKET_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+const socket = io(SOCKET_URL, {
+  transports: ["websocket"],
+});
 
 export default function ChatRoom() {
   const { appointmentId } = useParams();
@@ -27,31 +30,37 @@ export default function ChatRoom() {
     JSON.parse(localStorage.getItem("doctorUser") || "null") ||
     JSON.parse(localStorage.getItem("user") || "null");
 
-  const isDoctor = !!user?.doctorName;
+  const isDoctor = Boolean(user?.doctorName);
 
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [appointment, setAppointment] = useState(null);
   const [typingUser, setTypingUser] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const currentUserName =
     user?.doctorName || user?.fullName || user?.email || "User";
 
-  const receiverName = isDoctor
-    ? appointment?.patientName || "Patient"
-    : appointment?.doctor?.doctorName || "Doctor";
+  const receiver = useMemo(() => {
+    if (isDoctor) {
+      return {
+        name: appointment?.patientName || appointment?.patient?.fullName || "Patient",
+        subtitle: appointment?.patientPhone || appointment?.patient?.mobile || "Patient",
+        image: appointment?.patient?.profileImage || "",
+        icon: UserRound,
+      };
+    }
 
-  const receiverSubtitle = isDoctor
-    ? appointment?.patientPhone || "Patient"
-    : appointment?.doctor?.specialization || "Specialist";
-
-  const receiverImage = isDoctor
-    ? null
-    : appointment?.doctor?.profileImage;
+    return {
+      name: appointment?.doctor?.doctorName || "Doctor",
+      subtitle: appointment?.doctor?.specialization || "Specialist",
+      image: appointment?.doctor?.profileImage || "",
+      icon: Stethoscope,
+    };
+  }, [appointment, isDoctor]);
 
   useEffect(() => {
-    loadAppointment();
-    loadMessages();
+    loadInitialData();
 
     socket.emit("joinChatRoom", {
       appointmentId: Number(appointmentId),
@@ -59,7 +68,7 @@ export default function ChatRoom() {
 
     socket.on("newChatMessage", (msg) => {
       setMessages((prev) => {
-        const exists = prev.some((item) => item.id === msg.id);
+        const exists = prev.some((item) => item.id && item.id === msg.id);
         if (exists) return prev;
         return [...prev, msg];
       });
@@ -73,7 +82,7 @@ export default function ChatRoom() {
 
         typingTimeoutRef.current = setTimeout(() => {
           setTypingUser("");
-        }, 1800);
+        }, 1600);
       }
     });
 
@@ -90,21 +99,22 @@ export default function ChatRoom() {
     });
   }, [messages, typingUser]);
 
-  const loadAppointment = async () => {
+  const loadInitialData = async () => {
     try {
-      const res = await api.get(`/appointment/${appointmentId}`);
-      setAppointment(res.data);
-    } catch (error) {
-      console.error("Appointment load error:", error);
-    }
-  };
+      setLoading(true);
 
-  const loadMessages = async () => {
-    try {
-      const res = await api.get(`/chat/${appointmentId}`);
-      setMessages(res.data || []);
+      const [appointmentRes, messagesRes] = await Promise.all([
+        api.get(`/appointment/${appointmentId}`),
+        api.get(`/chat/${appointmentId}`),
+      ]);
+
+      setAppointment(appointmentRes.data);
+      setMessages(messagesRes.data || []);
     } catch (error) {
       console.error("Chat load error:", error);
+      alert(error.response?.data?.message || "Failed to load chat");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -118,13 +128,27 @@ export default function ChatRoom() {
   };
 
   const sendMessage = () => {
-    if (!message.trim() || !user?.id) return;
+    const cleanMessage = message.trim();
+
+    if (!cleanMessage || !user?.id) return;
+
+    const tempMessage = {
+      id: `temp-${Date.now()}`,
+      appointmentId: Number(appointmentId),
+      senderId: user.id,
+      senderRole: isDoctor ? "DOCTOR" : "PATIENT",
+      message: cleanMessage,
+      createdAt: new Date().toISOString(),
+      pending: true,
+    };
+
+    setMessages((prev) => [...prev, tempMessage]);
 
     socket.emit("sendChatMessage", {
       appointmentId: Number(appointmentId),
       senderId: user.id,
       senderRole: isDoctor ? "DOCTOR" : "PATIENT",
-      message: message.trim(),
+      message: cleanMessage,
     });
 
     setMessage("");
@@ -149,210 +173,201 @@ export default function ChatRoom() {
   };
 
   const formatDateLabel = (date) => {
-    const d = new Date(date);
+    const currentDate = new Date(date);
     const today = new Date();
 
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
 
-    if (d.toDateString() === today.toDateString()) return "Today";
-    if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+    if (currentDate.toDateString() === today.toDateString()) return "Today";
+    if (currentDate.toDateString() === yesterday.toDateString()) return "Yesterday";
 
-    return d.toLocaleDateString([], {
+    return currentDate.toLocaleDateString([], {
       day: "numeric",
       month: "short",
       year: "numeric",
     });
   };
 
+  const ReceiverIcon = receiver.icon;
+
+  if (loading) {
+    return (
+      <main className="h-screen bg-[#f4f8fb] flex items-center justify-center px-4">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 text-center">
+          <Loader2 className="text-cyan-600 animate-spin mx-auto" size={34} />
+          <p className="text-sm text-slate-500 font-bold mt-3">
+            Opening secure chat...
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-950 flex items-center justify-center p-0 md:p-5 overflow-hidden">
-      <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl" />
+    <main className="h-screen bg-[#eef8fc] flex flex-col overflow-hidden">
+      <header className="shrink-0 bg-white/95 backdrop-blur-xl border-b border-slate-100 px-4 pt-3 pb-3">
+        <div className="max-w-md mx-auto flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center active:scale-95"
+          >
+            <ArrowLeft size={20} />
+          </button>
 
-      <div className="relative w-full h-full md:max-w-6xl md:h-[94vh] bg-white/95 backdrop-blur-2xl md:rounded-[2.2rem] shadow-2xl overflow-hidden flex flex-col border border-white/20">
-        <div className="h-20 px-4 md:px-6 bg-white/90 backdrop-blur-xl border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-4 min-w-0">
-            <button
-              onClick={() => navigate(-1)}
-              className="w-11 h-11 rounded-2xl hover:bg-slate-100 flex items-center justify-center transition"
-            >
-              <ArrowLeft size={22} />
-            </button>
-
-            <div className="relative shrink-0">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 via-cyan-500 to-emerald-400 p-[2px] shadow-lg">
-                <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                  {receiverImage ? (
-                    <img
-                      src={receiverImage}
-                      alt={receiverName}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : isDoctor ? (
-                    <UserRound className="text-blue-600" size={28} />
-                  ) : (
-                    <Stethoscope className="text-blue-600" size={28} />
-                  )}
-                </div>
+          <div className="relative shrink-0">
+            {receiver.image ? (
+              <img
+                src={receiver.image}
+                alt={receiver.name}
+                className="w-12 h-12 rounded-full object-cover border-2 border-cyan-100"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-cyan-50 border border-cyan-100 flex items-center justify-center">
+                <ReceiverIcon className="text-cyan-600" size={24} />
               </div>
+            )}
 
-              <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 border-[3px] border-white rounded-full" />
-            </div>
-
-            <div className="min-w-0">
-              <h1 className="font-black text-slate-900 truncate">
-                {receiverName}
-              </h1>
-
-              <p className="text-xs text-emerald-600 font-black truncate">
-                Online • {receiverSubtitle}
-              </p>
-            </div>
+            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" />
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-50 text-emerald-700 font-black text-sm">
-              <ShieldCheck size={17} />
-              Secure Chat
-            </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base font-black text-slate-950 truncate">
+              {receiver.name}
+            </h1>
 
-            <button className="w-11 h-11 rounded-2xl hover:bg-slate-100 flex items-center justify-center transition">
-              <MoreVertical size={22} />
-            </button>
+            <p className="text-xs text-emerald-600 font-black truncate">
+              Online • {receiver.subtitle}
+            </p>
+          </div>
+
+          <div className="w-9 h-9 rounded-2xl bg-emerald-50 flex items-center justify-center">
+            <ShieldCheck size={18} className="text-emerald-600" />
           </div>
         </div>
+      </header>
 
-        <div className="flex-1 overflow-y-auto px-4 md:px-10 py-7 bg-gradient-to-b from-slate-50 via-white to-blue-50/40">
-          <div className="text-center mb-8">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-600 via-cyan-500 to-emerald-400 p-[3px] mx-auto shadow-xl">
-              <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                {receiverImage ? (
-                  <img
-                    src={receiverImage}
-                    alt={receiverName}
-                    className="w-full h-full object-cover"
-                  />
-                ) : isDoctor ? (
-                  <UserRound className="text-blue-600" size={40} />
-                ) : (
-                  <Stethoscope className="text-blue-600" size={40} />
-                )}
+      <section className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white border border-slate-100 rounded-3xl p-4 text-center shadow-sm mb-5">
+            {receiver.image ? (
+              <img
+                src={receiver.image}
+                alt={receiver.name}
+                className="w-20 h-20 rounded-full object-cover mx-auto border-2 border-cyan-100"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-cyan-50 flex items-center justify-center mx-auto">
+                <ReceiverIcon className="text-cyan-600" size={36} />
               </div>
-            </div>
+            )}
 
-            <h2 className="font-black text-2xl text-slate-900 mt-4">
-              {receiverName}
+            <h2 className="text-lg font-black text-slate-950 mt-3">
+              {receiver.name}
             </h2>
 
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               Appointment #{appointmentId}
             </p>
 
-            <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-sm font-black">
-              <Sparkles size={16} />
-              Secure MediCare consultation chat
+            <div className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full bg-cyan-50 text-cyan-700 text-xs font-black">
+              <ShieldCheck size={13} />
+              Secure consultation chat
             </div>
           </div>
 
-          <div className="space-y-2">
-            {messages.length === 0 && (
-              <div className="text-center text-slate-400 py-10">
-                Start the conversation with {receiverName}.
-              </div>
-            )}
+          {messages.length === 0 ? (
+            <div className="text-center text-slate-400 py-10">
+              <p className="font-bold text-sm">
+                Start your conversation with {receiver.name}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {messages.map((msg, index) => {
+                const mine = msg.senderId === user?.id;
+                const previous = messages[index - 1];
+                const showDate = shouldShowDate(msg, previous);
 
-            {messages.map((msg, index) => {
-              const mine = msg.senderId === user?.id;
-              const previous = messages[index - 1];
-              const showDate = shouldShowDate(msg, previous);
-
-              return (
-                <div key={msg.id || index}>
-                  {showDate && (
-                    <div className="flex justify-center my-6">
-                      <span className="px-4 py-2 rounded-full bg-white border border-slate-100 shadow-sm text-xs font-black text-slate-400">
-                        {formatDateLabel(msg.createdAt)}
-                      </span>
-                    </div>
-                  )}
-
-                  <div
-                    className={`flex ${
-                      mine ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    {!mine && (
-                      <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center mr-2 mt-auto overflow-hidden shrink-0">
-                        {receiverImage ? (
-                          <img
-                            src={receiverImage}
-                            alt={receiverName}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : isDoctor ? (
-                          <UserRound
-                            className="text-blue-600"
-                            size={17}
-                          />
-                        ) : (
-                          <Stethoscope
-                            className="text-blue-600"
-                            size={17}
-                          />
-                        )}
+                return (
+                  <div key={msg.id || index}>
+                    {showDate && (
+                      <div className="flex justify-center my-5">
+                        <span className="px-3 py-1.5 rounded-full bg-white border border-slate-100 shadow-sm text-[11px] font-black text-slate-400">
+                          {formatDateLabel(msg.createdAt)}
+                        </span>
                       </div>
                     )}
 
-                    <div
-                      className={`max-w-[78%] md:max-w-[58%] px-4 py-3 rounded-[1.4rem] text-sm leading-relaxed shadow-sm ${
-                        mine
-                          ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-br-md"
-                          : "bg-white text-slate-900 border border-slate-100 rounded-bl-md"
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap break-words">
-                        {msg.message}
-                      </p>
+                    <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                      {!mine && (
+                        <div className="w-7 h-7 rounded-full bg-cyan-50 border border-cyan-100 flex items-center justify-center mr-2 mt-auto overflow-hidden shrink-0">
+                          {receiver.image ? (
+                            <img
+                              src={receiver.image}
+                              alt={receiver.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <ReceiverIcon className="text-cyan-600" size={15} />
+                          )}
+                        </div>
+                      )}
 
                       <div
-                        className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
-                          mine ? "text-blue-100" : "text-slate-400"
+                        className={`max-w-[78%] px-4 py-2.5 rounded-[1.35rem] text-sm leading-relaxed shadow-sm ${
+                          mine
+                            ? "bg-cyan-600 text-white rounded-br-md"
+                            : "bg-white text-slate-900 border border-slate-100 rounded-bl-md"
                         }`}
                       >
-                        <span>{formatMessageTime(msg.createdAt)}</span>
-                        {mine && <CheckCheck size={13} />}
+                        <p className="whitespace-pre-wrap break-words">
+                          {msg.message}
+                        </p>
+
+                        <div
+                          className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
+                            mine ? "text-cyan-50" : "text-slate-400"
+                          }`}
+                        >
+                          <span>{formatMessageTime(msg.createdAt)}</span>
+                          {mine && <CheckCheck size={13} />}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          )}
 
-            {typingUser && (
-              <div className="flex justify-start mt-3">
-                <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-[1.4rem] px-4 py-3 shadow-sm">
-                  <div className="flex gap-1">
-                    <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
-                    <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.15s]" />
-                    <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.3s]" />
-                  </div>
+          {typingUser && (
+            <div className="flex justify-start mt-3">
+              <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-3xl px-4 py-3 shadow-sm">
+                <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
+                <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.15s]" />
+                <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.3s]" />
 
-                  <span className="text-xs text-slate-500 font-bold">
-                    {typingUser} is typing
-                  </span>
-                </div>
+                <span className="text-xs text-slate-500 font-bold ml-1">
+                  typing...
+                </span>
               </div>
-            )}
+            </div>
+          )}
 
-            <div ref={bottomRef} />
-          </div>
+          <div ref={bottomRef} className="h-3" />
         </div>
+      </section>
 
-        <div className="bg-white/95 backdrop-blur-xl border-t border-slate-100 p-4">
-          <div className="flex items-end gap-3 bg-slate-100 rounded-[2rem] p-2 shadow-inner">
-            <button className="w-11 h-11 rounded-full hover:bg-white flex items-center justify-center text-slate-500 transition">
-              <Smile size={22} />
+      <footer className="shrink-0 bg-white/95 backdrop-blur-xl border-t border-slate-100 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+14px)]">
+        <div className="max-w-md mx-auto">
+          <div className="flex items-end gap-2 bg-slate-100 rounded-[2rem] p-2">
+            <button
+              type="button"
+              className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-500 shrink-0"
+            >
+              <Paperclip size={20} />
             </button>
 
             <textarea
@@ -365,20 +380,21 @@ export default function ChatRoom() {
                   sendMessage();
                 }
               }}
-              placeholder="Message..."
-              className="flex-1 bg-transparent py-3 outline-none resize-none max-h-28 text-slate-900 placeholder:text-slate-400"
+              placeholder="Type a message..."
+              className="flex-1 bg-transparent py-2.5 outline-none resize-none max-h-28 text-sm text-slate-900 placeholder:text-slate-400"
             />
 
             <button
+              type="button"
               onClick={sendMessage}
               disabled={!message.trim()}
-              className="w-11 h-11 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white flex items-center justify-center disabled:from-slate-300 disabled:to-slate-300 hover:scale-105 transition shadow-lg"
+              className="w-10 h-10 rounded-full bg-cyan-600 text-white flex items-center justify-center disabled:bg-slate-300 active:scale-95 transition shadow-md shrink-0"
             >
-              <Send size={20} />
+              <Send size={18} />
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </footer>
+    </main>
   );
 }

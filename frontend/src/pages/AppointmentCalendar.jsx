@@ -1,294 +1,572 @@
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, dateFnsLocalizer } from "react-big-calendar";
-import { format, parse, startOfWeek, getDay } from "date-fns";
-import "react-big-calendar/lib/css/react-big-calendar.css";
-
 import {
-  CalendarDays,
   Clock,
   UserRound,
   Stethoscope,
   Video,
   X,
   Search,
-  CheckCircle2,
-  XCircle,
-  CalendarCheck,
-  RefreshCw,
-  Filter,
-  ShieldCheck,
-  Activity,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Phone,
   Building2,
-  Loader2,
+  CalendarDays,
+  CheckCircle2,
+  XCircle,
+  CircleDot,
 } from "lucide-react";
+import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
+
+import PageHeader from "../components/PageHeader";
 import api from "../api/axios";
+import PrescriptionModal from "../components/PrescriptionModal";
 
-const locales = {};
-
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek,
-  getDay,
-  locales,
-});
+const STATUS_FILTERS = ["ALL", "BOOKED", "COMPLETED", "CANCELLED"];
 
 export default function AppointmentCalendar() {
   const [appointments, setAppointments] = useState([]);
+  const [slots, setSlots] = useState([]);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [prescriptionAppointment, setPrescriptionAppointment] = useState(null);
+
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [showSlots, setShowSlots] = useState(false);
 
   const doctorToken = localStorage.getItem("doctorToken");
   const hospitalToken = localStorage.getItem("hospitalToken");
 
   useEffect(() => {
-    fetchAppointments();
+    fetchData();
   }, []);
 
-  const fetchAppointments = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
 
-      let res;
+      let appointmentRes;
+      let slotRes = { data: [] };
 
       if (doctorToken) {
         const doctor = JSON.parse(localStorage.getItem("doctorUser") || "null");
-        res = await api.get(`/appointment/doctor/${doctor.id}`);
+
+const doctorId =
+  doctor?.id ||
+  doctor?.doctorId ||
+  doctor?._id ||
+  doctor?.userId ||
+  doctor?.doctor?.id;
+
+if (!doctorId) {
+  toast.error("Doctor not found. Please login again.");
+  setAppointments([]);
+  setSlots([]);
+  return;
+}
+
+appointmentRes = await api.get(`/appointment/doctor/${doctorId}`);
+slotRes = await api.get(`/slot/doctor/${doctorId}`);
       } else if (hospitalToken) {
-        res = await api.get("/appointment/hospital/my");
+        appointmentRes = await api.get("/appointment/hospital/my");
       } else {
-        res = await api.get("/appointment/my");
+        appointmentRes = await api.get("/appointment/my");
       }
 
-      setAppointments(res.data || []);
+      setAppointments(appointmentRes.data || []);
+      setSlots(slotRes.data || []);
     } catch (error) {
-      console.error("Calendar appointment error:", error);
-      alert("Failed to load appointments");
+      console.error("Calendar error:", error);
+      toast.error("Failed to load calendar");
+      setAppointments([]);
+      setSlots([]);
     } finally {
       setLoading(false);
     }
   };
+
+  const monthDates = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const lastDay = new Date(year, month + 1, 0).getDate();
+
+    return Array.from({ length: lastDay }, (_, index) => {
+      const date = new Date(year, month, index + 1);
+      return {
+        date,
+        key: toDateKey(date),
+        day: date.toLocaleDateString([], { weekday: "short" }),
+        number: date.getDate(),
+      };
+    });
+  }, [currentMonth]);
 
   const filteredAppointments = appointments.filter((item) => {
     const matchesStatus =
       statusFilter === "ALL" || item.status === statusFilter;
 
     const text = `${item.patientName || ""} ${item.patientPhone || ""} ${
-      item.doctor?.doctorName || ""
-    } ${item.doctor?.specialization || ""} ${
-      item.doctor?.hospital?.hospitalName || ""
-    }`.toLowerCase();
+      item.patient?.fullName || ""
+    } ${item.doctor?.doctorName || ""} ${
+      item.doctor?.specialization || ""
+    } ${item.doctor?.hospital?.hospitalName || ""}`.toLowerCase();
 
-    const matchesSearch = text.includes(search.toLowerCase());
-
-    return matchesStatus && matchesSearch;
+    return matchesStatus && text.includes(search.toLowerCase());
   });
 
-  const stats = useMemo(
-    () => ({
-      total: appointments.length,
-      booked: appointments.filter((a) => a.status === "BOOKED").length,
-      completed: appointments.filter((a) => a.status === "COMPLETED").length,
-      cancelled: appointments.filter((a) => a.status === "CANCELLED").length,
-    }),
-    [appointments]
+  const selectedDateSlots = slots
+    .filter((slot) => slot.date === selectedDate)
+    .sort((a, b) =>
+      String(a.startTime || "").localeCompare(String(b.startTime || ""))
+    );
+
+  const selectedDateAppointments = filteredAppointments
+    .filter((item) => item.slot?.date === selectedDate)
+    .sort((a, b) =>
+      String(a.slot?.startTime || "").localeCompare(
+        String(b.slot?.startTime || "")
+      )
+    );
+
+  const selectedRawAppointments = appointments.filter(
+    (item) => item.slot?.date === selectedDate
   );
 
-  const events = useMemo(() => {
-    return filteredAppointments
-      .filter((appointment) => appointment.slot?.date)
-      .map((appointment) => {
-        const date = appointment.slot.date;
-        const startTime = appointment.slot.startTime || "09:00";
-        const endTime = appointment.slot.endTime || "09:30";
+  const selectedAvailableSlots = selectedDateSlots.filter(
+    (slot) => slot.isAvailable
+  );
 
-        return {
-          id: appointment.id,
-          title: `${appointment.patientName || "Patient"} • ${
-            appointment.doctor?.doctorName || "Doctor"
-          }`,
-          start: new Date(`${date}T${startTime}`),
-          end: new Date(`${date}T${endTime}`),
-          resource: appointment,
-        };
-      });
-  }, [filteredAppointments]);
+  const selectedBookedCount = selectedRawAppointments.filter(
+    (item) => item.status === "BOOKED"
+  ).length;
 
-  const eventStyleGetter = (event) => {
-    const status = event.resource?.status;
+  const selectedCompletedCount = selectedRawAppointments.filter(
+    (item) => item.status === "COMPLETED"
+  ).length;
 
-    let backgroundColor = "#0891b2";
+  const selectedCancelledCount = selectedRawAppointments.filter(
+    (item) => item.status === "CANCELLED"
+  ).length;
 
-    if (status === "COMPLETED") backgroundColor = "#059669";
-    if (status === "CANCELLED") backgroundColor = "#dc2626";
+  const selectedAvailableCount = selectedAvailableSlots.length;
 
-    return {
-      style: {
-        backgroundColor,
-        borderRadius: "14px",
-        border: "none",
-        color: "white",
-        fontWeight: 800,
-        padding: "5px 8px",
-        boxShadow: "0 8px 20px rgba(15, 23, 42, 0.15)",
-      },
-    };
+  const changeMonth = (step) => {
+    const nextMonth = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth() + step,
+      1
+    );
+
+    setCurrentMonth(nextMonth);
+    setSelectedDate(toDateKey(nextMonth));
+    setShowSlots(false);
   };
+
+  const goToday = () => {
+    const today = new Date();
+    setCurrentMonth(today);
+    setSelectedDate(toDateKey(today));
+    setShowSlots(false);
+  };
+
+  const selectDate = (dateKey) => {
+    setSelectedDate(dateKey);
+    setShowSlots(false);
+  };
+
+  const selectedDateLabel = new Date(selectedDate).toLocaleDateString([], {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4fbff] flex items-center justify-center">
-        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 text-center">
-          <Loader2 className="mx-auto text-cyan-600 animate-spin mb-4" size={38} />
-          <p className="text-slate-500 font-semibold">
-            Loading appointment calendar...
-          </p>
+      <main className="min-h-screen bg-[#f4f8fb] flex items-center justify-center px-4">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 text-center">
+          <Loader2
+            className="mx-auto text-cyan-600 animate-spin mb-3"
+            size={36}
+          />
+          <p className="text-slate-500 font-bold">Loading calendar...</p>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f4fbff]">
-      <div className="max-w-[1500px] mx-auto px-6 py-8">
-        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
-                <CalendarDays size={17} />
-                ADVANCED SCHEDULING CENTER
-              </div>
+    <main className="min-h-screen bg-[#f4f8fb] pb-28">
+      <PageHeader title="Calendar" subtitle="Appointments by date" />
 
-              <h1 className="text-4xl md:text-5xl font-black text-slate-950">
-                Appointment Calendar
+      <div className="max-w-md mx-auto px-4">
+        <section className="bg-slate-950 text-white rounded-[2rem] p-4 shadow-xl">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => changeMonth(-1)}
+              className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center active:scale-95"
+            >
+              <ChevronLeft size={20} />
+            </button>
+
+            <div className="text-center">
+              <h1 className="text-xl font-black">
+                {currentMonth.toLocaleDateString([], {
+                  month: "long",
+                  year: "numeric",
+                })}
               </h1>
 
-              <p className="text-slate-500 mt-3 max-w-2xl text-lg leading-relaxed">
-                Month, week, day and agenda views with status colors, video
-                consultation access and appointment insights.
-              </p>
+              <button
+                type="button"
+                onClick={goToday}
+                className="text-[11px] font-black text-cyan-300 mt-1"
+              >
+                Today
+              </button>
             </div>
 
             <button
-              onClick={fetchAppointments}
-              className="inline-flex items-center justify-center gap-2 bg-cyan-600 text-white px-6 py-4 rounded-2xl font-black hover:bg-cyan-700 transition"
+              type="button"
+              onClick={() => changeMonth(1)}
+              className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center active:scale-95"
             >
-              <RefreshCw size={18} />
-              Refresh
+              <ChevronRight size={20} />
             </button>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto mt-4 pb-1 no-scrollbar">
+            {monthDates.map((item) => {
+              const active = item.key === selectedDate;
+              const today = item.key === toDateKey(new Date());
+              const summary = getDateSummary(item.key, appointments, slots);
+
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => selectDate(item.key)}
+                  className={`min-w-[62px] rounded-3xl p-2 text-center border transition active:scale-95 ${
+                    active
+                      ? "bg-cyan-500 border-cyan-400 text-white shadow-lg"
+                      : today
+                      ? "bg-white/15 border-white/10 text-white"
+                      : "bg-white/5 border-white/10 text-slate-300"
+                  }`}
+                >
+                  <p className="text-[10px] font-black">{item.day}</p>
+                  <p className="text-xl font-black mt-0.5">{item.number}</p>
+
+                  <div className="flex justify-center gap-1 mt-1.5">
+                    <Dot count={summary.booked} className="bg-cyan-300" />
+                    <Dot count={summary.completed} className="bg-purple-300" />
+                    <Dot count={summary.cancelled} className="bg-red-300" />
+                    <Dot count={summary.available} className="bg-emerald-300" />
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </section>
 
-        <section className="grid md:grid-cols-4 gap-5 mb-8">
-          <StatCard icon={CalendarCheck} label="Total" value={stats.total} />
-          <StatCard icon={Clock} label="Booked" value={stats.booked} />
-          <StatCard
-            icon={CheckCircle2}
-            label="Completed"
-            value={stats.completed}
-            tone="green"
-          />
-          <StatCard
-            icon={XCircle}
-            label="Cancelled"
-            value={stats.cancelled}
-            tone="red"
-          />
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-3 mt-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] text-cyan-700 font-black">
+                SELECTED DATE
+              </p>
+
+              <h2 className="text-base font-black text-slate-950 truncate">
+                {selectedDateLabel}
+              </h2>
+            </div>
+
+            <div className="w-10 h-10 rounded-2xl bg-cyan-50 flex items-center justify-center">
+              <CalendarDays className="text-cyan-600" size={21} />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-2xl px-3 py-2 mt-2">
+            <Search size={16} className="text-cyan-600 shrink-0" />
+
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search patient"
+              className="w-full bg-transparent outline-none text-sm text-slate-800"
+            />
+
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="text-slate-400"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-4 gap-1.5 mt-2">
+            <CountCard
+              label="Booked"
+              value={selectedBookedCount}
+              icon={CircleDot}
+              tone="cyan"
+            />
+
+            <CountCard
+              label="Done"
+              value={selectedCompletedCount}
+              icon={CheckCircle2}
+              tone="purple"
+            />
+
+            <CountCard
+              label="Cancel"
+              value={selectedCancelledCount}
+              icon={XCircle}
+              tone="red"
+            />
+
+            <CountCard
+              label="Avail"
+              value={selectedAvailableCount}
+              icon={Clock}
+              tone="green"
+            />
+          </div>
+
+          <div className="grid grid-cols-4 gap-1.5 mt-2">
+            {STATUS_FILTERS.map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setStatusFilter(status)}
+                className={`py-1.5 rounded-xl text-[10px] font-black transition ${
+                  statusFilter === status
+                    ? "bg-cyan-600 text-white"
+                    : "bg-slate-50 text-slate-600 border border-slate-100"
+                }`}
+              >
+                {status === "ALL"
+                  ? "All"
+                  : status === "BOOKED"
+                  ? "Booked"
+                  : status === "COMPLETED"
+                  ? "Done"
+                  : "Cancel"}
+              </button>
+            ))}
+          </div>
         </section>
 
-        <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-3 mt-2">
+          <div className="flex items-center justify-between mb-2">
             <div>
-              <h2 className="text-2xl font-black text-slate-950">
-                Calendar View
+              <h2 className="text-base font-black text-slate-950">
+                Appointment Details
               </h2>
 
-              <p className="text-slate-500 text-sm">
-                Showing {events.length} appointment events
+              <p className="text-[11px] text-slate-500">
+                {selectedDateAppointments.length} appointment
+                {selectedDateAppointments.length === 1 ? "" : "s"} found
               </p>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-3">
-              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 md:w-80">
-                <Search size={18} className="text-cyan-600" />
+            <span className="bg-cyan-50 text-cyan-700 text-[10px] font-black px-2.5 py-1 rounded-full">
+              {statusFilter === "ALL" ? "All" : statusFilter}
+            </span>
+          </div>
 
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search patient or doctor..."
-                  className="w-full bg-transparent outline-none text-slate-800"
+          {selectedDateAppointments.length === 0 ? (
+            <Empty text="No appointments found for this date." />
+          ) : (
+            <div className="space-y-2">
+              {selectedDateAppointments.map((appointment) => (
+                <AppointmentRow
+                  key={appointment.id}
+                  appointment={appointment}
+                  onClick={() => setSelectedAppointment(appointment)}
                 />
-              </div>
-
-              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-                <Filter size={18} className="text-cyan-600" />
-
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-transparent font-bold outline-none text-slate-800"
-                >
-                  <option value="ALL">All Status</option>
-                  <option value="BOOKED">Booked</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="CANCELLED">Cancelled</option>
-                </select>
-              </div>
+              ))}
             </div>
-          </div>
+          )}
+        </section>
 
-          <div className="p-5">
-            <div className="h-[760px] premium-calendar">
-              <Calendar
-                localizer={localizer}
-                events={events}
-                startAccessor="start"
-                endAccessor="end"
-                views={["month", "week", "day", "agenda"]}
-                defaultView="month"
-                popup
-                eventPropGetter={eventStyleGetter}
-                onSelectEvent={(event) =>
-                  setSelectedAppointment(event.resource)
-                }
-              />
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-3 mt-2">
+          <button
+            type="button"
+            onClick={() => setShowSlots(!showSlots)}
+            className="w-full flex items-center justify-between"
+          >
+            <div className="text-left">
+              <h2 className="text-base font-black text-slate-950">
+                Available Slots
+              </h2>
+
+              <p className="text-[11px] text-slate-500">
+                {selectedAvailableSlots.length} slot
+                {selectedAvailableSlots.length === 1 ? "" : "s"} available
+              </p>
             </div>
-          </div>
+
+            <div className="flex items-center gap-2 text-cyan-700 font-black text-xs">
+              {showSlots ? "Hide" : "Show"}
+              {showSlots ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
+            </div>
+          </button>
+
+          {showSlots && (
+            <div className="space-y-2 mt-2">
+              {selectedAvailableSlots.length === 0 ? (
+                <Empty text="No available slots for this date." />
+              ) : (
+                selectedAvailableSlots.map((slot) => (
+                  <SlotRow key={slot.id} slot={slot} />
+                ))
+              )}
+            </div>
+          )}
         </section>
       </div>
+
+      {prescriptionAppointment && (
+        <PrescriptionModal
+          appointment={prescriptionAppointment}
+          onClose={() => setPrescriptionAppointment(null)}
+          onSaved={() => {
+            setPrescriptionAppointment(null);
+            fetchData();
+          }}
+        />
+      )}
 
       {selectedAppointment && (
         <AppointmentModal
           appointment={selectedAppointment}
           onClose={() => setSelectedAppointment(null)}
+          onCreatePrescription={(appointment) => {
+            setSelectedAppointment(null);
+            setPrescriptionAppointment(appointment);
+          }}
         />
       )}
+    </main>
+  );
+}
+
+function CountCard({ icon: Icon, label, value, tone }) {
+  const styles = {
+    cyan: "bg-cyan-50 text-cyan-700",
+    purple: "bg-purple-50 text-purple-700",
+    red: "bg-red-50 text-red-700",
+    green: "bg-emerald-50 text-emerald-700",
+  };
+
+  return (
+    <div className={`${styles[tone]} rounded-xl p-2 text-center`}>
+      <Icon size={14} className="mx-auto" />
+      <p className="text-base font-black mt-0.5">{value}</p>
+      <p className="text-[8px] font-black leading-tight">{label}</p>
     </div>
   );
 }
 
-function AppointmentModal({ appointment, onClose }) {
+function Dot({ count, className }) {
+  if (!count) return <span className="w-1.5 h-1.5 rounded-full bg-white/10" />;
+
+  return <span className={`w-1.5 h-1.5 rounded-full ${className}`} />;
+}
+
+function AppointmentRow({ appointment, onClick }) {
+  const patientName =
+    appointment.patient?.fullName || appointment.patientName || "Patient";
+
+  const time = `${formatTime(appointment.slot?.startTime) || "--"} - ${
+    formatTime(appointment.slot?.endTime) || "--"
+  }`;
+
   return (
-    <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-[2rem] shadow-2xl max-w-xl w-full overflow-hidden border border-slate-100">
-        <div className="bg-slate-950 text-white p-6 flex items-center justify-between">
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-3 text-left active:scale-[0.99] transition"
+    >
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shrink-0">
+          <UserRound className="text-cyan-600" size={20} />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-black text-slate-950 text-sm truncate">
+              {patientName}
+            </h3>
+
+            <StatusBadge status={appointment.status} />
+          </div>
+
+          <p className="text-xs text-slate-500 mt-1">{time}</p>
+
+          <p className="text-xs text-slate-400 mt-1 truncate">
+            {appointment.patientPhone || appointment.patient?.mobile || "-"}
+          </p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function SlotRow({ slot }) {
+  return (
+    <div className="flex items-center justify-between rounded-2xl border p-3 bg-emerald-50 border-emerald-100">
+      <div>
+        <p className="font-black text-slate-950">
+          {slot.startTime} - {slot.endTime}
+        </p>
+
+        <p className="text-xs text-slate-500">{slot.date}</p>
+      </div>
+
+      <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-700">
+        AVAILABLE
+      </span>
+    </div>
+  );
+}
+
+function AppointmentModal({ appointment, onClose, onCreatePrescription }) {
+  return (
+    <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-end justify-center px-4">
+      <div className="bg-white rounded-t-[2rem] shadow-2xl max-w-md w-full overflow-hidden border border-slate-100">
+        <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-black">Appointment Details</h2>
-            <p className="text-slate-300 text-sm">#{appointment.id}</p>
+            <h2 className="text-lg font-black text-slate-950">
+              Appointment Details
+            </h2>
+
+            <p className="text-slate-500 text-xs">#{appointment.id}</p>
           </div>
 
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center"
+            className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center"
           >
             <X size={20} />
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-4 space-y-3">
           <Detail
             icon={Stethoscope}
             label="Doctor"
@@ -298,13 +576,13 @@ function AppointmentModal({ appointment, onClose }) {
           <Detail
             icon={UserRound}
             label="Patient"
-            value={appointment.patientName}
+            value={appointment.patient?.fullName || appointment.patientName}
           />
 
           <Detail
             icon={Phone}
             label="Patient Phone"
-            value={appointment.patientPhone}
+            value={appointment.patientPhone || appointment.patient?.mobile}
           />
 
           <Detail
@@ -317,8 +595,8 @@ function AppointmentModal({ appointment, onClose }) {
             icon={Clock}
             label="Schedule"
             value={`${appointment.slot?.date || "-"} | ${
-              appointment.slot?.startTime || ""
-            } - ${appointment.slot?.endTime || ""}`}
+              formatTime(appointment.slot?.startTime) || ""
+            } - ${formatTime(appointment.slot?.endTime) || ""}`}
           />
 
           <div>
@@ -329,14 +607,31 @@ function AppointmentModal({ appointment, onClose }) {
             <StatusBadge status={appointment.status} />
           </div>
 
-          {appointment.videoRoomId && appointment.status === "BOOKED" && (
-            <a
-              href={`/video-call/${appointment.id}`}
-              className="flex items-center justify-center gap-2 bg-cyan-600 text-white py-4 rounded-2xl font-black hover:bg-cyan-700 transition"
+          {appointment.status === "COMPLETED" && (
+            <button
+              type="button"
+              onClick={() => onCreatePrescription(appointment)}
+              className="w-full bg-cyan-600 text-white py-3 rounded-2xl font-black text-sm"
             >
-              <Video size={20} />
+              Create Prescription
+            </button>
+          )}
+
+          <Link
+            to={`/doctor/appointment/${appointment.id}/patient-profile`}
+            className="flex items-center justify-center bg-slate-950 text-white py-3 rounded-2xl font-black text-sm"
+          >
+            View Patient Timeline
+          </Link>
+
+          {appointment.videoRoomId && appointment.status === "BOOKED" && (
+            <Link
+              to={`/video-call/${appointment.id}`}
+              className="flex items-center justify-center gap-2 bg-cyan-600 text-white py-3 rounded-2xl font-black text-sm"
+            >
+              <Video size={18} />
               Join Video Consultation
-            </a>
+            </Link>
           )}
         </div>
       </div>
@@ -346,17 +641,15 @@ function AppointmentModal({ appointment, onClose }) {
 
 function Detail({ icon: Icon, label, value }) {
   return (
-    <div className="bg-slate-50 rounded-2xl p-4 flex gap-3 border border-slate-100">
+    <div className="bg-slate-50 rounded-2xl p-3 flex gap-3 border border-slate-100">
       <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center shrink-0">
-        <Icon size={20} className="text-cyan-600" />
+        <Icon size={18} className="text-cyan-600" />
       </div>
 
-      <div>
-        <p className="text-xs font-black text-slate-400 uppercase">
-          {label}
-        </p>
+      <div className="min-w-0">
+        <p className="text-xs font-black text-slate-400 uppercase">{label}</p>
 
-        <p className="font-black text-slate-950">
+        <p className="font-black text-slate-950 text-sm truncate">
           {value || "-"}
         </p>
       </div>
@@ -367,44 +660,44 @@ function Detail({ icon: Icon, label, value }) {
 function StatusBadge({ status }) {
   const style =
     status === "COMPLETED"
-      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+      ? "bg-purple-50 text-purple-700 border-purple-100"
       : status === "CANCELLED"
       ? "bg-red-50 text-red-700 border-red-100"
       : "bg-cyan-50 text-cyan-700 border-cyan-100";
 
   return (
     <span
-      className={`inline-flex px-4 py-2 rounded-full text-sm font-black border ${style}`}
+      className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-black border shrink-0 ${style}`}
     >
       {status}
     </span>
   );
 }
 
-function StatCard({ icon: Icon, label, value, tone = "cyan" }) {
-  const styles = {
-    cyan: "bg-cyan-50 text-cyan-600",
-    green: "bg-emerald-50 text-emerald-600",
-    red: "bg-red-50 text-red-600",
-  };
-
+function Empty({ text }) {
   return (
-    <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100">
-      <div
-        className={`w-14 h-14 rounded-2xl ${
-          styles[tone] || styles.cyan
-        } flex items-center justify-center mb-5`}
-      >
-        <Icon size={26} />
-      </div>
-
-      <p className="text-slate-500 text-sm font-semibold">
-        {label}
-      </p>
-
-      <h2 className="text-4xl font-black text-slate-950 mt-1">
-        {value}
-      </h2>
+    <div className="bg-slate-50 rounded-2xl p-4 text-center border border-slate-100">
+      <p className="text-sm text-slate-500 font-semibold">{text}</p>
     </div>
   );
+}
+
+function getDateSummary(dateKey, appointments, slots) {
+  const daySlots = slots.filter((slot) => slot.date === dateKey);
+  const dayAppointments = appointments.filter(
+    (item) => item.slot?.date === dateKey
+  );
+
+  return {
+    available: daySlots.filter((slot) => slot.isAvailable).length,
+    booked: dayAppointments.filter((item) => item.status === "BOOKED").length,
+    completed: dayAppointments.filter((item) => item.status === "COMPLETED")
+      .length,
+    cancelled: dayAppointments.filter((item) => item.status === "CANCELLED")
+      .length,
+  };
+}
+
+function toDateKey(date) {
+  return date.toISOString().split("T")[0];
 }

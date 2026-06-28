@@ -9,15 +9,17 @@ import {
   Moon,
   Coffee,
   Bell,
-  Activity,
-  ClipboardList,
-  ShieldCheck,
   Search,
-  Filter,
-  CalendarCheck,
-  ArrowRight,
+  ClipboardList,
+  Trash2,
+  X,
+  UserRound,
 } from "lucide-react";
+import toast from "react-hot-toast";
+
+import PageHeader from "../components/PageHeader";
 import api from "../api/axios";
+import usePullToRefresh from "../hooks/usePullToRefresh";
 
 export default function MedicineReminders() {
   const patient = JSON.parse(
@@ -26,7 +28,13 @@ export default function MedicineReminders() {
       "null"
   );
 
+  const selectedProfile = JSON.parse(
+    localStorage.getItem("selectedProfile") || "null"
+  );
+
   const [reminders, setReminders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [timeFilter, setTimeFilter] = useState("ALL");
 
@@ -38,12 +46,10 @@ export default function MedicineReminders() {
     endDate: "",
   });
 
-  useEffect(() => {
-    fetchReminders();
-  }, []);
-
-  const fetchReminders = async () => {
+  const fetchReminders = async (showLoader = true) => {
     try {
+      if (showLoader) setLoading(true);
+
       if (!patient?.id) {
         setReminders([]);
         return;
@@ -53,13 +59,25 @@ export default function MedicineReminders() {
       setReminders(res.data || []);
     } catch (error) {
       console.error("Reminder error:", error);
+      toast.error("Unable to load reminders");
       setReminders([]);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const { pullDistance, refreshing, visible } = usePullToRefresh(async () => {
+    await fetchReminders(false);
+    toast.success("Reminders refreshed");
+  });
+
+  useEffect(() => {
+    fetchReminders();
+  }, []);
+
   const createReminder = async () => {
     if (!patient?.id) {
-      alert("Patient not found. Please logout and login again.");
+      toast.error("Please login again");
       return;
     }
 
@@ -70,19 +88,24 @@ export default function MedicineReminders() {
       !form.startDate ||
       !form.endDate
     ) {
-      alert("Please fill all fields");
+      toast.error("Please fill all fields");
       return;
     }
 
     try {
+      setSaving(true);
+
       await api.post("/medicine-reminder", {
         patientId: patient.id,
+        familyMemberId: selectedProfile?.isSelf ? undefined : selectedProfile?.id,
         medicineName: form.medicineName,
         dosage: form.dosage,
         reminderTime: form.reminderTime,
         startDate: form.startDate,
         endDate: form.endDate,
       });
+
+      toast.success("Reminder added");
 
       setForm({
         medicineName: "",
@@ -92,30 +115,53 @@ export default function MedicineReminders() {
         endDate: "",
       });
 
-      fetchReminders();
+      fetchReminders(false);
     } catch (error) {
-      console.error("Create reminder error:", {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
-      });
+      console.error("Create reminder error:", error);
+      toast.error(error.response?.data?.message || "Failed to create reminder");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-      alert(error.response?.data?.message || "Failed to create reminder");
+  const deleteReminder = async (id) => {
+    if (!window.confirm("Delete this reminder?")) return;
+
+    try {
+      await api.delete(`/medicine-reminder/${id}`);
+      toast.success("Reminder deleted");
+      fetchReminders(false);
+    } catch (error) {
+      console.error("Delete reminder error:", error);
+      toast.error(error.response?.data?.message || "Failed to delete reminder");
     }
   };
 
   const getTimeGroup = (time) => {
     const hour = Number(time?.split(":")[0]);
-
     if (hour < 12) return "Morning";
     if (hour < 18) return "Afternoon";
     return "Night";
   };
 
-  const filteredReminders = reminders.filter((item) => {
+  const profileReminders = useMemo(() => {
+    return reminders.filter((item) => {
+      const familyMember = item.familyMember || null;
+
+      if (!selectedProfile) return true;
+
+      if (selectedProfile.isSelf) {
+        return !familyMember;
+      }
+
+      return familyMember?.id === selectedProfile.id;
+    });
+  }, [reminders, selectedProfile]);
+
+  const filteredReminders = profileReminders.filter((item) => {
     const matchesSearch = `${item.medicineName || ""} ${item.dosage || ""}`
       .toLowerCase()
-      .includes(search.toLowerCase());
+      .includes(search.toLowerCase().trim());
 
     const group = getTimeGroup(item.reminderTime);
     const matchesTime = timeFilter === "ALL" || group === timeFilter;
@@ -123,250 +169,259 @@ export default function MedicineReminders() {
     return matchesSearch && matchesTime;
   });
 
-  const grouped = {
-    Morning: filteredReminders.filter(
-      (r) => getTimeGroup(r.reminderTime) === "Morning"
-    ),
-    Afternoon: filteredReminders.filter(
-      (r) => getTimeGroup(r.reminderTime) === "Afternoon"
-    ),
-    Night: filteredReminders.filter(
-      (r) => getTimeGroup(r.reminderTime) === "Night"
-    ),
-  };
-
-  const stats = useMemo(() => {
-    return {
-      total: reminders.length,
-      morning: reminders.filter((r) => getTimeGroup(r.reminderTime) === "Morning")
-        .length,
-      afternoon: reminders.filter(
-        (r) => getTimeGroup(r.reminderTime) === "Afternoon"
-      ).length,
-      night: reminders.filter((r) => getTimeGroup(r.reminderTime) === "Night")
-        .length,
-    };
-  }, [reminders]);
-
   const nextReminder = useMemo(() => {
-    if (reminders.length === 0) return null;
+    if (profileReminders.length === 0) return null;
 
-    return [...reminders].sort((a, b) =>
+    return [...profileReminders].sort((a, b) =>
       String(a.reminderTime).localeCompare(String(b.reminderTime))
     )[0];
-  }, [reminders]);
+  }, [profileReminders]);
 
   return (
-    <div className="min-h-screen bg-[#f4fbff]">
-      <div className="max-w-[1450px] mx-auto px-6 py-8">
-        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
-                <Pill size={17} />
-                MEDICINE REMINDERS
-              </div>
+    <main className="min-h-screen bg-[#f4f8fb] pb-28">
+      {visible && (
+        <div
+          className="fixed top-0 left-0 right-0 z-[100] flex justify-center transition-all duration-300"
+          style={{ transform: `translateY(${pullDistance}px)` }}
+        >
+          <div className="mt-3 bg-white border border-slate-200 shadow-lg rounded-full px-4 py-2 flex items-center gap-2">
+            <div
+              className={`w-4 h-4 border-2 border-cyan-600 border-t-transparent rounded-full ${
+                refreshing ? "animate-spin" : ""
+              }`}
+            />
 
-              <h1 className="text-4xl md:text-5xl font-black text-slate-950">
-                Track Daily Medicines
+            <span className="text-xs font-black text-cyan-700">
+              {refreshing
+                ? "Refreshing..."
+                : pullDistance > 70
+                ? "Release to refresh"
+                : "Pull to refresh"}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <PageHeader
+        title="Medicine Reminders"
+        subtitle={`${filteredReminders.length} reminders`}
+      />
+
+      <div className="max-w-md mx-auto px-4">
+        <section>
+          <p className="text-xs text-cyan-700 font-black">CURRENT PROFILE</p>
+
+          <div className="flex items-center justify-between mt-1">
+            <div>
+              <h1 className="text-xl font-black text-slate-950">
+                {selectedProfile?.fullName || patient?.fullName || "Patient"}
               </h1>
 
-              <p className="text-slate-500 mt-3 max-w-2xl text-lg leading-relaxed">
-                Add medicines, dosage and reminder timings to stay consistent
-                with your treatment routine.
+              <p className="text-xs text-slate-500">
+                {selectedProfile?.relation || "SELF"}
+                {selectedProfile?.age ? ` • ${selectedProfile.age}Y` : ""}
+                {selectedProfile?.gender ? ` • ${selectedProfile.gender}` : ""}
               </p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <MiniStat title="Total" value={stats.total} icon={ClipboardList} />
-              <MiniStat title="Morning" value={stats.morning} icon={Sun} />
-              <MiniStat title="Noon" value={stats.afternoon} icon={Coffee} />
-              <MiniStat title="Night" value={stats.night} icon={Moon} />
+            <div className="w-11 h-11 rounded-2xl bg-cyan-50 flex items-center justify-center">
+              <UserRound className="text-cyan-600" size={21} />
             </div>
           </div>
         </section>
 
-        <section className="grid xl:grid-cols-[420px_1fr] gap-8">
-          <aside className="space-y-6">
-            <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 xl:sticky xl:top-24">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center">
-                  <Plus className="text-cyan-600" size={24} />
-                </div>
-
-                <div>
-                  <h2 className="text-2xl font-black text-slate-950">
-                    Add Reminder
-                  </h2>
-
-                  <p className="text-sm text-slate-500">
-                    Schedule medicine alerts
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <InputBox
-                  label="Medicine Name"
-                  value={form.medicineName}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      medicineName: e.target.value,
-                    })
-                  }
-                  placeholder="Example: Paracetamol"
-                  icon={Pill}
-                />
-
-                <InputBox
-                  label="Dosage"
-                  value={form.dosage}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      dosage: e.target.value,
-                    })
-                  }
-                  placeholder="Example: 1 Tablet after food"
-                  icon={ClipboardList}
-                />
-
-                <InputBox
-                  label="Reminder Time"
-                  type="time"
-                  value={form.reminderTime}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      reminderTime: e.target.value,
-                    })
-                  }
-                  icon={Clock}
-                />
-
-                <InputBox
-                  label="Start Date"
-                  type="date"
-                  value={form.startDate}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      startDate: e.target.value,
-                    })
-                  }
-                  icon={CalendarDays}
-                />
-
-                <InputBox
-                  label="End Date"
-                  type="date"
-                  value={form.endDate}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      endDate: e.target.value,
-                    })
-                  }
-                  icon={CalendarCheck}
-                />
-
-                <button
-                  onClick={createReminder}
-                  className="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black hover:bg-cyan-700 transition flex items-center justify-center gap-2"
-                >
-                  Save Reminder
-                  <ArrowRight size={18} />
-                </button>
-              </div>
+        {nextReminder && (
+          <section className="bg-cyan-600 rounded-3xl p-4 text-white shadow-sm mt-2">
+            <div className="flex items-center gap-2">
+              <Bell size={18} />
+              <p className="text-xs font-black text-cyan-100">
+                NEXT REMINDER
+              </p>
             </div>
 
-            <div className="bg-cyan-600 rounded-[2rem] shadow-sm p-6 text-white">
-              <Bell className="mb-4" size={30} />
+            <div className="flex items-end justify-between gap-3 mt-2">
+              <div className="min-w-0">
+                <h2 className="text-xl font-black truncate">
+                  {nextReminder.medicineName}
+                </h2>
 
-              <h2 className="text-xl font-black">
-                Next Reminder
+                <p className="text-sm text-cyan-100 mt-1 truncate">
+                  {nextReminder.dosage}
+                </p>
+              </div>
+
+              <p className="text-2xl font-black shrink-0">
+                {nextReminder.reminderTime}
+              </p>
+            </div>
+          </section>
+        )}
+
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-3 mt-2">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-3">
+            <Search className="text-cyan-600 shrink-0" size={17} />
+
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search medicine"
+              className="w-full bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400"
+            />
+
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="text-slate-400"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto mt-2 pb-1">
+            {[
+              ["ALL", "All"],
+              ["Morning", "Morning"],
+              ["Afternoon", "Noon"],
+              ["Night", "Night"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setTimeFilter(value)}
+                className={`shrink-0 px-3 py-2 rounded-full text-xs font-black border ${
+                  timeFilter === value
+                    ? "bg-cyan-600 text-white border-cyan-600"
+                    : "bg-white text-slate-600 border-slate-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-2">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-10 h-10 rounded-2xl bg-cyan-50 flex items-center justify-center">
+              <Plus className="text-cyan-600" size={20} />
+            </div>
+
+            <div>
+              <h2 className="text-lg font-black text-slate-950">
+                Add Reminder
               </h2>
 
-              {nextReminder ? (
-                <>
-                  <p className="text-cyan-100 mt-2">
-                    {nextReminder.medicineName}
-                  </p>
-
-                  <p className="text-3xl font-black mt-2">
-                    {nextReminder.reminderTime}
-                  </p>
-
-                  <p className="text-sm text-cyan-100 mt-2">
-                    {nextReminder.dosage}
-                  </p>
-                </>
-              ) : (
-                <p className="text-cyan-100 mt-2">
-                  No reminders scheduled yet.
-                </p>
-              )}
+              <p className="text-xs text-slate-500 font-semibold">
+                Schedule medicine for this profile
+              </p>
             </div>
-          </aside>
+          </div>
 
-          <main>
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-5 mb-6">
-              <div className="grid lg:grid-cols-[1fr_260px] gap-4">
-                <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-                  <Search className="text-cyan-600" size={20} />
+          <div className="space-y-3">
+            <InputBox
+              label="Medicine Name"
+              value={form.medicineName}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  medicineName: e.target.value,
+                })
+              }
+              placeholder="Example: Paracetamol"
+              icon={Pill}
+            />
 
-                  <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search medicine or dosage..."
-                    className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
-                  />
-                </div>
+            <InputBox
+              label="Dosage"
+              value={form.dosage}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  dosage: e.target.value,
+                })
+              }
+              placeholder="Example: 1 tablet after food"
+              icon={ClipboardList}
+            />
 
-                <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-                  <Filter className="text-cyan-600" size={20} />
-
-                  <select
-                    value={timeFilter}
-                    onChange={(e) => setTimeFilter(e.target.value)}
-                    className="w-full bg-transparent outline-none text-slate-800 font-semibold"
-                  >
-                    <option value="ALL">All Timings</option>
-                    <option value="Morning">Morning</option>
-                    <option value="Afternoon">Afternoon</option>
-                    <option value="Night">Night</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <ReminderGroup
-                title="Morning"
-                icon={Sun}
-                items={grouped.Morning}
-                tone="yellow"
+            <div className="grid grid-cols-2 gap-3">
+              <InputBox
+                label="Time"
+                type="time"
+                value={form.reminderTime}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    reminderTime: e.target.value,
+                  })
+                }
+                icon={Clock}
               />
 
-              <ReminderGroup
-                title="Afternoon"
-                icon={Coffee}
-                items={grouped.Afternoon}
-                tone="cyan"
-              />
-
-              <ReminderGroup
-                title="Night"
-                icon={Moon}
-                items={grouped.Night}
-                tone="indigo"
+              <InputBox
+                label="Start Date"
+                type="date"
+                value={form.startDate}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    startDate: e.target.value,
+                  })
+                }
+                icon={CalendarDays}
               />
             </div>
-          </main>
+
+            <InputBox
+              label="End Date"
+              type="date"
+              value={form.endDate}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  endDate: e.target.value,
+                })
+              }
+              icon={CalendarDays}
+            />
+
+            <button
+              type="button"
+              onClick={createReminder}
+              disabled={saving}
+              className="w-full bg-cyan-600 text-white py-3.5 rounded-2xl font-black disabled:bg-slate-400 active:scale-95 transition"
+            >
+              {saving ? "Saving..." : "Save Reminder"}
+            </button>
+          </div>
+        </section>
+
+        <section className="mt-2">
+          <h2 className="text-lg font-black text-slate-950 mb-2">
+            My Reminders
+          </h2>
+
+          {loading ? (
+            <ReminderSkeleton />
+          ) : filteredReminders.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div className="space-y-3">
+              {filteredReminders.map((item) => (
+                <ReminderCard
+                  key={item.id}
+                  item={item}
+                  getTimeGroup={getTimeGroup}
+                  deleteReminder={deleteReminder}
+                />
+              ))}
+            </div>
+          )}
         </section>
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -379,125 +434,131 @@ function InputBox({
   icon: Icon,
 }) {
   return (
-    <div>
-      <p className="text-sm font-black text-slate-700 mb-2">
-        {label}
-      </p>
+    <label className="block">
+      <p className="text-xs font-black text-slate-700 mb-1.5">{label}</p>
 
-      <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-cyan-500">
-        <Icon className="text-cyan-600" size={20} />
+      <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-3 focus-within:ring-2 focus-within:ring-cyan-500">
+        <Icon className="text-cyan-600 shrink-0" size={17} />
 
         <input
           type={type}
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          className="w-full bg-transparent outline-none text-slate-800"
+          className="w-full bg-transparent outline-none text-sm text-slate-800"
         />
       </div>
-    </div>
+    </label>
   );
 }
 
-function ReminderGroup({ title, icon: Icon, items, tone }) {
-  const toneStyles = {
-    yellow: "bg-yellow-50 text-yellow-600",
-    cyan: "bg-cyan-50 text-cyan-600",
-    indigo: "bg-indigo-50 text-indigo-600",
-  };
+function ReminderCard({ item, getTimeGroup, deleteReminder }) {
+  const group = getTimeGroup(item.reminderTime);
+  const familyMember = item.familyMember || null;
+
+  const config =
+    group === "Morning"
+      ? {
+          icon: Sun,
+          color: "bg-yellow-50 text-yellow-600",
+        }
+      : group === "Afternoon"
+      ? {
+          icon: Coffee,
+          color: "bg-cyan-50 text-cyan-600",
+        }
+      : {
+          icon: Moon,
+          color: "bg-indigo-50 text-indigo-600",
+        };
+
+  const Icon = config.icon;
 
   return (
-    <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
-      <div className="flex items-center justify-between gap-4 mb-5">
-        <div className="flex items-center gap-3">
-          <div
-            className={`w-11 h-11 rounded-2xl ${
-              toneStyles[tone] || "bg-cyan-50 text-cyan-600"
-            } flex items-center justify-center`}
-          >
-            <Icon size={23} />
-          </div>
-
-          <div>
-            <h2 className="text-xl font-black text-slate-950">
-              {title}
-            </h2>
-
-            <p className="text-sm text-slate-500">
-              {items.length} medicines scheduled
-            </p>
-          </div>
+    <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-sm">
+      <div className="flex items-start gap-3">
+        <div
+          className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${config.color}`}
+        >
+          <Icon size={22} />
         </div>
-      </div>
 
-      {items.length === 0 ? (
-        <div className="border border-dashed border-slate-200 rounded-3xl p-8 text-center">
-          <Pill className="mx-auto text-slate-300 mb-3" size={38} />
-
-          <p className="font-black text-slate-950">
-            No medicines for {title}
-          </p>
-
-          <p className="text-sm text-slate-500 mt-1">
-            Add a reminder to see it here.
-          </p>
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-2 gap-4">
-          {items.map((item) => (
-            <ReminderCard key={item.id} item={item} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ReminderCard({ item }) {
-  return (
-    <div className="bg-slate-50 rounded-3xl p-5 border border-slate-100 hover:bg-cyan-50/40 transition">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-black text-slate-950 text-lg">
+        <div className="min-w-0 flex-1">
+          <h3 className="font-black text-slate-950 truncate">
             {item.medicineName}
           </h3>
 
-          <p className="text-slate-500 mt-1">
-            {item.dosage}
+          <p className="text-sm text-slate-500 mt-1">{item.dosage}</p>
+
+          {familyMember && (
+            <span className="inline-flex mt-2 px-2 py-1 rounded-full bg-cyan-50 text-cyan-700 text-[10px] font-black">
+              {familyMember.fullName} • {familyMember.relation}
+            </span>
+          )}
+
+          <div className="flex flex-wrap gap-2 mt-3">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-50 text-cyan-700 text-xs font-black">
+              <Clock size={14} />
+              {item.reminderTime}
+            </span>
+
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 text-slate-600 text-xs font-black">
+              <CheckCircle2 size={14} />
+              {group}
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-400 mt-2">
+            {item.startDate} → {item.endDate}
           </p>
         </div>
 
-        <CheckCircle2 className="text-emerald-600" size={24} />
-      </div>
-
-      <div className="flex flex-wrap gap-3 mt-4">
-        <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-cyan-50 text-cyan-700 text-sm font-bold border border-cyan-100">
-          <Clock size={15} />
-          {item.reminderTime}
-        </span>
-
-        <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-white text-slate-600 text-sm font-bold border border-slate-100">
-          <CalendarDays size={15} />
-          {item.startDate} - {item.endDate}
-        </span>
+        <button
+          type="button"
+          onClick={() => deleteReminder(item.id)}
+          className="w-9 h-9 rounded-2xl bg-red-50 flex items-center justify-center shrink-0"
+        >
+          <Trash2 size={17} className="text-red-600" />
+        </button>
       </div>
     </div>
   );
 }
 
-function MiniStat({ title, value, icon: Icon }) {
+function ReminderSkeleton() {
   return (
-    <div className="min-w-[90px] bg-slate-50 rounded-2xl border border-slate-100 p-3">
-      <div className="w-9 h-9 rounded-xl bg-cyan-50 flex items-center justify-center mb-2">
-        <Icon className="text-cyan-600" size={18} />
-      </div>
+    <div className="space-y-3">
+      {[1, 2, 3].map((item) => (
+        <div
+          key={item}
+          className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 animate-pulse"
+        >
+          <div className="flex gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100" />
 
-      <p className="text-xl font-black text-slate-950">
-        {value}
+            <div className="flex-1">
+              <div className="h-4 bg-slate-100 rounded-full w-36" />
+              <div className="h-3 bg-slate-100 rounded-full w-24 mt-3" />
+              <div className="h-8 bg-slate-100 rounded-full w-44 mt-3" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 text-center">
+      <Pill className="text-slate-300 mx-auto" size={34} />
+
+      <p className="font-black text-slate-900 mt-3">
+        No medicine reminders
       </p>
 
-      <p className="text-xs text-slate-500 font-bold">
-        {title}
+      <p className="text-sm text-slate-500 mt-1">
+        Stay on track with medicines, vitamins and supplements.
       </p>
     </div>
   );

@@ -1,26 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
+  Building2,
   Stethoscope,
   CalendarCheck,
-  CheckCircle2,
-  XCircle,
-  Star,
-  Activity,
-  ArrowRight,
-  Building2,
   Clock,
   UsersRound,
-  TrendingUp,
-  LogOut,
   IndianRupee,
-  Trophy,
-  Loader2,
+  Activity,
+  LogOut,
   RefreshCw,
-  ShieldCheck,
-  BarChart3,
+  Loader2,
+  ArrowRight,
+  CheckCircle2,
 } from "lucide-react";
 import api from "../api/axios";
+import usePullToRefresh from "../hooks/usePullToRefresh";
 
 export default function HospitalDashboard() {
   const navigate = useNavigate();
@@ -36,18 +31,20 @@ export default function HospitalDashboard() {
     activeDoctors: 0,
     appointments: 0,
     completed: 0,
-    cancelled: 0,
     pending: 0,
-    reviews: 0,
-    avgRating: 0,
     revenue: 0,
   });
 
-  const [topDoctors, setTopDoctors] = useState([]);
-  const [monthlyStats, setMonthlyStats] = useState([]);
+  const [recentDoctors, setRecentDoctors] = useState([]);
+  const [todayAppointments, setTodayAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!hospital) {
+      navigate("/hospital/login");
+      return;
+    }
+
     loadDashboard();
   }, []);
 
@@ -57,7 +54,6 @@ export default function HospitalDashboard() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/hospital/login");
-    window.location.reload();
   };
 
   const loadDashboard = async () => {
@@ -82,19 +78,19 @@ export default function HospitalDashboard() {
         doctorIds.includes(appointment.doctor?.id)
       );
 
+      const today = new Date().toISOString().split("T")[0];
+
+      const todays = hospitalAppointments.filter(
+        (appointment) => appointment.slot?.date === today
+      );
+
       const completedAppointments = hospitalAppointments.filter(
         (appointment) => appointment.status === "COMPLETED"
       );
 
-      const completed = completedAppointments.length;
-
-      const cancelled = hospitalAppointments.filter(
-        (appointment) => appointment.status === "CANCELLED"
-      ).length;
-
-      const pending = hospitalAppointments.filter(
+      const pendingAppointments = hospitalAppointments.filter(
         (appointment) => appointment.status === "BOOKED"
-      ).length;
+      );
 
       const revenue = completedAppointments.reduce(
         (sum, appointment) =>
@@ -102,102 +98,29 @@ export default function HospitalDashboard() {
         0
       );
 
-      let totalReviews = 0;
-      let totalRating = 0;
+      const {
+  pullDistance,
+  refreshing,
+  visible,
+} = usePullToRefresh(async () => {
+  await fetchDashboardData();
+  await fetchNotificationCount();
 
-      for (const doctor of hospitalDoctors) {
-        try {
-          const summary = await api.get(`/review/doctor/${doctor.id}/summary`);
-
-          const reviewCount = Number(summary.data.totalReviews || 0);
-          const average = Number(summary.data.averageRating || 0);
-
-          totalReviews += reviewCount;
-          totalRating += average * reviewCount;
-        } catch (error) {
-          console.error("Review summary error:", error);
-        }
-      }
-
-      const avgRating =
-        totalReviews === 0 ? 0 : Number((totalRating / totalReviews).toFixed(1));
-
-      const rankedDoctors = hospitalDoctors
-        .map((doctor) => {
-          const doctorAppointments = hospitalAppointments.filter(
-            (appointment) => appointment.doctor?.id === doctor.id
-          );
-
-          return {
-            id: doctor.id,
-            name: doctor.doctorName,
-            specialization: doctor.specialization,
-            image: doctor.profileImage,
-            appointments: doctorAppointments.length,
-            revenue: doctorAppointments
-              .filter((appointment) => appointment.status === "COMPLETED")
-              .reduce(
-                (sum, appointment) =>
-                  sum + Number(appointment.doctor?.consultationFee || 0),
-                0
-              ),
-          };
-        })
-        .sort((a, b) => b.appointments - a.appointments)
-        .slice(0, 5);
-
-      const monthMap = {};
-
-      hospitalAppointments.forEach((appointment) => {
-        const rawDate =
-          appointment.createdAt || appointment.slot?.date || appointment.date;
-
-        if (!rawDate) return;
-
-        const month = new Date(rawDate).toLocaleString("default", {
-          month: "short",
-        });
-
-        monthMap[month] = (monthMap[month] || 0) + 1;
-      });
-
-      const monthOrder = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ];
-
-      const monthly = monthOrder
-        .map((month) => ({
-          month,
-          count: monthMap[month] || 0,
-        }))
-        .filter((item) => item.count > 0);
-
-      setTopDoctors(rankedDoctors);
-      setMonthlyStats(monthly);
+  toast.success("Dashboard refreshed");
+});
 
       setStats({
         doctors: hospitalDoctors.length,
         activeDoctors: hospitalDoctors.filter((doctor) => doctor.isActive)
           .length,
         appointments: hospitalAppointments.length,
-        completed,
-        cancelled,
-        pending,
-        reviews: totalReviews,
-        avgRating,
+        completed: completedAppointments.length,
+        pending: pendingAppointments.length,
         revenue,
       });
+
+      setRecentDoctors(hospitalDoctors.slice(0, 4));
+      setTodayAppointments(todays.slice(0, 4));
     } catch (error) {
       console.error("Hospital dashboard error:", error);
     } finally {
@@ -205,444 +128,300 @@ export default function HospitalDashboard() {
     }
   };
 
-  const completedPercent = stats.appointments
-    ? Math.round((stats.completed / stats.appointments) * 100)
-    : 0;
-
-  const cancelledPercent = stats.appointments
-    ? Math.round((stats.cancelled / stats.appointments) * 100)
-    : 0;
-
-  const pendingPercent = stats.appointments
-    ? Math.round((stats.pending / stats.appointments) * 100)
-    : 0;
-
-  const maxMonthlyCount =
-    monthlyStats.length > 0
-      ? Math.max(...monthlyStats.map((month) => month.count))
-      : 0;
-
-  const healthScore = Math.min(
-    100,
-    completedPercent + Math.min(stats.activeDoctors * 4, 30)
-  );
-
-  const cards = useMemo(
-    () => [
-      {
-        title: "Revenue",
-        value: `₹${stats.revenue}`,
-        desc: "Completed consultations",
-        icon: IndianRupee,
-        gradient: "from-emerald-600 to-teal-500",
-      },
-      {
-        title: "Doctors",
-        value: stats.doctors,
-        desc: `${stats.activeDoctors} active doctors`,
-        icon: Stethoscope,
-        gradient: "from-cyan-600 to-blue-500",
-      },
-      {
-        title: "Appointments",
-        value: stats.appointments,
-        desc: "Total hospital bookings",
-        icon: CalendarCheck,
-        gradient: "from-purple-600 to-fuchsia-500",
-      },
-      {
-        title: "Completed",
-        value: stats.completed,
-        desc: `${completedPercent}% completion rate`,
-        icon: CheckCircle2,
-        gradient: "from-green-600 to-emerald-500",
-      },
-      {
-        title: "Pending",
-        value: stats.pending,
-        desc: `${pendingPercent}% awaiting consultation`,
-        icon: Clock,
-        gradient: "from-orange-500 to-amber-500",
-      },
-      {
-        title: "Cancelled",
-        value: stats.cancelled,
-        desc: `${cancelledPercent}% cancelled bookings`,
-        icon: XCircle,
-        gradient: "from-red-600 to-rose-500",
-      },
-      {
-        title: "Avg Rating",
-        value: stats.avgRating ? `⭐ ${stats.avgRating}` : "0",
-        desc: `${stats.reviews} patient reviews`,
-        icon: Star,
-        gradient: "from-yellow-500 to-orange-500",
-      },
-      {
-        title: "Health Score",
-        value: `${healthScore}%`,
-        desc: "Operational strength",
-        icon: Activity,
-        gradient: "from-slate-800 to-cyan-600",
-      },
-    ],
-    [
-      stats,
-      completedPercent,
-      pendingPercent,
-      cancelledPercent,
-      healthScore,
-    ]
-  );
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4fbff] flex items-center justify-center">
-        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 text-center">
-          <Loader2 className="mx-auto text-cyan-600 animate-spin mb-4" size={38} />
-          <p className="text-slate-500 font-semibold">
+      <main className="min-h-screen bg-[#f4f8fb] flex items-center justify-center px-4">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 text-center">
+          <Loader2 className="mx-auto text-cyan-600 animate-spin" size={36} />
+
+          <p className="text-slate-500 font-bold mt-3">
             Loading hospital dashboard...
           </p>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f4fbff]">
-      <div className="max-w-[1450px] mx-auto px-6 py-8">
-        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
-                <Building2 size={17} />
-                Hospital Analytics Center
-              </div>
+    <main className="min-h-screen bg-[#f4f8fb] px-4 pt-4 pb-24">
+      <PageHeader
+  title="Hospital Dashboard"
+  subtitle="Manage doctors and appointments"
+  showBack={false}
+/>
+      <div className="max-w-md mx-auto">
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-16 rounded-3xl bg-cyan-50 border border-cyan-100 flex items-center justify-center shrink-0 overflow-hidden">
+              {hospital?.profileImage ? (
+                <img
+                  src={hospital.profileImage}
+                  alt={hospital.hospitalName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Building2 className="text-cyan-600" size={32} />
+              )}
+            </div>
 
-              <h1 className="text-4xl md:text-5xl font-black text-slate-950">
-                {hospital?.hospitalName || "Hospital Dashboard"}
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-cyan-700 font-black">
+                HOSPITAL DASHBOARD
+              </p>
+
+              <h1 className="text-xl font-black text-slate-950 truncate mt-1">
+                {hospital?.hospitalName || "Hospital"}
               </h1>
 
-              <p className="text-slate-500 mt-3 max-w-2xl text-lg leading-relaxed">
-                Monitor revenue, appointments, doctor performance, patient
-                reviews and operational health from one dashboard.
+              <p className="text-sm text-slate-500 truncate">
+                {hospital?.city || "Healthcare Partner"}
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={loadDashboard}
-                className="inline-flex items-center justify-center gap-2 bg-cyan-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-cyan-700 transition"
-              >
-                <RefreshCw size={18} />
-                Refresh
-              </button>
-
-              <button
-                onClick={logout}
-                className="inline-flex items-center justify-center gap-2 bg-red-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-red-700 transition"
-              >
-                <LogOut size={18} />
-                Logout
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={logout}
+              className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center active:scale-95 transition"
+            >
+              <LogOut className="text-red-600" size={19} />
+            </button>
           </div>
         </section>
 
-        <section className="grid md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-          {cards.map((card) => (
-            <StatCard key={card.title} card={card} />
-          ))}
-        </section>
-
-        <section className="grid lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2 bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
-            <SectionTitle
-              icon={BarChart3}
-              title="Appointment Overview"
-              desc="Current booking performance"
-            />
-
-            <div className="space-y-5 mt-6">
-              <ProgressRow
-                label="Completed"
-                value={completedPercent}
-                color="from-emerald-500 to-teal-500"
-              />
-
-              <ProgressRow
-                label="Pending"
-                value={pendingPercent}
-                color="from-orange-500 to-amber-500"
-              />
-
-              <ProgressRow
-                label="Cancelled"
-                value={cancelledPercent}
-                color="from-red-500 to-rose-500"
-              />
-            </div>
-          </div>
-
-          <div className="relative overflow-hidden bg-slate-950 text-white rounded-[2rem] p-6 shadow-sm">
-            <div className="absolute -top-16 -right-16 w-56 h-56 bg-cyan-400/20 rounded-full blur-3xl" />
-
-            <div className="relative">
-              <TrendingUp className="text-cyan-300" size={34} />
-
-              <h2 className="text-2xl font-black mt-5">
-                Hospital Health Score
-              </h2>
-
-              <p className="text-slate-300 mt-2 text-sm leading-relaxed">
-                Based on completion rate, active doctors and patient reviews.
-              </p>
-
-              <div className="mt-7">
-                <p className="text-5xl font-black">{healthScore}%</p>
-
-                <p className="text-cyan-300 font-semibold mt-1">
-                  Operational strength
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="grid lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2 bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
-            <SectionTitle
-              icon={TrendingUp}
-              title="Monthly Appointments"
-              desc="Booking trend based on appointment records"
-            />
-
-            {monthlyStats.length === 0 ? (
-              <EmptyBox text="No monthly appointment data available." />
-            ) : (
-              <div className="flex items-end gap-4 h-64 mt-6">
-                {monthlyStats.map((item) => {
-                  const height =
-                    maxMonthlyCount === 0
-                      ? 0
-                      : Math.max(12, (item.count / maxMonthlyCount) * 190);
-
-                  return (
-                    <div
-                      key={item.month}
-                      className="flex-1 flex flex-col items-center justify-end gap-3"
-                    >
-                      <div className="text-sm font-black text-slate-700">
-                        {item.count}
-                      </div>
-
-                      <div
-                        className="w-full rounded-t-2xl bg-gradient-to-t from-purple-600 to-cyan-400 shadow-sm transition-all duration-700"
-                        style={{ height: `${height}px` }}
-                      />
-
-                      <div className="text-xs font-bold text-slate-500">
-                        {item.month}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
-            <SectionTitle
-              icon={Trophy}
-              title="Top Doctors"
-              desc="Ranked by appointments"
-            />
-
-            {topDoctors.length === 0 ? (
-              <EmptyBox text="No doctor ranking available." />
-            ) : (
-              <div className="space-y-4 mt-6">
-                {topDoctors.map((doctor, index) => (
-                  <TopDoctorItem key={doctor.id} doctor={doctor} index={index} />
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section className="grid md:grid-cols-3 gap-6">
-          <ActionCard
-            to="/hospital/doctors"
-            icon={UsersRound}
-            title="Manage Doctors"
-            desc="Add, deactivate and manage hospital doctors."
-            gradient="from-cyan-600 to-blue-500"
-          />
-
-          <ActionCard
-            to="/hospital/availability"
-            icon={Clock}
-            title="Manage Availability"
-            desc="Configure doctor schedules and available timings."
-            gradient="from-emerald-600 to-teal-500"
-          />
-
-          <ActionCard
-            to="/hospital/appointments"
+        <section className="grid grid-cols-2 gap-3 mt-3">
+          <StatCard icon={Stethoscope} value={stats.doctors} label="Doctors" />
+          <StatCard
             icon={CalendarCheck}
-            title="Appointments"
-            desc="Monitor bookings and consultation status."
-            gradient="from-purple-600 to-fuchsia-500"
+            value={stats.appointments}
+            label="Appointments"
           />
+          <StatCard icon={CheckCircle2} value={stats.completed} label="Done" />
+          <StatCard icon={IndianRupee} value={`₹${stats.revenue}`} label="Revenue" />
         </section>
-      </div>
-    </div>
-  );
-}
 
-function StatCard({ card }) {
-  const Icon = card.icon;
+        <section className="bg-cyan-600 rounded-3xl p-4 text-white shadow-sm mt-3">
+          <div className="flex gap-3">
+            <Activity className="shrink-0 mt-0.5" size={23} />
 
-  return (
-    <div className="group relative">
-      <div
-        className={`absolute -inset-0.5 rounded-[2rem] bg-gradient-to-r ${card.gradient} opacity-0 group-hover:opacity-40 blur transition duration-500`}
-      />
+            <div>
+              <h2 className="font-black">Today&apos;s Overview</h2>
 
-      <div className="relative h-full bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm group-hover:-translate-y-1 group-hover:shadow-xl transition duration-500">
-        <div className="flex items-start justify-between">
-          <div
-            className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-sm`}
-          >
-            <Icon className="text-white" size={27} />
+              <p className="text-sm text-cyan-100 mt-1 leading-relaxed">
+                {todayAppointments.length} appointment
+                {todayAppointments.length === 1 ? "" : "s"} today and{" "}
+                {stats.pending} booking{stats.pending === 1 ? "" : "s"} pending.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <h2 className="text-lg font-black text-slate-950 mb-3">
+            Quick Actions
+          </h2>
+
+          <div className="grid grid-cols-4 gap-2">
+            <QuickAction
+              to="/hospital/doctors"
+              icon={UsersRound}
+              title="Doctors"
+            />
+
+            <QuickAction
+              to="/hospital/appointments"
+              icon={CalendarCheck}
+              title="Bookings"
+            />
+
+            <QuickAction
+              to="/hospital/availability"
+              icon={Clock}
+              title="Slots"
+            />
+
+            <QuickAction
+              to="/hospital/profile"
+              icon={Building2}
+              title="Profile"
+            />
+          </div>
+        </section>
+
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-black text-slate-950">
+              Today&apos;s Appointments
+            </h2>
+
+            <Link
+              to="/hospital/appointments"
+              className="text-xs text-cyan-600 font-black"
+            >
+              View All
+            </Link>
           </div>
 
-          <span className="px-3 py-1 rounded-full bg-cyan-50 text-cyan-700 text-xs font-black border border-cyan-100">
-            Live
-          </span>
-        </div>
+          {todayAppointments.length === 0 ? (
+            <EmptyBox text="No appointments today." />
+          ) : (
+            <div className="space-y-3">
+              {todayAppointments.map((item) => (
+                <AppointmentItem key={item.id} item={item} />
+              ))}
+            </div>
+          )}
+        </section>
 
-        <p className="text-slate-500 text-sm mt-5">{card.title}</p>
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-black text-slate-950">
+              Recent Doctors
+            </h2>
 
-        <h2 className="text-4xl font-black mt-1 text-slate-950">
-          {card.value}
-        </h2>
+            <Link
+              to="/hospital/doctors"
+              className="text-xs text-cyan-600 font-black"
+            >
+              View All
+            </Link>
+          </div>
 
-        <p className="text-sm text-slate-500 mt-2">{card.desc}</p>
+          {recentDoctors.length === 0 ? (
+            <EmptyBox text="No doctors added yet." />
+          ) : (
+            <div className="space-y-3">
+              {recentDoctors.map((doctor) => (
+                <DoctorItem key={doctor.id} doctor={doctor} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <button
+          type="button"
+          onClick={loadDashboard}
+          className="mt-3 w-full bg-white border border-slate-200 text-slate-700 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 active:scale-95 transition"
+        >
+          <RefreshCw size={17} />
+          Refresh Dashboard
+        </button>
       </div>
-    </div>
+    </main>
   );
 }
 
-function SectionTitle({ icon: Icon, title, desc }) {
+function StatCard({ icon: Icon, value, label }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="w-11 h-11 rounded-2xl bg-cyan-50 flex items-center justify-center">
+    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+      <div className="w-11 h-11 rounded-2xl bg-cyan-50 flex items-center justify-center mb-3">
         <Icon className="text-cyan-600" size={22} />
       </div>
 
-      <div>
-        <h2 className="text-xl font-black text-slate-950">{title}</h2>
-        <p className="text-sm text-slate-500">{desc}</p>
+      <p className="text-2xl font-black text-slate-950">
+        {value}
+      </p>
+
+      <p className="text-xs text-slate-500 font-black">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function QuickAction({ to, icon: Icon, title }) {
+  return (
+    <Link
+      to={to}
+      className="bg-slate-50 border border-slate-100 rounded-2xl p-3 text-center active:scale-95 transition"
+    >
+      <Icon className="text-cyan-600 mx-auto" size={21} />
+
+      <p className="text-[11px] font-black text-slate-800 mt-2">
+        {title}
+      </p>
+    </Link>
+  );
+}
+
+function AppointmentItem({ item }) {
+  return (
+    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-black text-slate-950 text-sm truncate">
+            {item.patient?.fullName || item.patientName || "Patient"}
+          </h3>
+
+          <p className="text-xs text-slate-500 mt-1">
+            Dr. {item.doctor?.doctorName || "Doctor"}
+          </p>
+
+          <p className="text-xs text-cyan-700 font-black mt-1">
+            {item.slot?.startTime || "--"} - {item.slot?.endTime || "--"}
+          </p>
+        </div>
+
+        <StatusBadge status={item.status} />
       </div>
     </div>
   );
 }
 
-function ProgressRow({ label, value, color }) {
+function DoctorItem({ doctor }) {
   return (
-    <div>
-      <div className="flex justify-between text-sm font-bold mb-2">
-        <span className="text-slate-700">{label}</span>
-        <span className="text-slate-500">{value}%</span>
-      </div>
-
-      <div className="h-4 rounded-full bg-slate-100 overflow-hidden">
-        <div
-          className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-700`}
-          style={{ width: `${value}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function TopDoctorItem({ doctor, index }) {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl bg-slate-50 border border-slate-100 p-3">
-      <div className="w-8 h-8 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center font-black">
-        {index + 1}
-      </div>
-
+    <Link
+      to={`/doctor/${doctor.id}`}
+      className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-3 active:scale-[0.98] transition"
+    >
       <img
         src={
-          doctor.image ||
+          doctor.profileImage ||
           `https://ui-avatars.com/api/?name=${encodeURIComponent(
-            doctor.name || "Doctor"
+            doctor.doctorName || "Doctor"
           )}&background=0891b2&color=fff&bold=true`
         }
-        alt={doctor.name}
+        alt={doctor.doctorName}
         className="w-11 h-11 rounded-2xl object-cover"
       />
 
-      <div className="flex-1 min-w-0">
-        <p className="font-black text-slate-950 truncate">
-          {doctor.name}
-        </p>
+      <div className="min-w-0 flex-1">
+        <h3 className="font-black text-slate-950 text-sm truncate">
+          {doctor.doctorName || "Doctor"}
+        </h3>
 
         <p className="text-xs text-slate-500 truncate">
           {doctor.specialization || "Specialist"}
         </p>
       </div>
 
-      <div className="text-right">
-        <p className="font-black text-cyan-600">
-          {doctor.appointments}
-        </p>
-
-        <p className="text-[11px] text-slate-400">
-          appts
-        </p>
-      </div>
-    </div>
+      <ArrowRight className="text-cyan-600" size={18} />
+    </Link>
   );
 }
 
-function ActionCard({ to, icon: Icon, title, desc, gradient }) {
+function StatusBadge({ status }) {
+  const style =
+    status === "COMPLETED"
+      ? "bg-emerald-50 text-emerald-700"
+      : status === "CANCELLED"
+      ? "bg-red-50 text-red-700"
+      : "bg-cyan-50 text-cyan-700";
+
   return (
-    <Link to={to} className="group relative">
-      <div
-        className={`absolute -inset-0.5 rounded-[2rem] bg-gradient-to-r ${gradient} opacity-0 group-hover:opacity-40 blur transition duration-500`}
-      />
-
-      <div className="relative h-full bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 group-hover:-translate-y-1 group-hover:shadow-xl transition duration-500">
-        <div
-          className={`w-14 h-14 rounded-2xl bg-gradient-to-r ${gradient} flex items-center justify-center shadow-sm mb-5`}
-        >
-          <Icon className="text-white" size={26} />
-        </div>
-
-        <h2 className="text-xl font-black text-slate-950">
-          {title}
-        </h2>
-
-        <p className="text-slate-500 mt-2">
-          {desc}
-        </p>
-
-        <div className="mt-5 flex items-center gap-2 text-cyan-600 font-black">
-          Open
-          <ArrowRight size={18} className="group-hover:translate-x-1 transition" />
-        </div>
-      </div>
-    </Link>
+    <span
+      className={`px-2.5 py-1 rounded-full text-[10px] font-black shrink-0 ${style}`}
+    >
+      {status || "BOOKED"}
+    </span>
   );
 }
 
 function EmptyBox({ text }) {
   return (
-    <div className="text-slate-500 bg-slate-50 rounded-2xl p-6 mt-6 border border-slate-100">
-      {text}
+    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 text-center">
+      <p className="text-sm text-slate-500 font-semibold">
+        {text}
+      </p>
     </div>
   );
 }

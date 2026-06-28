@@ -8,12 +8,13 @@ import {
   Stethoscope,
   CalendarDays,
   ShieldCheck,
-  Filter,
   ClipboardList,
-  Activity,
   ArrowRight,
   Sparkles,
+  Activity,
+  X,
 } from "lucide-react";
+import PageHeader from "../components/PageHeader";
 import api from "../api/axios";
 
 export default function SymptomHistory() {
@@ -31,11 +32,7 @@ export default function SymptomHistory() {
       const res = await api.get("/symptom-history/my");
       setHistory(res.data || []);
     } catch (error) {
-      console.error("Symptom history error:", {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
-      });
+      console.error("Symptom history error:", error);
       alert("Failed to load symptom history");
     } finally {
       setLoading(false);
@@ -45,7 +42,7 @@ export default function SymptomHistory() {
   const filtered = history.filter((item) => {
     const matchesSearch = `${item.symptoms || ""} ${item.condition || ""} ${
       item.specialization || ""
-    }`
+    } ${item.advice || ""}`
       .toLowerCase()
       .includes(search.toLowerCase());
 
@@ -57,80 +54,99 @@ export default function SymptomHistory() {
     return matchesSearch && matchesUrgency;
   });
 
-  const stats = useMemo(() => {
-    return {
+  const stats = useMemo(
+    () => ({
       total: history.length,
       urgent: history.filter((item) => item.urgent).length,
       normal: history.filter((item) => !item.urgent).length,
-      specialists: new Set(history.map((item) => item.specialization).filter(Boolean))
-        .size,
-    };
-  }, [history]);
+    }),
+    [history]
+  );
 
   return (
-    <div className="min-h-screen bg-[#f4fbff]">
-      <div className="max-w-[1450px] mx-auto px-6 py-8">
-        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
-                <Brain size={17} />
-                SYMPTOM HISTORY
-              </div>
+    <main className="min-h-screen bg-[#f4f8fb] pb-28">
+      <PageHeader
+        title="Symptom History"
+        subtitle={`${filtered.length} health checks found`}
+      />
 
-              <h1 className="text-4xl md:text-5xl font-black text-slate-950">
+      <div className="max-w-md mx-auto px-4">
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-cyan-50 flex items-center justify-center">
+              <Brain className="text-cyan-600" size={28} />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-cyan-700 font-black">
+                AI HEALTH RECORDS
+              </p>
+
+              <h1 className="text-xl font-black text-slate-950 truncate">
                 Previous Symptom Checks
               </h1>
 
-              <p className="text-slate-500 mt-3 max-w-2xl text-lg leading-relaxed">
-                Review your past symptom analysis, suggested specializations,
-                care advice and urgency history.
+              <p className="text-sm text-slate-500 truncate">
+                Track symptoms and recommended specialists
               </p>
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <MiniStat title="Total" value={stats.total} icon={ClipboardList} />
-              <MiniStat title="Urgent" value={stats.urgent} icon={AlertTriangle} />
-              <MiniStat title="Normal" value={stats.normal} icon={CheckCircle2} />
-              <MiniStat title="Specialists" value={stats.specialists} icon={Stethoscope} />
-            </div>
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            <MiniStat icon={ClipboardList} label="Total" value={stats.total} />
+            <MiniStat icon={AlertTriangle} label="Urgent" value={stats.urgent} />
+            <MiniStat icon={CheckCircle2} label="Normal" value={stats.normal} />
           </div>
         </section>
 
-        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-5 mb-8">
-          <div className="grid lg:grid-cols-[1fr_260px] gap-4">
-            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-              <Search size={20} className="text-cyan-600" />
+        <section className="sticky top-[72px] z-20 bg-[#f4f8fb]/95 backdrop-blur-md pt-3 pb-3">
+          <div className="flex items-center gap-3 bg-white border border-slate-100 rounded-2xl px-3 py-3 shadow-sm">
+            <Search className="text-cyan-600 shrink-0" size={18} />
 
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search symptoms, condition or specialization..."
-                className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
-              />
-            </div>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search symptoms, condition, specialist"
+              className="w-full bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400"
+            />
 
-            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-              <Filter size={20} className="text-cyan-600" />
-
-              <select
-                value={urgencyFilter}
-                onChange={(e) => setUrgencyFilter(e.target.value)}
-                className="w-full bg-transparent outline-none text-slate-800 font-semibold"
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="text-slate-400"
               >
-                <option value="ALL">All Results</option>
-                <option value="URGENT">Urgent Only</option>
-                <option value="NORMAL">Normal Only</option>
-              </select>
-            </div>
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <FilterChip
+              label="All"
+              active={urgencyFilter === "ALL"}
+              onClick={() => setUrgencyFilter("ALL")}
+            />
+
+            <FilterChip
+              label="Urgent"
+              active={urgencyFilter === "URGENT"}
+              onClick={() => setUrgencyFilter("URGENT")}
+            />
+
+            <FilterChip
+              label="Normal"
+              active={urgencyFilter === "NORMAL"}
+              onClick={() => setUrgencyFilter("NORMAL")}
+            />
           </div>
         </section>
 
         {loading ? (
-          <EmptyState text="Loading symptom history..." />
+          <LoadingState />
         ) : history.length === 0 ? (
           <EmptyState
-            title="No symptom history found"
+            title="No symptom history"
             text="Your symptom checks will appear here after using AI Symptom Checker."
             action
           />
@@ -140,177 +156,206 @@ export default function SymptomHistory() {
             text="Try changing search or urgency filter."
           />
         ) : (
-          <section className="grid xl:grid-cols-[1fr_340px] gap-8">
-            <main className="space-y-5">
-              {filtered.map((item) => (
-                <HistoryCard key={item.id} item={item} />
-              ))}
-            </main>
-
-            <aside className="space-y-5">
-              <InfoCard
-                icon={Sparkles}
-                title="AI Guidance"
-                desc="Your symptom checks help you identify the right doctor specialization faster."
-              />
-
-              <InfoCard
-                icon={ShieldCheck}
-                title="Care Reminder"
-                desc="AI results are guidance only. Always consult a qualified doctor for diagnosis."
-              />
-
-              <InfoCard
-                icon={Activity}
-                title="Track Patterns"
-                desc="Use this history to notice repeated symptoms and share them during consultations."
-              />
-            </aside>
+          <section className="space-y-3">
+            {filtered.map((item) => (
+              <HistoryCard key={item.id} item={item} />
+            ))}
           </section>
         )}
+
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <div className="flex gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-cyan-50 flex items-center justify-center shrink-0">
+              <ShieldCheck className="text-cyan-600" size={22} />
+            </div>
+
+            <div>
+              <h3 className="text-sm font-black text-slate-950">
+                Medical Disclaimer
+              </h3>
+
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                AI results are guidance only. Always consult a qualified doctor
+                for diagnosis and treatment.
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
 
 function HistoryCard({ item }) {
   const urgent = Boolean(item.urgent);
 
+  const dateLabel = item.createdAt
+    ? new Date(item.createdAt).toLocaleDateString([], {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "Date not available";
+
+  const doctorLink = `/doctors?specialization=${encodeURIComponent(
+    item.specialization || "General Physician"
+  )}`;
+
   return (
-    <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 hover:shadow-xl transition">
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
-        <div className="flex gap-4 min-w-0">
-          <div
-            className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
-              urgent ? "bg-red-50" : "bg-emerald-50"
-            }`}
-          >
-            {urgent ? (
-              <AlertTriangle className="text-red-600" size={28} />
-            ) : (
-              <CheckCircle2 className="text-emerald-600" size={28} />
-            )}
-          </div>
-
-          <div className="min-w-0">
-            <div
-              className={`inline-flex items-center gap-2 px-3 py-1 rounded-full font-black text-xs mb-3 ${
-                urgent
-                  ? "bg-red-50 text-red-700 border border-red-100"
-                  : "bg-emerald-50 text-emerald-700 border border-emerald-100"
-              }`}
-            >
-              {urgent ? "Urgent Attention" : "Routine Guidance"}
-            </div>
-
-            <h3 className="text-2xl font-black text-slate-950">
-              {item.condition || "Health Concern"}
-            </h3>
-
-            <p className="text-slate-500 mt-2 leading-relaxed">
-              {item.symptoms || "Symptoms not available"}
-            </p>
-
-            <div className="flex flex-wrap gap-3 mt-4">
-              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm border border-cyan-100">
-                <Stethoscope size={16} />
-                {item.specialization || "General Physician"}
-              </span>
-
-              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-50 text-slate-600 font-bold text-sm border border-slate-100">
-                <CalendarDays size={16} />
-                {item.createdAt
-                  ? new Date(item.createdAt).toLocaleString()
-                  : "Date not available"}
-              </span>
-            </div>
-          </div>
+    <article className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 active:scale-[0.99] transition">
+      <div className="flex items-start gap-3">
+        <div
+          className={`w-13 h-13 rounded-2xl flex items-center justify-center shrink-0 border ${
+            urgent
+              ? "bg-red-50 border-red-100"
+              : "bg-emerald-50 border-emerald-100"
+          }`}
+        >
+          {urgent ? (
+            <AlertTriangle className="text-red-600" size={25} />
+          ) : (
+            <CheckCircle2 className="text-emerald-600" size={25} />
+          )}
         </div>
 
-        <Link
-          to={`/doctors?specialization=${encodeURIComponent(
-            item.specialization || "General Physician"
-          )}`}
-          className="inline-flex items-center justify-center gap-2 bg-cyan-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-cyan-700 transition shrink-0"
-        >
-          Find Doctors
-          <ArrowRight size={18} />
-        </Link>
+        <div className="min-w-0 flex-1">
+          <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black ${
+              urgent
+                ? "bg-red-50 text-red-700"
+                : "bg-emerald-50 text-emerald-700"
+            }`}
+          >
+            {urgent ? "Urgent Attention" : "Routine Guidance"}
+          </span>
+
+          <h2 className="text-lg font-black text-slate-950 truncate mt-2">
+            {item.condition || "Health Concern"}
+          </h2>
+
+          <p className="text-xs text-slate-500 font-bold flex items-center gap-1.5 mt-1">
+            <CalendarDays size={13} className="text-cyan-600" />
+            {dateLabel}
+          </p>
+        </div>
       </div>
 
-      <div className="mt-5 bg-slate-50 rounded-2xl p-4 border border-slate-100">
-        <p className="text-xs font-black text-slate-400 uppercase">
-          Advice
-        </p>
+      <div className="mt-4 space-y-3">
+        <InfoBlock
+          icon={Activity}
+          title="Symptoms"
+          content={item.symptoms || "Symptoms not available"}
+        />
 
-        <p className="font-semibold text-slate-700 mt-1 leading-relaxed">
-          {item.advice || "Consult a qualified doctor for proper diagnosis."}
-        </p>
+        <InfoBlock
+          icon={Stethoscope}
+          title="Recommended Specialist"
+          content={item.specialization || "General Physician"}
+        />
+
+        <InfoBlock
+          icon={Sparkles}
+          title="Advice"
+          content={
+            item.advice || "Consult a qualified doctor for proper diagnosis."
+          }
+        />
       </div>
+
+      <Link
+        to={doctorLink}
+        className="mt-4 w-full bg-cyan-600 text-white py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2 active:scale-95 transition"
+      >
+        Find Doctors
+        <ArrowRight size={16} />
+      </Link>
+    </article>
+  );
+}
+
+function InfoBlock({ icon: Icon, title, content }) {
+  return (
+    <div className="bg-slate-50 rounded-2xl border border-slate-100 p-3">
+      <div className="flex items-center gap-2 text-xs font-black text-slate-500 mb-2">
+        <Icon className="text-cyan-600 shrink-0" size={16} />
+        {title}
+      </div>
+
+      <p className="text-slate-700 text-sm leading-relaxed">
+        {content}
+      </p>
     </div>
   );
 }
 
-function EmptyState({ title = "Please wait", text, action }) {
+function FilterChip({ label, active, onClick }) {
   return (
-    <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-12 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center mx-auto mb-4">
-        <Brain className="text-cyan-600" size={34} />
-      </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`py-2.5 rounded-2xl text-xs font-black transition ${
+        active ? "bg-cyan-600 text-white" : "bg-white text-slate-600 border border-slate-100"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
 
-      <h3 className="text-2xl font-black text-slate-950">
+function MiniStat({ icon: Icon, label, value }) {
+  return (
+    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 text-center">
+      <Icon className="text-cyan-600 mx-auto" size={18} />
+
+      <p className="text-sm font-black text-slate-950 mt-1">
+        {value}
+      </p>
+
+      <p className="text-[10px] text-slate-500 font-bold">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 text-center">
+      <Brain className="text-cyan-600 animate-pulse mx-auto mb-3" size={36} />
+
+      <h3 className="text-lg font-black text-slate-950">
+        Loading history
+      </h3>
+
+      <p className="text-sm text-slate-500 mt-1">
+        Please wait while we fetch your symptom checks.
+      </p>
+    </div>
+  );
+}
+
+function EmptyState({ title, text, action }) {
+  return (
+    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 text-center">
+      <Brain className="text-cyan-600 mx-auto mb-3" size={36} />
+
+      <h3 className="text-lg font-black text-slate-950">
         {title}
       </h3>
 
-      <p className="text-slate-500 mt-2">
+      <p className="text-sm text-slate-500 mt-1">
         {text}
       </p>
 
       {action && (
         <Link
           to="/symptom-checker"
-          className="inline-flex items-center gap-2 mt-6 bg-cyan-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-cyan-700"
+          className="inline-flex items-center gap-2 mt-5 bg-cyan-600 text-white px-5 py-3 rounded-2xl font-black text-sm"
         >
           Open Symptom Checker
-          <ArrowRight size={18} />
+          <ArrowRight size={16} />
         </Link>
       )}
-    </div>
-  );
-}
-
-function InfoCard({ icon: Icon, title, desc }) {
-  return (
-    <div className="bg-white rounded-[1.7rem] border border-slate-100 shadow-sm p-5">
-      <div className="w-11 h-11 rounded-2xl bg-cyan-50 flex items-center justify-center mb-4">
-        <Icon className="text-cyan-600" size={22} />
-      </div>
-
-      <h3 className="font-black text-slate-950">
-        {title}
-      </h3>
-
-      <p className="text-slate-500 text-sm mt-2 leading-relaxed">
-        {desc}
-      </p>
-    </div>
-  );
-}
-
-function MiniStat({ title, value, icon: Icon }) {
-  return (
-    <div className="min-w-[90px] bg-slate-50 rounded-2xl border border-slate-100 p-3">
-      <div className="w-9 h-9 rounded-xl bg-cyan-50 flex items-center justify-center mb-2">
-        <Icon className="text-cyan-600" size={18} />
-      </div>
-
-      <p className="text-xl font-black text-slate-950">
-        {value}
-      </p>
-
-      <p className="text-xs text-slate-500 font-bold">
-        {title}
-      </p>
     </div>
   );
 }

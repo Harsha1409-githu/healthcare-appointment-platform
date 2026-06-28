@@ -8,7 +8,6 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-
 import type { Response } from 'express';
 
 import { PrescriptionService } from './prescription.service';
@@ -34,28 +33,21 @@ export class PrescriptionController {
   @UseGuards(JwtAuthGuard)
   @Get('my')
   getMyPrescriptions(@Req() req: any) {
-    return this.prescriptionService.getMyPrescriptions(
-      req.user.sub,
-    );
+    return this.prescriptionService.getMyPrescriptions(req.user.sub);
   }
 
   @Get('appointment/:appointmentId')
-  getByAppointment(
-    @Param('appointmentId') appointmentId: string,
-  ) {
-    return this.prescriptionService.getByAppointment(
-      Number(appointmentId),
-    );
+  getByAppointment(@Param('appointmentId') appointmentId: string) {
+    return this.prescriptionService.getByAppointment(Number(appointmentId));
+  }
+
+  @Get(':id')
+  getOne(@Param('id') id: string) {
+    return this.prescriptionService.findOne(Number(id));
   }
 
   @Get(':id/pdf')
-  downloadPdf(
-    @Param('id') id: string,
-    @Res() res: Response,
-  ) {
-    return this.prescriptionService.generatePdf(
-      Number(id),
-      res,
-    );
+  downloadPdf(@Param('id') id: string, @Res() res: Response) {
+    return this.prescriptionService.generatePdf(Number(id), res);
   }
 }

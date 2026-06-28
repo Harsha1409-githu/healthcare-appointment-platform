@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   Stethoscope,
   GraduationCap,
@@ -17,16 +17,22 @@ import {
   Clock,
   Video,
   Loader2,
-  Award,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import PageHeader from "../components/PageHeader";
 import api from "../api/axios";
 
 export default function DoctorDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [doctor, setDoctor] = useState(null);
   const [slots, setSlots] = useState([]);
+  const [selectedSlotId, setSelectedSlotId] = useState("");
   const [loading, setLoading] = useState(true);
+
+  const [openSection, setOpenSection] = useState("about");
 
   useEffect(() => {
     Promise.all([
@@ -35,7 +41,13 @@ export default function DoctorDetails() {
     ])
       .then(([doctorRes, slotRes]) => {
         setDoctor(doctorRes.data);
-        setSlots(slotRes.data || []);
+
+        const availableSlots = slotRes.data || [];
+        setSlots(availableSlots);
+
+        if (availableSlots.length > 0) {
+          setSelectedSlotId(availableSlots[0].id);
+        }
       })
       .catch((err) => {
         console.error("Doctor details error:", err);
@@ -45,346 +57,424 @@ export default function DoctorDetails() {
       });
   }, [id]);
 
+  const selectedSlot = useMemo(
+    () =>
+      slots.find((slot) => String(slot.id) === String(selectedSlotId)) ||
+      slots[0],
+    [slots, selectedSlotId]
+  );
+
+  const doctorImage =
+    doctor?.profileImage ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      doctor?.doctorName || "Doctor"
+    )}&background=0891b2&color=fff&bold=true`;
+
+  const bookNow = () => {
+    if (!doctor?.id || !selectedSlot?.id) {
+      alert("No slot available for booking");
+      return;
+    }
+
+    navigate(`/book/${doctor.id}/${selectedSlot.id}`);
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4fbff] flex items-center justify-center">
-        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 text-center">
+      <main className="min-h-screen bg-[#f4f8fb] flex items-center justify-center px-4">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 text-center">
           <Loader2 className="mx-auto text-cyan-600 animate-spin mb-4" size={38} />
-          <p className="text-slate-500 font-semibold">
+
+          <p className="text-slate-500 font-bold">
             Loading doctor details...
           </p>
         </div>
-      </div>
+      </main>
     );
   }
 
   if (!doctor) {
     return (
-      <div className="min-h-screen bg-[#f4fbff] flex items-center justify-center">
-        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 text-center">
+      <main className="min-h-screen bg-[#f4f8fb] flex items-center justify-center px-4">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 text-center">
+          <Stethoscope className="text-red-500 mx-auto mb-3" size={36} />
+
           <p className="text-red-500 font-black text-xl">
             Doctor not found
           </p>
+
+          <button
+            onClick={() => navigate("/doctors")}
+            className="mt-4 bg-cyan-600 text-white px-5 py-3 rounded-2xl font-black"
+          >
+            View Doctors
+          </button>
         </div>
-      </div>
+      </main>
     );
   }
 
-  const doctorImage =
-    doctor.profileImage ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      doctor.doctorName || "Doctor"
-    )}&background=0891b2&color=fff&bold=true`;
-
   return (
-    <div className="min-h-screen bg-[#f4fbff]">
-      <div className="max-w-[1450px] mx-auto px-6 py-8">
-        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
-          <div className="grid xl:grid-cols-[1fr_330px] gap-8">
-            <div className="flex flex-col lg:flex-row gap-6">
-              <div className="relative shrink-0">
-                <img
-                  src={doctorImage}
-                  alt={doctor.doctorName}
-                  className="w-36 h-36 rounded-[2rem] object-cover border border-slate-100 shadow-sm"
-                />
+    <main className="min-h-screen bg-[#f4f8fb] pb-36">
+      <PageHeader
+        title="Doctor Profile"
+        subtitle="Consultation details"
+      />
 
-                <div className="absolute -bottom-3 -right-3 w-11 h-11 rounded-full bg-emerald-500 flex items-center justify-center border-4 border-white">
-                  <BadgeCheck size={20} className="text-white" />
-                </div>
-              </div>
+      <div className="max-w-md mx-auto px-4">
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+          <div className="flex gap-3">
+            <div className="relative shrink-0">
+              <img
+                src={doctorImage}
+                alt={doctor.doctorName || "Doctor"}
+                className="w-24 h-24 rounded-3xl object-cover border border-slate-100 shadow-sm"
+              />
 
-              <div className="min-w-0">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 font-black text-sm mb-4">
-                  <ShieldCheck size={17} />
-                  VERIFIED SPECIALIST
-                </div>
-
-                <h1 className="text-4xl md:text-5xl font-black text-slate-950">
-                  {doctor.doctorName}
-                </h1>
-
-                <p className="text-cyan-700 text-xl font-black mt-2">
-                  {doctor.specialization || "Specialist"}
-                </p>
-
-                <div className="flex flex-wrap gap-3 mt-5">
-                  <Badge icon={Star} text="4.8 Rating" />
-                  <Badge
-                    icon={BriefcaseMedical}
-                    text={`${doctor.experience || 0}+ Years`}
-                  />
-                  <Badge icon={Video} text="Video Consult" />
-                  <Badge icon={Clock} text="Available Today" />
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-3 mt-6">
-                  <InfoLine
-                    icon={Building2}
-                    text={doctor.hospital?.hospitalName || "Hospital Not Available"}
-                  />
-
-                  <InfoLine
-                    icon={MapPin}
-                    text={
-                      doctor.city || doctor.hospital?.city || "Location Available"
-                    }
-                  />
-                </div>
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center border-4 border-white">
+                <BadgeCheck size={14} className="text-white" />
               </div>
             </div>
 
-            <div className="bg-slate-50 rounded-[2rem] border border-slate-100 p-6">
-              <p className="text-sm text-slate-500 font-semibold">
-                Consultation Fee
-              </p>
-
-              <div className="flex items-center text-5xl font-black text-slate-950 mt-2">
-                <IndianRupee size={34} />
-                {doctor.consultationFee || 0}
+            <div className="min-w-0 flex-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-black text-[10px] border border-emerald-100">
+                <ShieldCheck size={12} />
+                Verified Doctor
               </div>
 
-              <p className="text-emerald-700 font-black mt-4 flex items-center gap-2">
-                <CalendarCheck size={18} />
-                Instant appointment booking
+              <h1 className="text-xl font-black text-slate-950 truncate mt-2">
+                {doctor.doctorName}
+              </h1>
+
+              <p className="text-sm text-cyan-700 font-black truncate">
+                {doctor.specialization || "Specialist"}
               </p>
 
-              <div className="grid gap-3 mt-6">
-                {slots.length > 0 ? (
-                  <Link to={`/book/${doctor.id}/${slots[0].id}`}>
-                    <button className="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black hover:bg-cyan-700 transition flex items-center justify-center gap-2">
-                      Book Appointment
-                      <ArrowRight size={18} />
-                    </button>
-                  </Link>
-                ) : (
-                  <button
-                    disabled
-                    className="w-full bg-slate-300 text-white py-4 rounded-2xl font-black cursor-not-allowed"
-                  >
-                    No Slots Available
-                  </button>
-                )}
+              <p className="text-xs text-slate-500 mt-1 truncate">
+                {doctor.qualification || "Qualification not available"}
+              </p>
 
-                <Link to="/doctors">
-                  <button className="w-full border border-cyan-600 text-cyan-700 py-4 rounded-2xl font-black hover:bg-cyan-50 transition">
-                    View Other Doctors
-                  </button>
-                </Link>
+              <div className="flex items-center gap-2 text-emerald-600 font-black text-xs mt-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                Available Today
               </div>
             </div>
           </div>
+
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            <MiniBadge icon={Star} title="4.8" subtitle="Rating" />
+            <MiniBadge
+              icon={BriefcaseMedical}
+              title={`${doctor.experience || 0}+`}
+              subtitle="Years"
+            />
+            <MiniBadge icon={Video} title="Video" subtitle="Consult" />
+          </div>
         </section>
 
-        <div className="grid xl:grid-cols-[1fr_380px] gap-8">
-          <main className="space-y-8">
-            <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
-              <h2 className="text-2xl font-black text-slate-950 mb-6">
-                Professional Details
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <h2 className="text-lg font-black text-slate-950 mb-3">
+            Clinic Details
+          </h2>
+
+          <InfoLine
+            icon={Building2}
+            text={doctor.hospital?.hospitalName || "Hospital Not Available"}
+          />
+
+          <InfoLine
+            icon={MapPin}
+            text={doctor.city || doctor.hospital?.city || "Location Available"}
+          />
+
+          <InfoLine
+            icon={CalendarCheck}
+            text="Instant appointment booking available"
+          />
+        </section>
+
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-lg font-black text-slate-950">
+                Available Slots
               </h2>
 
-              <div className="grid md:grid-cols-2 gap-5">
-                <InfoCard
-                  icon={Stethoscope}
-                  label="Specialization"
-                  value={doctor.specialization}
-                />
+              <p className="text-xs text-slate-500">
+                Choose your preferred time
+              </p>
+            </div>
 
-                <InfoCard
-                  icon={GraduationCap}
-                  label="Qualification"
-                  value={doctor.qualification}
-                />
+            <span className="px-3 py-1 rounded-full bg-cyan-50 text-cyan-700 font-black text-xs">
+              {slots.length} Slots
+            </span>
+          </div>
 
-                <InfoCard
-                  icon={BriefcaseMedical}
-                  label="Experience"
-                  value={`${doctor.experience || 0} Years`}
-                />
+          {slots.length === 0 ? (
+            <div className="rounded-2xl bg-slate-50 border border-slate-100 p-6 text-center">
+              <CalendarCheck className="mx-auto text-slate-300 mb-3" size={36} />
 
-                <InfoCard
-                  icon={IndianRupee}
-                  label="Consultation Fee"
-                  value={`₹${doctor.consultationFee || 0}`}
-                />
+              <h3 className="text-lg font-black text-slate-950">
+                No slots available
+              </h3>
 
-                <InfoCard icon={Phone} label="Mobile" value={doctor.mobile} />
+              <p className="text-sm text-slate-500 mt-1">
+                Please check later or choose another doctor.
+              </p>
+            </div>
+          ) : (
+            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+              {slots.map((slot) => {
+                const active = String(selectedSlotId) === String(slot.id);
 
-                <InfoCard icon={Mail} label="Email" value={doctor.email} />
-              </div>
-            </section>
-
-            <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
-              <div className="flex items-center justify-between gap-4 mb-6">
-                <div>
-                  <h2 className="text-2xl font-black text-slate-950">
-                    Available Slots
-                  </h2>
-
-                  <p className="text-slate-500 mt-1">
-                    Choose your preferred appointment time.
-                  </p>
-                </div>
-
-                <span className="hidden sm:inline-flex px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm">
-                  {slots.length} Slots
-                </span>
-              </div>
-
-              {slots.length === 0 ? (
-                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-8 text-center">
-                  <CalendarCheck className="mx-auto text-slate-300 mb-4" size={42} />
-
-                  <h3 className="text-xl font-black text-slate-950">
-                    No available slots
-                  </h3>
-
-                  <p className="text-slate-500 mt-2">
-                    Please check again later or choose another doctor.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-4">
-                  {slots.map((slot) => (
-                    <Link
-                      key={slot.id}
-                      to={`/book/${doctor.id}/${slot.id}`}
-                      className="group rounded-2xl border border-slate-100 bg-slate-50 p-5 hover:border-cyan-200 hover:bg-cyan-50 transition"
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    onClick={() => setSelectedSlotId(slot.id)}
+                    className={`shrink-0 min-w-[132px] rounded-2xl border p-3 text-left active:scale-95 transition ${
+                      active
+                        ? "bg-cyan-600 text-white border-cyan-600 shadow-md"
+                        : "bg-slate-50 text-slate-800 border-slate-100"
+                    }`}
+                  >
+                    <p
+                      className={`text-xs font-black ${
+                        active ? "text-cyan-50" : "text-cyan-700"
+                      }`}
                     >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="font-black text-slate-950">
-                            {slot.date}
-                          </p>
+                      {slot.date}
+                    </p>
 
-                          <p className="text-sm text-slate-500 mt-1">
-                            {slot.startTime} - {slot.endTime}
-                          </p>
-                        </div>
+                    <p className="text-sm font-black mt-1">
+                      {slot.startTime}
+                    </p>
 
-                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center border border-slate-100 group-hover:translate-x-1 transition">
-                          <ArrowRight size={19} className="text-cyan-600" />
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </section>
-          </main>
+                    <p
+                      className={`text-xs mt-0.5 ${
+                        active ? "text-cyan-50" : "text-slate-500"
+                      }`}
+                    >
+                      to {slot.endTime}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
-          <aside className="space-y-6">
-            <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
-              <h2 className="text-xl font-black text-slate-950 mb-5">
-                Hospital
-              </h2>
-
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center overflow-hidden border border-cyan-100">
-                  {doctor.hospital?.profileImage ? (
-                    <img
-                      src={doctor.hospital.profileImage}
-                      alt={doctor.hospital?.hospitalName || "Hospital"}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Building2 size={30} className="text-cyan-600" />
-                  )}
-                </div>
-
-                <div>
-                  <p className="font-black text-slate-950">
-                    {doctor.hospital?.hospitalName || "Hospital"}
-                  </p>
-
-                  <p className="text-sm text-slate-500">
-                    Healthcare Partner
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
-              <h2 className="text-xl font-black text-slate-950 mb-5">
-                Location
-              </h2>
-
-              <div className="flex items-center gap-3 text-slate-600 bg-slate-50 rounded-2xl border border-slate-100 p-4">
-                <MapPin size={22} className="text-cyan-600" />
-
-                <span className="font-semibold">
-                  {doctor.city || "-"}, {doctor.state || "-"}
-                </span>
-              </div>
-            </section>
-
-            <section className="bg-cyan-600 rounded-[2rem] shadow-sm p-6 text-white">
-              <CalendarCheck size={34} className="mb-4" />
-
-              <h2 className="text-2xl font-black mb-2">
-                Book Appointment
-              </h2>
-
-              <p className="text-cyan-100 mb-5">
-                Select an available slot and confirm your consultation.
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-slate-500 font-bold">
+                Consultation Fee
               </p>
 
-              {slots.length > 0 ? (
-                <Link to={`/book/${doctor.id}/${slots[0].id}`}>
-                  <button className="w-full bg-white text-cyan-700 py-4 rounded-2xl font-black hover:bg-cyan-50 transition">
-                    Book Now
-                  </button>
-                </Link>
+              <div className="flex items-center text-2xl font-black text-slate-950 mt-1">
+                <IndianRupee size={20} />
+                {doctor.consultationFee || 0}
+              </div>
+            </div>
+
+            <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center">
+              <IndianRupee className="text-cyan-600" size={26} />
+            </div>
+          </div>
+
+          {selectedSlot && (
+            <div className="mt-3 bg-emerald-50 border border-emerald-100 rounded-2xl p-3">
+              <p className="text-xs font-black text-emerald-700">
+                Selected Slot
+              </p>
+
+              <p className="text-sm font-black text-slate-950 mt-1">
+                {selectedSlot.date} • {selectedSlot.startTime} -{" "}
+                {selectedSlot.endTime}
+              </p>
+            </div>
+          )}
+        </section>
+
+        <Accordion
+          title="About Doctor"
+          open={openSection === "about"}
+          onClick={() =>
+            setOpenSection(openSection === "about" ? "" : "about")
+          }
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <InfoCard
+              icon={Stethoscope}
+              label="Speciality"
+              value={doctor.specialization}
+            />
+
+            <InfoCard
+              icon={BriefcaseMedical}
+              label="Experience"
+              value={`${doctor.experience || 0} Years`}
+            />
+
+            <InfoCard
+              icon={GraduationCap}
+              label="Qualification"
+              value={doctor.qualification}
+            />
+
+            <InfoCard
+              icon={AwardIcon}
+              label="Verified"
+              value="Yes"
+            />
+          </div>
+        </Accordion>
+
+        <Accordion
+          title="Contact Information"
+          open={openSection === "contact"}
+          onClick={() =>
+            setOpenSection(openSection === "contact" ? "" : "contact")
+          }
+        >
+          <InfoLine icon={Phone} text={doctor.mobile || "Mobile not available"} />
+          <InfoLine icon={Mail} text={doctor.email || "Email not available"} />
+        </Accordion>
+
+        <Accordion
+          title="Hospital"
+          open={openSection === "hospital"}
+          onClick={() =>
+            setOpenSection(openSection === "hospital" ? "" : "hospital")
+          }
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-cyan-50 flex items-center justify-center overflow-hidden border border-cyan-100">
+              {doctor.hospital?.profileImage ? (
+                <img
+                  src={doctor.hospital.profileImage}
+                  alt={doctor.hospital?.hospitalName || "Hospital"}
+                  className="w-full h-full object-cover"
+                />
               ) : (
-                <button
-                  disabled
-                  className="w-full bg-white/30 text-white py-4 rounded-2xl font-black cursor-not-allowed"
-                >
-                  No Slots
-                </button>
+                <Building2 size={26} className="text-cyan-600" />
               )}
-            </section>
-          </aside>
+            </div>
+
+            <div>
+              <p className="font-black text-slate-950">
+                {doctor.hospital?.hospitalName || "Hospital"}
+              </p>
+
+              <p className="text-sm text-slate-500">
+                Healthcare Partner
+              </p>
+            </div>
+          </div>
+        </Accordion>
+
+        <Link
+          to="/doctors"
+          className="mt-3 flex items-center justify-center gap-2 bg-white border border-slate-100 rounded-3xl py-4 font-black text-cyan-700 shadow-sm"
+        >
+          View Other Doctors
+          <ArrowRight size={17} />
+        </Link>
+      </div>
+
+      <div className="fixed bottom-20 left-0 right-0 z-40 px-4">
+        <div className="max-w-md mx-auto bg-white/95 backdrop-blur-xl border border-slate-200 rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] p-3">
+          <button
+            type="button"
+            disabled={!selectedSlot}
+            onClick={bookNow}
+            className="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black disabled:bg-slate-300 active:scale-95 transition flex items-center justify-center gap-2"
+          >
+            {selectedSlot ? (
+              <>
+                Book Appointment • ₹{doctor.consultationFee || 0}
+                <ArrowRight size={18} />
+              </>
+            ) : (
+              "No Slots Available"
+            )}
+          </button>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 
-function Badge({ icon: Icon, text }) {
+function MiniBadge({ icon: Icon, title, subtitle }) {
   return (
-    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-100 text-sm font-black">
-      <Icon size={16} />
-      {text}
-    </span>
+    <div className="bg-slate-50 rounded-2xl border border-slate-100 p-3 text-center">
+      <Icon className="text-cyan-600 mx-auto" size={18} />
+
+      <p className="text-sm font-black text-slate-950 mt-1">
+        {title}
+      </p>
+
+      <p className="text-[10px] text-slate-500 font-bold">
+        {subtitle}
+      </p>
+    </div>
   );
 }
 
 function InfoLine({ icon: Icon, text }) {
   return (
-    <div className="flex items-center gap-3 text-slate-600 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 min-w-0">
+    <div className="flex items-center gap-3 text-slate-600 bg-slate-50 border border-slate-100 rounded-2xl px-3 py-3 min-w-0 mt-2 first:mt-0">
       <Icon size={18} className="text-cyan-600 shrink-0" />
-      <span className="truncate font-semibold">{text || "-"}</span>
+
+      <span className="truncate text-sm font-bold">
+        {text || "-"}
+      </span>
     </div>
   );
 }
 
 function InfoCard({ icon: Icon, label, value }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl bg-slate-50 border border-slate-100 p-4">
-      <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center">
-        <Icon size={22} className="text-cyan-600" />
+    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-3">
+      <div className="w-10 h-10 rounded-2xl bg-cyan-50 flex items-center justify-center mb-2">
+        <Icon size={19} className="text-cyan-600" />
       </div>
 
-      <div>
-        <p className="text-xs font-black uppercase text-slate-400">
-          {label}
-        </p>
+      <p className="text-[10px] font-black uppercase text-slate-400">
+        {label}
+      </p>
 
-        <p className="font-black text-slate-950">
-          {value || "-"}
-        </p>
-      </div>
+      <p className="font-black text-slate-950 text-sm mt-1 truncate">
+        {value || "-"}
+      </p>
     </div>
   );
+}
+
+function Accordion({ title, open, onClick, children }) {
+  return (
+    <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+      <button
+        type="button"
+        onClick={onClick}
+        className="w-full flex items-center justify-between gap-3"
+      >
+        <h2 className="text-lg font-black text-slate-950">
+          {title}
+        </h2>
+
+        {open ? (
+          <ChevronUp className="text-slate-400" size={21} />
+        ) : (
+          <ChevronDown className="text-slate-400" size={21} />
+        )}
+      </button>
+
+      {open && <div className="mt-4">{children}</div>}
+    </section>
+  );
+}
+
+function AwardIcon(props) {
+  return <BadgeCheck {...props} />;
 }

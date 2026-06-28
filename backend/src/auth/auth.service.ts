@@ -106,7 +106,7 @@ export class AuthService {
     });
 
     if (!patient) {
-      const defaultEmail = `${mobile}@medicare.local`;
+      const defaultEmail = `${mobile}@TryDoc.local`;
       const defaultPassword = await bcrypt.hash(`otp-${mobile}`, 10);
 
       patient = this.patientRepository.create({

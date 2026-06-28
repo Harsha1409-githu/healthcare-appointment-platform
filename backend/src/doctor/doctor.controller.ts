@@ -18,6 +18,7 @@ import { SearchDoctorDto } from './dto/search-doctor.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
+import { UpdateDoctorStatusDto } from './dto/update-doctor-status.dto';
 
 @Controller('doctor')
 export class DoctorController {
@@ -111,6 +112,19 @@ changePassword(
   getAll() {
     return this.doctorService.getDoctors();
   }
+
+  @Patch(':id/status')
+updateLiveStatus(
+  @Param('id') id: string,
+  @Body() dto: UpdateDoctorStatusDto,
+) {
+  return this.doctorService.updateLiveStatus(id, dto);
+}
+
+@Get(':id/status')
+getLiveStatus(@Param('id') id: string) {
+  return this.doctorService.getLiveStatus(id);
+}
 
   @Delete(':id')
   deleteDoctor(@Param('id') id: string) {

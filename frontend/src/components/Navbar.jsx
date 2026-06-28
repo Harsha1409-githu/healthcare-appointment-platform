@@ -240,7 +240,7 @@ export default function Navbar() {
             </div>
 
             <h1 className="text-2xl font-black text-slate-950">
-              MediCare
+              TryDoc
             </h1>
           </Link>
 
@@ -276,7 +276,7 @@ export default function Navbar() {
             </NavLink>
 
             <NavLink to="/ai-health-assistant" className={navClass}>
-  MediCare AI
+  TryDoc AI
 </NavLink>
           </nav>
 
@@ -545,7 +545,7 @@ function MobileMenu({
 
               <div>
                 <h2 className="text-2xl font-black text-slate-950">
-                  MediCare
+                  TryDoc
                 </h2>
                 <p className="text-sm text-slate-500">
                   Healthcare made simple
@@ -640,7 +640,7 @@ function MobileMenu({
   className={mobileNavClass}
 >
   <Brain size={19} />
-  MediCare AI
+  TryDoc AI
 </NavLink>
 
             {patientToken && (

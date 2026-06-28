@@ -73,7 +73,7 @@ export default function DoctorSidebar() {
           {!collapsed && (
             <div className="min-w-0">
               <h1 className="text-2xl font-black text-slate-950">
-                MediCare
+                TryDoc
               </h1>
 
               <p className="text-xs text-slate-500 truncate max-w-[170px]">

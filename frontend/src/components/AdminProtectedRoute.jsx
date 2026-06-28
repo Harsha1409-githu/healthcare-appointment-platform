@@ -24,7 +24,7 @@ export default function AdminProtectedRoute({ children }) {
   const isAdmin =
     adminUser?.role === "admin" ||
     adminUser?.role === "ADMIN" ||
-    adminUser?.email === "admin@medicare.com" ||
+    adminUser?.email === "admin@TryDoc.com" ||
     adminUser?.isAdmin === true;
 
   if (!token || !adminUser || !isAdmin) {

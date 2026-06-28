@@ -19,6 +19,9 @@ export class LabTest {
   @Column()
   patientId: string;
 
+  @Column({ nullable: true })
+  familyMemberId: string;
+
   @Column()
   testName: string;
 

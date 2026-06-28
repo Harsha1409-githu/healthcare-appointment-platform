@@ -16,6 +16,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import api from "../api/axios";
+import PageHeader from "../components/PageHeader";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -115,6 +116,11 @@ export default function AdminDashboard() {
 
   return (
     <div className="w-full min-h-screen bg-[#f4fbff]">
+      <PageHeader
+  title="Admin Dashboard"
+  subtitle="Platform overview"
+  showBack={false}
+/>
       <div className="w-full max-w-[1500px] mx-auto px-6 py-8">
         <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
           <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
@@ -130,7 +136,7 @@ export default function AdminDashboard() {
 
               <p className="text-slate-500 mt-3 max-w-2xl text-lg leading-relaxed">
                 Monitor hospitals, doctors, patients and appointments across
-                the MediCare platform.
+                the TryDoc platform.
               </p>
             </div>
 
@@ -173,7 +179,7 @@ export default function AdminDashboard() {
                 </h2>
 
                 <p className="text-slate-500">
-                  Core MediCare platform activity summary.
+                  Core TryDoc platform activity summary.
                 </p>
               </div>
             </div>

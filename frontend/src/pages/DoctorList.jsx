@@ -6,7 +6,6 @@ import {
   BadgeCheck,
   ArrowRight,
   Search,
-  Filter,
   MapPin,
   Building2,
   Award,
@@ -16,7 +15,10 @@ import {
   ShieldCheck,
   Star,
   Loader2,
+  SlidersHorizontal,
+  X,
 } from "lucide-react";
+import PageHeader from "../components/PageHeader";
 import api from "../api/axios";
 
 export default function DoctorList() {
@@ -26,6 +28,7 @@ export default function DoctorList() {
   const [search, setSearch] = useState("");
   const [specializationFilter, setSpecializationFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ACTIVE");
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     fetchDoctors();
@@ -53,13 +56,13 @@ export default function DoctorList() {
   }, [doctors]);
 
   const filteredDoctors = doctors.filter((doc) => {
-    const matchesSearch = `${doc.doctorName || ""} ${
-      doc.specialization || ""
-    } ${doc.qualification || ""} ${doc.hospital?.hospitalName || ""} ${
+    const searchText = `${doc.doctorName || ""} ${doc.specialization || ""} ${
+      doc.qualification || ""
+    } ${doc.hospital?.hospitalName || ""} ${
       doc.city || doc.hospital?.city || ""
-    }`
-      .toLowerCase()
-      .includes(search.toLowerCase());
+    }`.toLowerCase();
+
+    const matchesSearch = searchText.includes(search.toLowerCase());
 
     const matchesSpecialization =
       specializationFilter === "ALL" ||
@@ -73,113 +76,143 @@ export default function DoctorList() {
     return matchesSearch && matchesSpecialization && matchesStatus;
   });
 
-  const stats = useMemo(() => {
-    return {
-      total: doctors.length,
-      active: doctors.filter((doc) => doc.isActive).length,
-      inactive: doctors.filter((doc) => !doc.isActive).length,
-      specializations: specializations.filter((item) => item !== "ALL").length,
-    };
-  }, [doctors, specializations]);
+  const activeSpecialty =
+    specializationFilter === "ALL" ? "All Specialities" : specializationFilter;
 
   return (
-    <div className="min-h-screen bg-[#f4fbff]">
-      <div className="max-w-[1450px] mx-auto px-6 py-8">
-        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
-                <Stethoscope size={17} />
-                DOCTOR DIRECTORY
-              </div>
+    <main className="min-h-screen bg-[#f4f8fb] pb-28">
+      <PageHeader
+        title="Doctors"
+        subtitle={`${filteredDoctors.length} doctors available`}
+      />
 
-              <h1 className="text-4xl md:text-5xl font-black text-slate-950">
-                Doctors
-              </h1>
-
-              <p className="text-slate-500 mt-3 max-w-2xl text-lg leading-relaxed">
-                Browse verified doctors, specializations, hospitals,
-                consultation fees and availability.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <MiniStat title="Total" value={stats.total} icon={Stethoscope} />
-              <MiniStat title="Active" value={stats.active} icon={ShieldCheck} />
-              <MiniStat title="Inactive" value={stats.inactive} icon={Clock} />
-              <MiniStat
-                title="Specialties"
-                value={stats.specializations}
-                icon={Award}
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-5 mb-8">
-          <div className="grid lg:grid-cols-[1fr_260px_220px] gap-4">
-            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-              <Search className="text-cyan-600" size={20} />
+      <div className="max-w-md mx-auto px-4">
+        <section className="sticky top-[72px] z-20 bg-[#f4f8fb]/95 backdrop-blur-md pt-1 pb-3">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center gap-3 bg-white border border-slate-100 rounded-2xl px-3 py-3 shadow-sm">
+              <Search className="text-cyan-600 shrink-0" size={18} />
 
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search doctor, specialty, hospital or city..."
-                className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
+                placeholder="Search doctor, speciality, hospital"
+                className="w-full bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400"
               />
+
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="text-slate-400"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
 
-            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-              <Filter className="text-cyan-600" size={20} />
+            <button
+              type="button"
+              onClick={() => setShowFilters(true)}
+              className="w-12 h-12 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center text-cyan-600 active:scale-95"
+            >
+              <SlidersHorizontal size={20} />
+            </button>
+          </div>
 
-              <select
-                value={specializationFilter}
-                onChange={(e) => setSpecializationFilter(e.target.value)}
-                className="w-full bg-transparent outline-none text-slate-800 font-semibold"
+          <div className="flex gap-2 overflow-x-auto no-scrollbar mt-3 pb-1">
+            {specializations.slice(0, 8).map((specialization) => (
+              <button
+                key={specialization}
+                type="button"
+                onClick={() => setSpecializationFilter(specialization)}
+                className={`shrink-0 px-4 py-2 rounded-full text-xs font-black border transition ${
+                  specializationFilter === specialization
+                    ? "bg-cyan-600 text-white border-cyan-600 shadow-sm"
+                    : "bg-white text-slate-600 border-slate-100"
+                }`}
               >
-                {specializations.map((specialization) => (
-                  <option key={specialization} value={specialization}>
-                    {specialization === "ALL"
-                      ? "All Specializations"
-                      : specialization}
-                  </option>
-                ))}
-              </select>
+                {specialization === "ALL" ? "All" : specialization}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mb-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-cyan-700 font-black">
+                {activeSpecialty}
+              </p>
+
+              <h2 className="text-xl font-black text-slate-950">
+                Find your doctor
+              </h2>
+
+              <p className="text-sm text-slate-500 mt-1">
+                Verified specialists near you
+              </p>
             </div>
 
-            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-              <BadgeCheck className="text-cyan-600" size={20} />
-
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full bg-transparent outline-none text-slate-800 font-semibold"
-              >
-                <option value="ALL">All Status</option>
-                <option value="ACTIVE">Active Only</option>
-                <option value="INACTIVE">Inactive Only</option>
-              </select>
+            <div className="w-14 h-14 rounded-2xl bg-cyan-50 flex items-center justify-center">
+              <Stethoscope className="text-cyan-600" size={28} />
             </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            <MiniStat
+              icon={ShieldCheck}
+              label="Active"
+              value={doctors.filter((doc) => doc.isActive).length}
+            />
+
+            <MiniStat
+              icon={Award}
+              label="Speciality"
+              value={specializations.length - 1}
+            />
+
+            <MiniStat
+              icon={CalendarCheck}
+              label="Booking"
+              value="Fast"
+            />
           </div>
         </section>
 
         {loading ? (
           <LoadingState />
         ) : filteredDoctors.length === 0 ? (
-          <EmptyState />
+          <EmptyState
+            clearFilters={() => {
+              setSearch("");
+              setSpecializationFilter("ALL");
+              setStatusFilter("ACTIVE");
+            }}
+          />
         ) : (
-          <div className="grid gap-5">
+          <section className="space-y-3">
             {filteredDoctors.map((doc) => (
-              <DoctorRowCard key={doc.id} doc={doc} />
+              <DoctorMobileCard key={doc.id} doc={doc} />
             ))}
-          </div>
+          </section>
         )}
       </div>
-    </div>
+
+      {showFilters && (
+        <FilterSheet
+          specializations={specializations}
+          specializationFilter={specializationFilter}
+          setSpecializationFilter={setSpecializationFilter}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          onClose={() => setShowFilters(false)}
+        />
+      )}
+    </main>
   );
 }
 
-function DoctorRowCard({ doc }) {
+function DoctorMobileCard({ doc }) {
   const doctorImage =
     doc.profileImage ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(
@@ -187,195 +220,274 @@ function DoctorRowCard({ doc }) {
     )}&background=0891b2&color=fff&bold=true`;
 
   return (
-    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition overflow-hidden">
-      <div className="p-6">
-        <div className="grid xl:grid-cols-[1fr_260px] gap-6">
-          <div className="flex flex-col md:flex-row gap-5">
-            <div className="relative shrink-0">
-              <img
-                src={doctorImage}
-                alt={doc.doctorName}
-                className="w-28 h-28 rounded-3xl border border-slate-100 shadow-sm object-cover"
-              />
+    <article className="bg-white rounded-3xl border border-slate-100 shadow-sm p-3 active:scale-[0.99] transition">
+      <div className="flex gap-3">
+        <div className="relative shrink-0">
+          <img
+            src={doctorImage}
+            alt={doc.doctorName || "Doctor"}
+            className="w-20 h-20 rounded-3xl border border-slate-100 object-cover"
+          />
 
-              <div
-                className={`absolute -bottom-2 -right-2 w-9 h-9 rounded-full flex items-center justify-center border-4 border-white ${
-                  doc.isActive ? "bg-emerald-500" : "bg-slate-400"
-                }`}
-              >
-                <BadgeCheck size={17} className="text-white" />
-              </div>
-            </div>
+          <div
+            className={`absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center border-4 border-white ${
+              doc.isActive ? "bg-emerald-500" : "bg-slate-400"
+            }`}
+          >
+            <BadgeCheck size={14} className="text-white" />
+          </div>
+        </div>
 
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap gap-2 mb-3">
-                <span
-                  className={`inline-flex items-center gap-2 px-3 py-1 rounded-full font-black text-xs border ${
-                    doc.isActive
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                      : "bg-slate-50 text-slate-500 border-slate-100"
-                  }`}
-                >
-                  <BadgeCheck size={14} />
-                  {doc.isActive ? "Active Doctor" : "Inactive Doctor"}
-                </span>
-
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-50 text-yellow-700 font-black text-xs border border-yellow-100">
-                  <Star size={14} className="fill-yellow-500 text-yellow-500" />
-                  Trusted
-                </span>
-              </div>
-
-              <h3 className="text-2xl font-black text-slate-950">
-                {doc.doctorName}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="text-base font-black text-slate-950 truncate">
+                {doc.doctorName || "Doctor"}
               </h3>
 
-              <p className="text-cyan-700 font-black mt-1">
+              <p className="text-sm text-cyan-700 font-black truncate">
                 {doc.specialization || "Specialist"}
               </p>
-
-              <div className="flex flex-wrap gap-2 mt-4">
-                <SmallBadge
-                  icon={Award}
-                  text={`${doc.experience || 0}+ Years`}
-                />
-
-                <SmallBadge icon={Video} text="Video Consult" />
-
-                <SmallBadge
-                  icon={CalendarCheck}
-                  text="Instant Booking"
-                  green
-                />
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-3 mt-5">
-                <InfoLine
-                  icon={Stethoscope}
-                  text={doc.qualification || "Qualification not added"}
-                />
-
-                <InfoLine
-                  icon={Building2}
-                  text={doc.hospital?.hospitalName || "Hospital Not Available"}
-                />
-
-                <InfoLine
-                  icon={MapPin}
-                  text={doc.city || doc.hospital?.city || "Location Available"}
-                />
-              </div>
             </div>
+
+            <span
+              className={`shrink-0 px-2 py-1 rounded-full text-[10px] font-black ${
+                doc.isActive
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {doc.isActive ? "ACTIVE" : "OFF"}
+            </span>
           </div>
 
-          <div className="xl:border-l border-slate-100 xl:pl-6 flex flex-col justify-between">
-            <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5">
-              <p className="text-sm text-slate-500 font-semibold">
-                Consultation Fee
-              </p>
+          <p className="text-xs text-slate-500 mt-1 truncate">
+            {doc.qualification || "Qualification not added"}
+          </p>
 
-              <div className="flex items-center text-3xl font-black text-slate-950 mt-2">
-                <IndianRupee size={24} />
-                {doc.consultationFee || 0}
-              </div>
-
-              <p className="text-sm text-emerald-700 font-black mt-3 flex items-center gap-2">
-                <CalendarCheck size={17} />
-                Instant appointment booking
-              </p>
-            </div>
-
-            <div className="grid gap-3 mt-5">
-              <Link to={`/doctor/${doc.id}`}>
-                <button className="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black hover:bg-cyan-700 transition flex items-center justify-center gap-2">
-                  View Profile
-                  <ArrowRight size={18} />
-                </button>
-              </Link>
-
-              <Link to={`/doctor/${doc.id}`}>
-                <button className="w-full border border-cyan-600 text-cyan-700 py-4 rounded-2xl font-black hover:bg-cyan-50 transition">
-                  Book Appointment
-                </button>
-              </Link>
-            </div>
+          <div className="flex items-center gap-1.5 text-yellow-600 text-xs font-black mt-2">
+            <Star size={13} className="fill-yellow-500 text-yellow-500" />
+            4.8
+            <span className="text-slate-300">•</span>
+            <span className="text-slate-600">
+              {doc.experience || 0}+ years
+            </span>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-function InfoLine({ icon: Icon, text }) {
-  return (
-    <div className="flex items-center gap-3 text-slate-600 bg-slate-50 border border-slate-100 rounded-2xl px-3 py-2 min-w-0">
-      <Icon size={18} className="text-cyan-600 shrink-0" />
-      <span className="truncate">{text || "-"}</span>
-    </div>
-  );
-}
+      <div className="grid grid-cols-2 gap-2 mt-3">
+        <InfoPill
+          icon={Building2}
+          text={doc.hospital?.hospitalName || "Hospital"}
+        />
 
-function SmallBadge({ icon: Icon, text, green }) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black border ${
-        green
-          ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-          : "bg-cyan-50 text-cyan-700 border-cyan-100"
-      }`}
-    >
-      <Icon size={14} />
-      {text}
-    </span>
-  );
-}
+        <InfoPill
+          icon={MapPin}
+          text={doc.city || doc.hospital?.city || "Available"}
+        />
 
-function MiniStat({ title, value, icon: Icon }) {
-  return (
-    <div className="min-w-[90px] bg-slate-50 rounded-2xl border border-slate-100 p-3">
-      <div className="w-9 h-9 rounded-xl bg-cyan-50 flex items-center justify-center mb-2">
-        <Icon className="text-cyan-600" size={18} />
+        <InfoPill icon={Video} text="Video consult" />
+        <InfoPill icon={Clock} text="Available today" />
       </div>
 
-      <p className="text-xl font-black text-slate-950">{value}</p>
+      <div className="mt-3 bg-slate-50 rounded-2xl border border-slate-100 p-3 flex items-center justify-between">
+        <div>
+          <p className="text-xs text-slate-500 font-bold">
+            Consultation Fee
+          </p>
 
-      <p className="text-xs text-slate-500 font-bold">{title}</p>
+          <div className="flex items-center text-xl font-black text-slate-950 mt-0.5">
+            <IndianRupee size={17} />
+            {doc.consultationFee || 0}
+          </div>
+        </div>
+
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-black">
+          <CalendarCheck size={13} />
+          Instant
+        </div>
+      </div>
+<div className="grid grid-cols-3 gap-2 mt-3">
+  <Link
+    to={`/doctor/${doc.id}`}
+    className="border border-slate-200 text-slate-700 py-3 rounded-2xl text-xs font-black text-center"
+  >
+    Profile
+  </Link>
+
+  <Link
+    to={`/book/${doc.id}?type=IN_PERSON`}
+    className="bg-emerald-600 text-white py-3 rounded-2xl text-xs font-black text-center"
+  >
+    🏥 In-Person
+  </Link>
+
+  <Link
+    to={`/book/${doc.id}?type=VIDEO`}
+    className="bg-blue-600 text-white py-3 rounded-2xl text-xs font-black text-center"
+  >
+    🎥 Video
+  </Link>
+</div>
+    </article>
+  );
+}
+
+function FilterSheet({
+  specializations,
+  specializationFilter,
+  setSpecializationFilter,
+  statusFilter,
+  setStatusFilter,
+  onClose,
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-end">
+      <div className="bg-white w-full max-w-md mx-auto rounded-t-[2rem] p-4 max-h-[85vh] overflow-y-auto">
+        <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4" />
+
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-xl font-black text-slate-950">
+              Filters
+            </h2>
+
+            <p className="text-sm text-slate-500">
+              Refine doctor results
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <h3 className="text-sm font-black text-slate-900 mb-2">
+          Doctor Status
+        </h3>
+
+        <div className="grid grid-cols-3 gap-2 mb-5">
+          {["ALL", "ACTIVE", "INACTIVE"].map((status) => (
+            <button
+              key={status}
+              type="button"
+              onClick={() => setStatusFilter(status)}
+              className={`py-3 rounded-2xl text-xs font-black ${
+                statusFilter === status
+                  ? "bg-cyan-600 text-white"
+                  : "bg-slate-50 text-slate-600"
+              }`}
+            >
+              {status === "ALL"
+                ? "All"
+                : status === "ACTIVE"
+                ? "Active"
+                : "Inactive"}
+            </button>
+          ))}
+        </div>
+
+        <h3 className="text-sm font-black text-slate-900 mb-2">
+          Specialization
+        </h3>
+
+        <div className="grid grid-cols-2 gap-2">
+          {specializations.map((specialization) => (
+            <button
+              key={specialization}
+              type="button"
+              onClick={() => setSpecializationFilter(specialization)}
+              className={`py-3 px-3 rounded-2xl text-xs font-black text-left ${
+                specializationFilter === specialization
+                  ? "bg-cyan-600 text-white"
+                  : "bg-slate-50 text-slate-600"
+              }`}
+            >
+              {specialization === "ALL" ? "All Specialities" : specialization}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-5 w-full bg-cyan-600 text-white py-4 rounded-2xl font-black"
+        >
+          Apply Filters
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function InfoPill({ icon: Icon, text }) {
+  return (
+    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 rounded-2xl px-2 py-2 min-w-0">
+      <Icon size={13} className="text-cyan-600 shrink-0" />
+      <span className="truncate text-[11px] font-bold text-slate-600">
+        {text || "-"}
+      </span>
+    </div>
+  );
+}
+
+function MiniStat({ icon: Icon, label, value }) {
+  return (
+    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 text-center">
+      <Icon className="text-cyan-600 mx-auto" size={18} />
+
+      <p className="text-sm font-black text-slate-950 mt-1">
+        {value}
+      </p>
+
+      <p className="text-[10px] text-slate-500 font-bold">
+        {label}
+      </p>
     </div>
   );
 }
 
 function LoadingState() {
   return (
-    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-12 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center mx-auto mb-4">
-        <Loader2 className="text-cyan-600 animate-spin" size={34} />
-      </div>
+    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 text-center">
+      <Loader2 className="text-cyan-600 animate-spin mx-auto mb-3" size={34} />
 
-      <h3 className="text-2xl font-black text-slate-950">
+      <h3 className="text-lg font-black text-slate-950">
         Loading doctors
       </h3>
 
-      <p className="text-slate-500 mt-2">
-        Please wait while we fetch doctor profiles.
+      <p className="text-sm text-slate-500 mt-1">
+        Please wait while we fetch doctors.
       </p>
     </div>
   );
 }
 
-function EmptyState() {
+function EmptyState({ clearFilters }) {
   return (
-    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-12 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center mx-auto mb-4">
-        <Stethoscope className="text-cyan-600" size={34} />
-      </div>
+    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 text-center">
+      <Stethoscope className="text-cyan-600 mx-auto mb-3" size={34} />
 
-      <h3 className="text-2xl font-black text-slate-950">
+      <h3 className="text-lg font-black text-slate-950">
         No doctors found
       </h3>
 
-      <p className="text-slate-500 mt-2">
+      <p className="text-sm text-slate-500 mt-1">
         Try changing search or filters.
       </p>
+
+      <button
+        type="button"
+        onClick={clearFilters}
+        className="mt-4 bg-cyan-600 text-white px-5 py-3 rounded-2xl font-black text-sm"
+      >
+        Clear Filters
+      </button>
     </div>
   );
 }

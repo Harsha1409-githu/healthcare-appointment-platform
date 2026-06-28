@@ -3,8 +3,10 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  OneToMany,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { FamilyMember } from '../family-member/family-member.entity';
 
 @Entity()
 export class Patient {
@@ -38,6 +40,9 @@ profileImage: string;
   @Column()
 @Exclude()
 password: string;
+
+@OneToMany(() => FamilyMember, (member) => member.patient)
+familyMembers: FamilyMember[];
 
   @CreateDateColumn()
   createdAt: Date;

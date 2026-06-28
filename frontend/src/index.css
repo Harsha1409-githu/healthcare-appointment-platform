@@ -1,9 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 /* Global App Styles */
 
@@ -27,6 +24,7 @@ body {
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 img {
@@ -41,6 +39,15 @@ a {
 
 button {
   transition: all 0.25s ease;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* App Containers */
@@ -214,34 +221,7 @@ button {
   background: #94a3b8;
 }
 
-/* Mobile */
-
-@media (max-width: 768px) {
-  .app-container,
-  .app-container-wide {
-    padding: 20px 16px;
-  }
-
-  .ui-title {
-    font-size: 34px;
-  }
-
-  .ui-heading {
-    font-size: 26px;
-  }
-
-  .ui-subtitle {
-    font-size: 15px;
-  }
-}
-/* ===========================
-   MediCare Global UI Override
-=========================== */
-
-body {
-  zoom: 0.92;
-  background: #f4fbff;
-}
+/* Global UI Override */
 
 .max-w-7xl,
 .max-w-6xl,
@@ -274,9 +254,8 @@ body {
   font-size: 2rem !important;
 }
 
-img {
-  object-fit: cover;
-}
+/* Animations */
+
 @keyframes float {
   0% {
     transform: translateY(0px);
@@ -293,4 +272,67 @@ img {
 
 .animate-float {
   animation: float 4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 768px) {
+  .app-container,
+  .app-container-wide {
+    padding: 20px 16px;
+  }
+
+  .ui-title {
+    font-size: 34px;
+  }
+
+  .ui-heading {
+    font-size: 26px;
+  }
+
+  .ui-subtitle {
+    font-size: 15px;
+  }
+
+  .sticky {
+    position: relative !important;
+  }
+
+  .shadow-xl,
+  .shadow-2xl,
+  .blur-3xl,
+  .backdrop-blur,
+  .backdrop-blur-xl {
+    filter: none !important;
+    backdrop-filter: none !important;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08) !important;
+  }
+
+  .hover\:-translate-y-1:hover,
+  .hover\:-translate-y-2:hover,
+  .hover\:scale-105:hover {
+    transform: none !important;
+  }
+
+  .animate-float {
+    animation: none !important;
+  }
+}
+
+.ActionButton {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 1rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
 }

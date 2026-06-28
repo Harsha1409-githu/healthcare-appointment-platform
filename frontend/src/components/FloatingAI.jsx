@@ -27,7 +27,7 @@ export default function FloatingAI() {
 
       <div className="hidden md:block text-left">
         <p className="font-black text-sm">
-          Ask MediCare AI
+          Ask TryDoc AI
         </p>
       </div>
     </button>

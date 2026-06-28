@@ -4,7 +4,9 @@ import {
   Column,
   ManyToOne,
 } from 'typeorm';
+
 import { Doctor } from '../doctor/doctor.entity';
+import { SlotType } from '../slot/slot.entity';
 
 @Entity()
 export class DoctorAvailability {
@@ -23,7 +25,13 @@ export class DoctorAvailability {
   @Column()
   endTime: string;
 
-  // ✅ ADD THIS (IMPORTANT)
   @Column({ default: 15 })
   slotDuration: number;
+
+  @Column({
+    type: 'enum',
+    enum: SlotType,
+    default: SlotType.BOTH,
+  })
+  slotType: SlotType;
 }

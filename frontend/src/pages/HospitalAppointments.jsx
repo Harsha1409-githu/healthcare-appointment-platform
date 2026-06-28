@@ -9,14 +9,14 @@ import {
   UserRound,
   FileText,
   Save,
-  Filter,
   Loader2,
   RefreshCw,
   Video,
   Phone,
   Mail,
-  ShieldCheck,
+  X,
 } from "lucide-react";
+import PageHeader from "../components/PageHeader";
 import api from "../api/axios";
 
 export default function HospitalAppointments() {
@@ -26,10 +26,9 @@ export default function HospitalAppointments() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
-  const [doctorFilter, setDoctorFilter] = useState("ALL");
   const [dateFilter, setDateFilter] = useState("");
 
-  const [showPrescription, setShowPrescription] = useState(null);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
 
   const [prescriptionForm, setPrescriptionForm] = useState({
     diagnosis: "",
@@ -62,13 +61,15 @@ export default function HospitalAppointments() {
     }
   };
 
-  const doctors = useMemo(() => {
-    const names = appointments
-      .map((appointment) => appointment.doctor?.doctorName)
-      .filter(Boolean);
-
-    return ["ALL", ...new Set(names)];
-  }, [appointments]);
+  const stats = useMemo(
+    () => ({
+      total: appointments.length,
+      booked: appointments.filter((a) => a.status === "BOOKED").length,
+      completed: appointments.filter((a) => a.status === "COMPLETED").length,
+      cancelled: appointments.filter((a) => a.status === "CANCELLED").length,
+    }),
+    [appointments]
+  );
 
   const filteredAppointments = useMemo(() => {
     return appointments.filter((appointment) => {
@@ -86,51 +87,37 @@ export default function HospitalAppointments() {
       const matchesStatus =
         statusFilter === "ALL" || appointment.status === statusFilter;
 
-      const matchesDoctor =
-        doctorFilter === "ALL" ||
-        appointment.doctor?.doctorName === doctorFilter;
-
       const matchesDate = !dateFilter || appointment.slot?.date === dateFilter;
 
-      return matchesSearch && matchesStatus && matchesDoctor && matchesDate;
+      return matchesSearch && matchesStatus && matchesDate;
     });
-  }, [appointments, search, statusFilter, doctorFilter, dateFilter]);
-
-  const booked = appointments.filter((appointment) => appointment.status === "BOOKED").length;
-  const completed = appointments.filter((appointment) => appointment.status === "COMPLETED").length;
-  const cancelled = appointments.filter((appointment) => appointment.status === "CANCELLED").length;
+  }, [appointments, search, statusFilter, dateFilter]);
 
   const markCompleted = async (id) => {
-    const confirmComplete = window.confirm(
-      "Mark this appointment as completed?"
-    );
-
-    if (!confirmComplete) return;
+    if (!window.confirm("Mark this appointment as completed?")) return;
 
     try {
       setActionLoading(true);
 
-      await api.patch(`/appointment/${id}/complete`, {}, {
-        headers: getHospitalHeaders(),
-      });
+      await api.patch(
+        `/appointment/${id}/complete`,
+        {},
+        {
+          headers: getHospitalHeaders(),
+        }
+      );
 
       fetchAppointments();
     } catch (error) {
       console.error("Complete appointment error:", error);
-
-      alert(
-        error.response?.data?.message ||
-          "Failed to complete appointment"
-      );
+      alert(error.response?.data?.message || "Failed to complete appointment");
     } finally {
       setActionLoading(false);
     }
   };
 
   const cancelAppointment = async (id) => {
-    const confirmCancel = window.confirm("Cancel this appointment?");
-
-    if (!confirmCancel) return;
+    if (!window.confirm("Cancel this appointment?")) return;
 
     try {
       setActionLoading(true);
@@ -146,17 +133,24 @@ export default function HospitalAppointments() {
       fetchAppointments();
     } catch (error) {
       console.error("Cancel appointment error:", error);
-
-      alert(
-        error.response?.data?.message ||
-          "Failed to cancel appointment"
-      );
+      alert(error.response?.data?.message || "Failed to cancel appointment");
     } finally {
       setActionLoading(false);
     }
   };
 
-  const savePrescription = async (appointmentId) => {
+  const openPrescriptionSheet = (appointment) => {
+    setSelectedAppointment(appointment);
+    setPrescriptionForm({
+      diagnosis: "",
+      medicines: "",
+      notes: "",
+    });
+  };
+
+  const savePrescription = async () => {
+    if (!selectedAppointment?.id) return;
+
     if (!prescriptionForm.diagnosis || !prescriptionForm.medicines) {
       alert("Diagnosis and medicines are required");
       return;
@@ -166,7 +160,7 @@ export default function HospitalAppointments() {
       setActionLoading(true);
 
       await api.post("/prescription", {
-        appointmentId,
+        appointmentId: selectedAppointment.id,
         diagnosis: prescriptionForm.diagnosis,
         medicines: prescriptionForm.medicines,
         notes: prescriptionForm.notes,
@@ -174,8 +168,7 @@ export default function HospitalAppointments() {
 
       alert("Prescription saved successfully");
 
-      setShowPrescription(null);
-
+      setSelectedAppointment(null);
       setPrescriptionForm({
         diagnosis: "",
         medicines: "",
@@ -183,11 +176,7 @@ export default function HospitalAppointments() {
       });
     } catch (error) {
       console.error("Prescription error:", error);
-
-      alert(
-        error.response?.data?.message ||
-          "Failed to save prescription"
-      );
+      alert(error.response?.data?.message || "Failed to save prescription");
     } finally {
       setActionLoading(false);
     }
@@ -196,462 +185,446 @@ export default function HospitalAppointments() {
   const clearFilters = () => {
     setSearch("");
     setStatusFilter("ALL");
-    setDoctorFilter("ALL");
     setDateFilter("");
   };
 
-  const statusClass = (status) => {
-    if (status === "BOOKED") {
-      return "bg-emerald-50 text-emerald-700 border-emerald-100";
-    }
-
-    if (status === "CANCELLED") {
-      return "bg-red-50 text-red-700 border-red-100";
-    }
-
-    return "bg-cyan-50 text-cyan-700 border-cyan-100";
-  };
-
   return (
-    <div className="min-h-screen bg-[#f4fbff]">
-      <div className="max-w-[1450px] mx-auto px-6 py-8">
-        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
-                <CalendarCheck size={17} />
-                Hospital Appointment Center
-              </div>
+    <main className="min-h-screen bg-[#f4f8fb] pb-28">
+      <PageHeader
+        title="Appointments"
+        subtitle={`${filteredAppointments.length} hospital bookings`}
+      />
 
-              <h1 className="text-4xl md:text-5xl font-black text-slate-950">
-                Hospital Appointments
+      <div className="max-w-md mx-auto px-4">
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-cyan-700 font-black">
+                HOSPITAL CENTER
+              </p>
+
+              <h1 className="text-xl font-black text-slate-950">
+                Appointment Manager
               </h1>
 
-              <p className="text-slate-500 mt-3 max-w-2xl text-lg leading-relaxed">
-                Monitor bookings, manage appointment status and create
-                prescriptions after consultations.
+              <p className="text-sm text-slate-500">
+                Manage bookings and prescriptions
               </p>
             </div>
 
             <button
+              type="button"
               onClick={fetchAppointments}
-              className="inline-flex items-center justify-center gap-2 bg-cyan-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-cyan-700 transition"
+              className="w-11 h-11 rounded-2xl bg-cyan-50 flex items-center justify-center text-cyan-600 active:scale-95"
             >
-              <RefreshCw size={18} />
-              Refresh
-            </button>
-          </div>
-        </section>
-
-        <section className="grid md:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            icon={CalendarCheck}
-            title="Total"
-            value={appointments.length}
-            gradient="from-cyan-600 to-blue-500"
-          />
-
-          <StatCard
-            icon={Clock}
-            title="Booked"
-            value={booked}
-            gradient="from-emerald-600 to-teal-500"
-          />
-
-          <StatCard
-            icon={CheckCircle2}
-            title="Completed"
-            value={completed}
-            gradient="from-purple-600 to-fuchsia-500"
-          />
-
-          <StatCard
-            icon={XCircle}
-            title="Cancelled"
-            value={cancelled}
-            gradient="from-red-600 to-rose-500"
-          />
-        </section>
-
-        <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 mb-8">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5 mb-5">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-cyan-50 flex items-center justify-center">
-                <Filter className="text-cyan-600" size={22} />
-              </div>
-
-              <div>
-                <h2 className="text-xl font-black text-slate-950">
-                  Search & Filters
-                </h2>
-
-                <p className="text-sm text-slate-500">
-                  Filter appointments by patient, doctor, status or date.
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={clearFilters}
-              className="px-5 py-3 rounded-2xl bg-slate-100 text-slate-700 font-black hover:bg-slate-200 transition"
-            >
-              Clear Filters
+              <RefreshCw size={20} />
             </button>
           </div>
 
-          <div className="grid md:grid-cols-4 gap-4">
-            <InputBox icon={Search}>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search patient, phone, doctor..."
-                className="w-full bg-transparent outline-none"
-              />
-            </InputBox>
+          <div className="grid grid-cols-4 gap-2 mt-4">
+            <MiniStat icon={CalendarCheck} label="Total" value={stats.total} />
+            <MiniStat icon={Clock} label="Booked" value={stats.booked} />
+            <MiniStat
+              icon={CheckCircle2}
+              label="Done"
+              value={stats.completed}
+            />
+            <MiniStat icon={XCircle} label="Cancel" value={stats.cancelled} />
+          </div>
+        </section>
 
-            <InputBox icon={Stethoscope}>
-              <select
-                value={doctorFilter}
-                onChange={(e) => setDoctorFilter(e.target.value)}
-                className="w-full bg-transparent outline-none"
+        <section className="sticky top-[72px] z-20 bg-[#f4f8fb]/95 backdrop-blur-md pt-3 pb-3">
+          <div className="flex items-center gap-3 bg-white border border-slate-100 rounded-2xl px-3 py-3 shadow-sm">
+            <Search className="text-cyan-600 shrink-0" size={18} />
+
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search patient, phone, doctor"
+              className="w-full bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400"
+            />
+
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="text-slate-400"
               >
-                {doctors.map((doctor) => (
-                  <option key={doctor} value={doctor}>
-                    {doctor === "ALL" ? "All Doctors" : doctor}
-                  </option>
-                ))}
-              </select>
-            </InputBox>
+                <X size={16} />
+              </button>
+            )}
+          </div>
 
-            <InputBox icon={CheckCircle2}>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full bg-transparent outline-none"
+          <div className="grid grid-cols-4 gap-2 mt-3">
+            {["ALL", "BOOKED", "COMPLETED", "CANCELLED"].map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setStatusFilter(status)}
+                className={`py-2.5 rounded-2xl text-[10px] font-black transition ${
+                  statusFilter === status
+                    ? "bg-cyan-600 text-white"
+                    : "bg-white text-slate-600 border border-slate-100"
+                }`}
               >
-                <option value="ALL">All Status</option>
-                <option value="BOOKED">Booked</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
-            </InputBox>
+                {status === "ALL"
+                  ? "All"
+                  : status === "BOOKED"
+                  ? "Booked"
+                  : status === "COMPLETED"
+                  ? "Done"
+                  : "Cancel"}
+              </button>
+            ))}
+          </div>
 
-            <InputBox icon={CalendarCheck}>
+          <div className="grid grid-cols-[1fr_auto] gap-2 mt-3">
+            <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-2xl px-3 py-3 shadow-sm">
+              <CalendarCheck size={17} className="text-cyan-600" />
+
               <input
                 type="date"
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="w-full bg-transparent outline-none"
+                className="w-full bg-transparent outline-none text-sm text-slate-800"
               />
-            </InputBox>
+            </div>
+
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="px-4 rounded-2xl bg-slate-950 text-white text-xs font-black"
+            >
+              Clear
+            </button>
           </div>
         </section>
 
         {loading ? (
-          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-10 text-center text-slate-500">
-            <Loader2 className="mx-auto animate-spin text-cyan-600 mb-3" />
-            Loading appointments...
-          </div>
+          <LoadingState />
         ) : filteredAppointments.length === 0 ? (
-          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-12 text-center">
-            <div className="w-20 h-20 rounded-3xl bg-cyan-50 flex items-center justify-center mx-auto mb-5">
-              <CalendarCheck className="text-cyan-600" size={36} />
-            </div>
-
-            <h3 className="text-2xl font-black text-slate-950">
-              No appointments found
-            </h3>
-
-            <p className="text-slate-500 mt-2">
-              Appointments will appear here after patients book with your
-              hospital doctors.
-            </p>
-          </div>
+          <EmptyState />
         ) : (
-          <div className="grid gap-5">
+          <section className="space-y-3">
             {filteredAppointments.map((appointment) => (
               <AppointmentCard
                 key={appointment.id}
                 appointment={appointment}
-                statusClass={statusClass}
                 actionLoading={actionLoading}
                 markCompleted={markCompleted}
                 cancelAppointment={cancelAppointment}
-                showPrescription={showPrescription}
-                setShowPrescription={setShowPrescription}
-                prescriptionForm={prescriptionForm}
-                setPrescriptionForm={setPrescriptionForm}
-                savePrescription={savePrescription}
+                openPrescriptionSheet={openPrescriptionSheet}
               />
             ))}
-          </div>
+          </section>
         )}
       </div>
-    </div>
+
+      {selectedAppointment && (
+        <PrescriptionSheet
+          appointment={selectedAppointment}
+          form={prescriptionForm}
+          setForm={setPrescriptionForm}
+          actionLoading={actionLoading}
+          onSave={savePrescription}
+          onClose={() => setSelectedAppointment(null)}
+        />
+      )}
+    </main>
   );
 }
 
 function AppointmentCard({
   appointment,
-  statusClass,
   actionLoading,
   markCompleted,
   cancelAppointment,
-  showPrescription,
-  setShowPrescription,
-  prescriptionForm,
-  setPrescriptionForm,
-  savePrescription,
+  openPrescriptionSheet,
 }) {
+  const patientName =
+    appointment.patient?.fullName || appointment.patientName || "Patient";
+
+  const patientPhone =
+    appointment.patientPhone || appointment.patient?.mobile || "Phone";
+
+  const doctorName = appointment.doctor?.doctorName || "Doctor";
+  const specialization = appointment.doctor?.specialization || "Specialist";
+
+  const date = appointment.slot?.date || appointment.date || "Date";
+  const time = `${formatTime(appointment.slot?.startTime) || ""} - ${
+    formatTime(appointment.slot?.endTime) || ""
+  }`;
+
+  const status = appointment.status || "BOOKED";
+
+  const statusStyle =
+    status === "BOOKED"
+      ? "bg-emerald-50 text-emerald-700"
+      : status === "COMPLETED"
+      ? "bg-cyan-50 text-cyan-700"
+      : "bg-red-50 text-red-700";
+
   return (
-    <div className="group relative">
-      <div className="absolute -inset-0.5 rounded-[2rem] bg-gradient-to-r from-cyan-500 via-blue-500 to-emerald-400 opacity-0 group-hover:opacity-30 blur transition duration-500" />
+    <article className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 active:scale-[0.99] transition">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="w-12 h-12 rounded-2xl bg-cyan-50 border border-cyan-100 flex items-center justify-center shrink-0">
+            <UserRound className="text-cyan-600" size={24} />
+          </div>
 
-      <div className="relative bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
-            <div className="grid md:grid-cols-3 gap-6 flex-1">
-              <InfoBlock
-                icon={UserRound}
-                title="Patient"
-                main={
-                  appointment.patient?.fullName ||
-                  appointment.patientName ||
-                  "Patient"
-                }
-                sub={appointment.patientPhone}
-                extra={appointment.patient?.email}
-              />
+          <div className="min-w-0">
+            <h2 className="text-lg font-black text-slate-950 truncate">
+              {patientName}
+            </h2>
 
-              <InfoBlock
-                icon={Stethoscope}
-                title="Doctor"
-                main={appointment.doctor?.doctorName}
-                sub={appointment.doctor?.specialization}
-                extra={appointment.doctor?.hospital?.hospitalName}
-              />
+            <p className="text-xs text-slate-500 font-bold flex items-center gap-1.5 mt-1">
+              <Phone size={13} className="text-cyan-600" />
+              {patientPhone}
+            </p>
 
-              <InfoBlock
-                icon={Clock}
-                title="Schedule"
-                main={appointment.slot?.date || appointment.date}
-                sub={`${appointment.slot?.startTime || ""} - ${
-                  appointment.slot?.endTime || ""
-                }`}
-                extra={`Appointment #${String(appointment.id).slice(0, 8)}`}
-              />
-            </div>
-
-            <div className="flex flex-col items-start xl:items-end gap-3 shrink-0">
-              <span
-                className={`px-4 py-2 rounded-full text-sm font-black border ${statusClass(
-                  appointment.status
-                )}`}
-              >
-                {appointment.status}
-              </span>
-
-              {appointment.status === "BOOKED" && (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    disabled={actionLoading}
-                    onClick={() => markCompleted(appointment.id)}
-                    className="bg-cyan-600 text-white px-4 py-2 rounded-xl font-black hover:bg-cyan-700 disabled:bg-slate-400"
-                  >
-                    Complete
-                  </button>
-
-                  <button
-                    disabled={actionLoading}
-                    onClick={() => cancelAppointment(appointment.id)}
-                    className="bg-red-600 text-white px-4 py-2 rounded-xl font-black hover:bg-red-700 disabled:bg-slate-400"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-
-              {appointment.status === "COMPLETED" && (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() =>
-                      setShowPrescription(
-                        showPrescription === appointment.id
-                          ? null
-                          : appointment.id
-                      )
-                    }
-                    className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-black hover:bg-emerald-700"
-                  >
-                    Add Prescription
-                  </button>
-
-                  <a
-                    href={`/video-call/${appointment.id}`}
-                    className="inline-flex items-center gap-2 bg-slate-950 text-white px-4 py-2 rounded-xl font-black"
-                  >
-                    <Video size={16} />
-                    Video
-                  </a>
-                </div>
-              )}
-
-              {appointment.status === "CANCELLED" && (
-                <span className="text-slate-400 text-sm font-semibold">
-                  No action available
-                </span>
-              )}
-            </div>
+            {appointment.patient?.email && (
+              <p className="text-xs text-slate-400 font-bold flex items-center gap-1.5 mt-1 truncate">
+                <Mail size={13} className="text-cyan-600" />
+                {appointment.patient.email}
+              </p>
+            )}
           </div>
         </div>
 
-        {showPrescription === appointment.id && (
-          <div className="border-t border-slate-100 bg-slate-50 p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-11 h-11 rounded-2xl bg-emerald-50 flex items-center justify-center">
-                <FileText className="text-emerald-600" size={22} />
-              </div>
-
-              <div>
-                <h3 className="text-xl font-black text-slate-950">
-                  Add Prescription
-                </h3>
-
-                <p className="text-sm text-slate-500">
-                  Create prescription for{" "}
-                  {appointment.patient?.fullName ||
-                    appointment.patientName ||
-                    "Patient"}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-4">
-              <input
-                type="text"
-                placeholder="Diagnosis"
-                value={prescriptionForm.diagnosis}
-                onChange={(e) =>
-                  setPrescriptionForm({
-                    ...prescriptionForm,
-                    diagnosis: e.target.value,
-                  })
-                }
-                className="w-full border border-slate-200 bg-white p-4 rounded-2xl outline-none focus:ring-2 focus:ring-cyan-500"
-              />
-
-              <textarea
-                placeholder="Medicines"
-                rows="4"
-                value={prescriptionForm.medicines}
-                onChange={(e) =>
-                  setPrescriptionForm({
-                    ...prescriptionForm,
-                    medicines: e.target.value,
-                  })
-                }
-                className="w-full border border-slate-200 bg-white p-4 rounded-2xl outline-none focus:ring-2 focus:ring-cyan-500"
-              />
-
-              <textarea
-                placeholder="Notes"
-                rows="3"
-                value={prescriptionForm.notes}
-                onChange={(e) =>
-                  setPrescriptionForm({
-                    ...prescriptionForm,
-                    notes: e.target.value,
-                  })
-                }
-                className="w-full border border-slate-200 bg-white p-4 rounded-2xl outline-none focus:ring-2 focus:ring-cyan-500"
-              />
-
-              <div className="flex flex-wrap gap-3">
-                <button
-                  disabled={actionLoading}
-                  onClick={() => savePrescription(appointment.id)}
-                  className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-emerald-700 disabled:bg-slate-400"
-                >
-                  <Save size={18} />
-                  Save Prescription
-                </button>
-
-                <button
-                  onClick={() => setShowPrescription(null)}
-                  className="border border-slate-300 px-5 py-3 rounded-2xl font-black hover:bg-white"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ icon: Icon, title, value, gradient }) {
-  return (
-    <div className="group relative">
-      <div
-        className={`absolute -inset-0.5 rounded-[2rem] bg-gradient-to-r ${gradient} opacity-0 group-hover:opacity-40 blur transition duration-500`}
-      />
-
-      <div className="relative bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 group-hover:-translate-y-1 group-hover:shadow-xl transition duration-500">
-        <div
-          className={`w-14 h-14 rounded-2xl bg-gradient-to-r ${gradient} flex items-center justify-center shadow-sm mb-5`}
+        <span
+          className={`px-2.5 py-1 rounded-full text-[10px] font-black shrink-0 ${statusStyle}`}
         >
-          <Icon className="text-white" size={27} />
+          {status}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 mt-4">
+        <InfoPill icon={Stethoscope} title={doctorName} text={specialization} />
+        <InfoPill icon={Clock} title={date} text={time || "Time"} />
+        <InfoPill
+          icon={CalendarCheck}
+          title="Appointment ID"
+          text={`#${String(appointment.id).slice(0, 8)}`}
+        />
+      </div>
+
+      {status === "BOOKED" && (
+        <div className="grid grid-cols-2 gap-2 mt-4">
+          <button
+            type="button"
+            disabled={actionLoading}
+            onClick={() => markCompleted(appointment.id)}
+            className="bg-cyan-600 text-white py-3 rounded-2xl text-sm font-black disabled:bg-slate-400 active:scale-95"
+          >
+            Complete
+          </button>
+
+          <button
+            type="button"
+            disabled={actionLoading}
+            onClick={() => cancelAppointment(appointment.id)}
+            className="bg-red-600 text-white py-3 rounded-2xl text-sm font-black disabled:bg-slate-400 active:scale-95"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {status === "COMPLETED" && (
+        <div className="grid grid-cols-2 gap-2 mt-4">
+          <button
+            type="button"
+            onClick={() => openPrescriptionSheet(appointment)}
+            className="bg-emerald-600 text-white py-3 rounded-2xl text-sm font-black active:scale-95 flex items-center justify-center gap-1.5"
+          >
+            <FileText size={16} />
+            Prescription
+          </button>
+
+          <a
+            href={`/video-call/${appointment.id}`}
+            className="bg-slate-950 text-white py-3 rounded-2xl text-sm font-black active:scale-95 flex items-center justify-center gap-1.5"
+          >
+            <Video size={16} />
+            Video
+          </a>
+        </div>
+      )}
+
+      {status === "CANCELLED" && (
+        <p className="mt-4 text-center bg-slate-50 rounded-2xl py-3 text-sm text-slate-500 font-bold">
+          No action available
+        </p>
+      )}
+    </article>
+  );
+}
+
+function PrescriptionSheet({
+  appointment,
+  form,
+  setForm,
+  actionLoading,
+  onSave,
+  onClose,
+}) {
+  const patientName =
+    appointment.patient?.fullName || appointment.patientName || "Patient";
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-end">
+      <div className="bg-white w-full max-w-md mx-auto rounded-t-[2rem] max-h-[88vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-slate-100 p-4 rounded-t-[2rem] z-10">
+          <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4" />
+
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-black text-slate-950">
+                Add Prescription
+              </h2>
+
+              <p className="text-sm text-slate-500">
+                For {patientName}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
-        <p className="text-slate-500 text-sm">{title}</p>
+        <div className="p-4 space-y-3 pb-8">
+          <input
+            type="text"
+            placeholder="Diagnosis"
+            value={form.diagnosis}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                diagnosis: e.target.value,
+              })
+            }
+            className="w-full border border-slate-200 bg-slate-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-cyan-500 text-sm"
+          />
 
-        <h2 className="text-4xl font-black text-slate-950 mt-1">
-          {value}
-        </h2>
+          <textarea
+            placeholder="Medicines"
+            rows="5"
+            value={form.medicines}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                medicines: e.target.value,
+              })
+            }
+            className="w-full border border-slate-200 bg-slate-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-cyan-500 text-sm resize-none"
+          />
+
+          <textarea
+            placeholder="Notes"
+            rows="3"
+            value={form.notes}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                notes: e.target.value,
+              })
+            }
+            className="w-full border border-slate-200 bg-slate-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-cyan-500 text-sm resize-none"
+          />
+
+          <button
+            type="button"
+            disabled={actionLoading}
+            onClick={onSave}
+            className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white py-4 rounded-2xl font-black disabled:bg-slate-400 active:scale-95"
+          >
+            {actionLoading ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save size={18} />
+                Save Prescription
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-function InputBox({ icon: Icon, children }) {
+function InfoPill({ icon: Icon, title, text }) {
   return (
-    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-cyan-500 transition">
-      <Icon size={19} className="text-cyan-600 shrink-0" />
-      {children}
-    </div>
-  );
-}
-
-function InfoBlock({ icon: Icon, title, main, sub, extra }) {
-  return (
-    <div className="flex gap-3">
-      <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center shrink-0">
-        <Icon className="text-cyan-600" size={23} />
-      </div>
+    <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl px-3 py-3 min-w-0">
+      <Icon size={18} className="text-cyan-600 shrink-0" />
 
       <div className="min-w-0">
-        <p className="text-xs font-black text-slate-400 uppercase">
-          {title}
+        <p className="text-sm font-black text-slate-950 truncate">
+          {title || "-"}
         </p>
 
-        <p className="font-black text-slate-950 truncate">
-          {main || "-"}
+        <p className="text-xs text-slate-500 truncate">
+          {text || "-"}
         </p>
-
-        {sub && (
-          <p className="text-sm text-slate-500 truncate">
-            {sub}
-          </p>
-        )}
-
-        {extra && (
-          <p className="text-xs text-slate-400 mt-1 truncate">
-            {extra}
-          </p>
-        )}
       </div>
+    </div>
+  );
+}
+
+function MiniStat({ icon: Icon, label, value }) {
+  return (
+    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-2.5 text-center">
+      <Icon className="text-cyan-600 mx-auto" size={17} />
+
+      <p className="text-sm font-black text-slate-950 mt-1">
+        {value}
+      </p>
+
+      <p className="text-[9px] text-slate-500 font-bold">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 text-center">
+      <Loader2 className="mx-auto animate-spin text-cyan-600 mb-3" size={34} />
+
+      <h3 className="text-lg font-black text-slate-950">
+        Loading appointments
+      </h3>
+
+      <p className="text-sm text-slate-500 mt-1">
+        Please wait while we fetch hospital bookings.
+      </p>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 text-center">
+      <CalendarCheck className="text-cyan-600 mx-auto mb-3" size={36} />
+
+      <h3 className="text-lg font-black text-slate-950">
+        No appointments found
+      </h3>
+
+      <p className="text-sm text-slate-500 mt-1">
+        Appointments will appear here after patients book with your hospital
+        doctors.
+      </p>
     </div>
   );
 }

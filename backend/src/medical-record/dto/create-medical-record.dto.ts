@@ -5,4 +5,5 @@ export class CreateMedicalRecordDto {
   recordType: RecordType;
   fileUrl: string;
   fileName?: string;
+  familyMemberId?: string;
 }

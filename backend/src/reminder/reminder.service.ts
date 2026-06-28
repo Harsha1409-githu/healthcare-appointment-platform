@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { AppointmentService } from '../appointment/appointment.service';
 import { NotificationService } from '../notification/notification.service';
+import { formatTime } from '../utils/time';
 
 @Injectable()
 export class ReminderService {
@@ -18,7 +19,7 @@ export class ReminderService {
     const now = new Date();
 
     for (const appointment of appointments) {
-      if (!appointment.slot?.date || !appointment.slot?.startTime) {
+      if (!appointment.slot?.date || !formatTime(appointment.slot?.startTime)) {
         continue;
       }
 

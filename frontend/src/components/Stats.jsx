@@ -26,7 +26,7 @@ export default function Stats() {
     {
       title: "Partner Hospitals",
       value: "20+",
-      desc: "Trusted hospitals and clinics connected through the MediCare network.",
+      desc: "Trusted hospitals and clinics connected through the TryDoc network.",
       icon: Building2,
       gradient: "from-emerald-600 to-teal-500",
       bg: "bg-emerald-50",
@@ -74,7 +74,7 @@ export default function Stats() {
           </div>
 
           <p className="text-slate-500 text-lg leading-relaxed">
-            MediCare connects patients, doctors, hospitals, prescriptions,
+            TryDoc connects patients, doctors, hospitals, prescriptions,
             lab tests and digital health records into one seamless healthcare
             experience.
           </p>
@@ -192,7 +192,7 @@ export default function Stats() {
             </div>
 
             <button className="mt-7 w-full inline-flex items-center justify-center gap-2 bg-cyan-600 text-white px-6 py-4 rounded-2xl font-black hover:bg-cyan-700 transition">
-              Explore MediCare
+              Explore TryDoc
               <ArrowRight size={18} />
             </button>
           </div>

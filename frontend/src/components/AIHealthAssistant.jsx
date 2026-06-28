@@ -128,7 +128,7 @@ export default function AIHealthAssistant() {
             </h2>
 
             <p className="text-slate-500 text-lg mt-5 max-w-2xl leading-relaxed">
-              Describe your symptoms and MediCare helps you understand the
+              Describe your symptoms and TryDoc helps you understand the
               possible concern, urgency level and the right specialist to visit.
             </p>
 
@@ -239,7 +239,7 @@ export default function AIHealthAssistant() {
                       </p>
 
                       <p className="text-sm text-slate-500 mt-2">
-                        MediCare will suggest a specialist and next step.
+                        TryDoc will suggest a specialist and next step.
                       </p>
                     </div>
                   </div>

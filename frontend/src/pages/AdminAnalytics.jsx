@@ -150,7 +150,7 @@ export default function AdminAnalytics() {
 
               <p className="text-slate-500 mt-3 max-w-2xl text-lg leading-relaxed">
                 Track appointments, revenue, hospital performance and
-                specialization demand across the MediCare platform.
+                specialization demand across the TryDoc platform.
               </p>
             </div>
 

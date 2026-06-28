@@ -1,50 +1,65 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  CalendarCheck,
-  CheckCircle2,
-  Clock,
-  IndianRupee,
-  Star,
-  TrendingUp,
-  LogOut,
-  UserRound,
-  Phone,
-  FileText,
-  Save,
-  XCircle,
-  Activity,
-  Video,
-  ClipboardList,
-  Stethoscope,
-  ShieldCheck,
-  Search,
-  Filter,
-  MessageSquare,
-  ArrowRight,
-  X,
-} from "lucide-react";
+import { Clock, FileText, Loader2, Plus, Star } from "lucide-react";
+import toast from "react-hot-toast";
+
 import api from "../api/axios";
+import DashboardSkeleton from "../components/DashboardSkeleton";
+import usePullToRefresh from "../hooks/usePullToRefresh";
+
+import ReviewCheckInSheet from "../doctor/waiting/ReviewCheckInSheet";
+import DoctorTopBar from "../doctor/dashboard/DoctorTopBar";
+import DoctorKPIs from "../doctor/dashboard/DoctorKPIs";
+import SectionHeader from "../doctor/dashboard/SectionHeader";
+import NextPatientCard from "../doctor/dashboard/NextPatientCard";
+import QueueGroup from "../doctor/queue/QueueGroup";
+import CheckInSheet from "../doctor/checkin/CheckInSheet";
+
+import BottomSheet from "../doctor/common/BottomSheet";
+import InputField from "../doctor/common/InputField";
+import TextAreaField from "../doctor/common/TextAreaField";
+
+import { buildQueues } from "../doctor/utils/buildQueues";
+
+const todayIso = () => new Date().toISOString().split("T")[0];
+
+const getPatientName = (appointment) =>
+  appointment?.familyMember?.fullName ||
+  appointment?.patient?.fullName ||
+  appointment?.patientName ||
+  "Patient";
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
 
-  const doctor = JSON.parse(localStorage.getItem("doctorUser") || "null");
+  const [doctor, setDoctor] = useState(
+    JSON.parse(localStorage.getItem("doctorUser") || "null")
+  );
 
   const [appointments, setAppointments] = useState([]);
+  const [followUps, setFollowUps] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
   const [reviewSummary, setReviewSummary] = useState({
     totalReviews: 0,
     averageRating: 0,
   });
 
-  const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("ALL");
-  const [search, setSearch] = useState("");
+  const [checkInModal, setCheckInModal] = useState(null);
+  const [checkInData, setCheckInData] = useState(null);
+  const [reviewAppointment, setReviewAppointment] = useState(null);
 
-  const [form, setForm] = useState({
-    diagnosis: "",
-    medicines: "",
+  const [followUpAppointment, setFollowUpAppointment] = useState(null);
+  const [followUpSaving, setFollowUpSaving] = useState(false);
+  const [followUpForm, setFollowUpForm] = useState({
+    followUpDate: "",
     notes: "",
+  });
+
+  const { pullDistance, refreshing, visible } = usePullToRefresh(async () => {
+    await fetchDashboardData();
+    await fetchNotificationCount();
   });
 
   useEffect(() => {
@@ -54,786 +69,601 @@ export default function DoctorDashboard() {
     }
 
     fetchDashboardData();
+    fetchNotificationCount();
   }, []);
 
-  const logout = () => {
-    localStorage.removeItem("doctorToken");
-    localStorage.removeItem("doctorUser");
-    navigate("/doctor/login");
-  };
+  useEffect(() => {
+    const refreshDoctor = () => {
+      setDoctor(JSON.parse(localStorage.getItem("doctorUser") || "null"));
+    };
+
+    window.addEventListener("doctorProfileUpdated", refreshDoctor);
+    window.addEventListener("storage", refreshDoctor);
+
+    return () => {
+      window.removeEventListener("doctorProfileUpdated", refreshDoctor);
+      window.removeEventListener("storage", refreshDoctor);
+    };
+  }, []);
 
   const fetchDashboardData = async () => {
     try {
-      const [appointmentRes, reviewRes] = await Promise.all([
+      setLoading(true);
+
+      const [appointmentRes, reviewRes, followUpRes] = await Promise.all([
         api.get(`/appointment/doctor/${doctor.id}`),
         api.get(`/review/doctor/${doctor.id}/summary`),
+        api.get(`/follow-up/doctor/${doctor.id}`),
       ]);
 
       setAppointments(appointmentRes.data || []);
-      setReviewSummary(
-        reviewRes.data || {
-          totalReviews: 0,
-          averageRating: 0,
-        }
-      );
+      setFollowUps(followUpRes.data || []);
+      setReviewSummary(reviewRes.data || { totalReviews: 0, averageRating: 0 });
     } catch (error) {
       console.error("Doctor dashboard error:", error);
+      toast.error("Unable to load dashboard");
+      setAppointments([]);
+      setFollowUps([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const completeAppointment = async (id) => {
+  const fetchNotificationCount = async () => {
     try {
-      await api.patch(`/appointment/${id}/complete`);
-      fetchDashboardData();
+      const res = await api.get("/notifications/my");
+      setUnreadCount((res.data || []).filter((item) => !item.isRead).length);
     } catch (error) {
-      console.error("Complete error:", error);
-      alert(error.response?.data?.message || "Failed to complete appointment");
+      console.error(error);
     }
   };
 
-  const openPrescriptionModal = (appointment) => {
-    setSelectedAppointment(appointment);
-    setForm({
-      diagnosis: "",
-      medicines: "",
+  const openCheckIn = async (appointment) => {
+    try {
+      const res = await api.get(`/check-in/doctor/appointment/${appointment.id}`);
+      setCheckInData(res.data);
+      setCheckInModal(appointment);
+    } catch (error) {
+      console.error(error);
+      toast("Patient has not submitted Check-In yet");
+    }
+  };
+
+  const viewPrescription = async (appointment) => {
+    try {
+      const res = await api.get(`/prescription/appointment/${appointment.id}`);
+
+      if (!res.data?.id) {
+        toast.error("Prescription not found");
+        return;
+      }
+
+      window.open(
+        `${import.meta.env.VITE_API_URL}/prescription/${res.data.id}/pdf`,
+        "_blank"
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error("Unable to open prescription");
+    }
+  };
+
+  const addDays = (days) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split("T")[0];
+  };
+
+  const openFollowUpModal = (appointment, days = 7) => {
+    setFollowUpAppointment(appointment);
+    setFollowUpForm({
+      followUpDate: addDays(days),
       notes: "",
     });
   };
 
-  const closePrescriptionModal = () => {
-    setSelectedAppointment(null);
-    setForm({
-      diagnosis: "",
-      medicines: "",
+  const closeFollowUpModal = () => {
+    setFollowUpAppointment(null);
+    setFollowUpForm({
+      followUpDate: "",
       notes: "",
     });
   };
 
-  const savePrescription = async () => {
-    if (!selectedAppointment) return;
+  const saveFollowUp = async () => {
+    if (!followUpAppointment) return;
 
-    if (!form.diagnosis || !form.medicines) {
-      alert("Diagnosis and medicines are required");
+    const patientId =
+      followUpAppointment.patient?.id || followUpAppointment.patientId;
+
+    if (!patientId) {
+      toast.error("Patient not found");
+      return;
+    }
+
+    if (!followUpForm.followUpDate) {
+      toast.error("Please select follow-up date");
       return;
     }
 
     try {
-      await api.post("/prescription", {
-        appointmentId: selectedAppointment.id,
-        diagnosis: form.diagnosis,
-        medicines: form.medicines,
-        notes: form.notes,
+      setFollowUpSaving(true);
+
+      await api.post("/follow-up", {
+        appointmentId: followUpAppointment.id,
+        doctorId: doctor.id,
+        patientId,
+        followUpDate: followUpForm.followUpDate,
+        notes: followUpForm.notes,
       });
 
-      alert("Prescription created successfully");
-      closePrescriptionModal();
-      fetchDashboardData();
+      toast.success("Follow-up scheduled");
+      closeFollowUpModal();
+      await fetchDashboardData();
     } catch (error) {
-      console.error("Prescription error:", error);
-      alert(error.response?.data?.message || "Failed to create prescription");
+      toast.error(error.response?.data?.message || "Failed to schedule follow-up");
+    } finally {
+      setFollowUpSaving(false);
     }
   };
 
-  const completedCount = appointments.filter(
-    (a) => a.status === "COMPLETED"
-  ).length;
+  const today = todayIso();
 
-  const pendingCount = appointments.filter((a) => a.status === "BOOKED").length;
-
-  const cancelledCount = appointments.filter(
-    (a) => a.status === "CANCELLED"
-  ).length;
-
-  const revenue = appointments
-    .filter((a) => a.status === "COMPLETED")
-    .reduce(
-      (sum, a) =>
-        sum + (a.doctor?.consultationFee || doctor?.consultationFee || 0),
-      0
-    );
-
-  const today = new Date().toISOString().split("T")[0];
-
-  const todayAppointments = appointments.filter(
-    (a) => a.slot?.date === today
-  );
-
-  const completionRate = appointments.length
-    ? Math.round((completedCount / appointments.length) * 100)
-    : 0;
-
-  const performanceScore = Math.min(
-    100,
-    completionRate +
-      Math.round((Number(reviewSummary.averageRating || 0) / 5) * 20)
-  );
-
-  const monthlyStats = useMemo(() => {
-    const monthlyMap = {};
-
-    appointments.forEach((appointment) => {
-      const rawDate =
-        appointment.createdAt || appointment.slot?.date || appointment.date;
-
-      if (!rawDate) return;
-
-      const month = new Date(rawDate).toLocaleString("default", {
-        month: "short",
-      });
-
-      monthlyMap[month] = (monthlyMap[month] || 0) + 1;
+  const sortedAppointments = useMemo(() => {
+    return [...appointments].sort((a, b) => {
+      const aKey = `${a.slot?.date || ""} ${a.slot?.startTime || ""}`;
+      const bKey = `${b.slot?.date || ""} ${b.slot?.startTime || ""}`;
+      return aKey.localeCompare(bKey);
     });
-
-    const monthOrder = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-
-    return monthOrder
-      .map((month) => ({
-        month,
-        count: monthlyMap[month] || 0,
-      }))
-      .filter((item) => item.count > 0);
   }, [appointments]);
 
-  const maxMonthlyCount =
-    monthlyStats.length > 0
-      ? Math.max(...monthlyStats.map((m) => m.count))
-      : 0;
+  const todayAppointments = useMemo(() => {
+    return sortedAppointments.filter((item) => item.slot?.date === today);
+  }, [sortedAppointments, today]);
 
-  const filteredAppointments = appointments.filter((appointment) => {
-    const matchesStatus =
-      statusFilter === "ALL" || appointment.status === statusFilter;
+  const futureAppointments = useMemo(() => {
+    return sortedAppointments.filter((item) => item.slot?.date > today);
+  }, [sortedAppointments, today]);
 
-    const text = `${appointment.patient?.fullName || ""} ${
-      appointment.patientName || ""
-    } ${appointment.patientPhone || ""} ${appointment.status || ""}`
-      .toLowerCase()
-      .trim();
+  const queues = useMemo(() => {
+    return buildQueues({
+      todayAppointments,
+      futureAppointments,
+    });
+  }, [todayAppointments, futureAppointments]);
 
-    const matchesSearch = text.includes(search.toLowerCase().trim());
+  const nextAppointment =
+    queues.ready[0] ||
+    queues.waiting[0] ||
+    queues.consulting[0] ||
+    queues.documentation[0] ||
+    queues.upcomingToday[0] ||
+    null;
 
-    return matchesStatus && matchesSearch;
-  });
+  const completedToday = queues.completed.length;
 
-  const cards = [
-    {
-      title: "Revenue",
-      value: `₹${revenue}`,
-      desc: "Completed consultations",
-      icon: IndianRupee,
-      tone: "emerald",
-    },
-    {
-      title: "Appointments",
-      value: appointments.length,
-      desc: "Total bookings",
-      icon: CalendarCheck,
-      tone: "cyan",
-    },
-    {
-      title: "Today",
-      value: todayAppointments.length,
-      desc: "Appointments today",
-      icon: Clock,
-      tone: "amber",
-    },
-    {
-      title: "Completed",
-      value: completedCount,
-      desc: `${completionRate}% completion rate`,
-      icon: CheckCircle2,
-      tone: "emerald",
-    },
-    {
-      title: "Booked",
-      value: pendingCount,
-      desc: "Awaiting consultation",
-      icon: Activity,
-      tone: "purple",
-    },
-    {
-      title: "Cancelled",
-      value: cancelledCount,
-      desc: "Cancelled bookings",
-      icon: XCircle,
-      tone: "red",
-    },
-    {
-      title: "Rating",
-      value: reviewSummary.averageRating
-        ? `⭐ ${Number(reviewSummary.averageRating).toFixed(1)}`
-        : "0",
-      desc: `${reviewSummary.totalReviews || 0} reviews`,
-      icon: Star,
-      tone: "yellow",
-    },
-    {
-      title: "Performance",
-      value: `${performanceScore}%`,
-      desc: "Overall score",
-      icon: TrendingUp,
-      tone: "cyan",
-    },
-  ];
+  const waitingToday =
+    queues.ready.length +
+    queues.waiting.length +
+    queues.consulting.length +
+    queues.documentation.length;
+
+  const pendingFollowUps = useMemo(() => {
+    return followUps
+      .filter((item) => item.status === "PENDING")
+      .sort((a, b) =>
+        String(a.followUpDate || "").localeCompare(String(b.followUpDate || ""))
+      );
+  }, [followUps]);
+
+  const videoToday = todayAppointments.filter(
+    (item) => item.appointmentType === "VIDEO"
+  ).length;
+
+  const compactAlerts = [
+    unreadCount > 0
+      ? `${unreadCount} unread notification${unreadCount > 1 ? "s" : ""}`
+      : null,
+    pendingFollowUps.length > 0
+      ? `${pendingFollowUps.length} pending follow-up${
+          pendingFollowUps.length > 1 ? "s" : ""
+        }`
+      : null,
+    waitingToday > 0
+      ? `${waitingToday} patient${waitingToday > 1 ? "s" : ""} active today`
+      : null,
+  ].filter(Boolean);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#f6f8fb] pt-4 pb-28">
+        <div className="mx-auto max-w-5xl px-4">
+          <DashboardSkeleton />
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#f4fbff]">
-      <div className="max-w-[1450px] mx-auto px-6 py-8">
-        <section className="relative overflow-hidden bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
-          <div className="absolute -top-20 -right-20 w-80 h-80 bg-cyan-100 rounded-full blur-3xl" />
+    <main className="min-h-screen bg-[#f6f8fb] pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-8">
+      {visible && (
+        <div
+          className="fixed left-0 right-0 top-0 z-[100] flex justify-center transition-all duration-300"
+          style={{ transform: `translateY(${pullDistance}px)` }}
+        >
+          <div className="mt-2 flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-lg">
+            <div
+              className={`h-4 w-4 rounded-full border-2 border-cyan-600 border-t-transparent ${
+                refreshing ? "animate-spin" : ""
+              }`}
+            />
 
-          <div className="relative flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
-            <div className="flex flex-col md:flex-row md:items-center gap-5">
-              <div className="w-24 h-24 rounded-[2rem] bg-cyan-50 border border-cyan-100 overflow-hidden flex items-center justify-center shrink-0">
-                {doctor?.profileImage ? (
-                  <img
-                    src={doctor.profileImage}
-                    alt={doctor.doctorName}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <UserRound size={44} className="text-cyan-600" />
-                )}
-              </div>
+            <span className="text-xs font-black text-cyan-700">
+              {refreshing
+                ? "Refreshing..."
+                : pullDistance > 70
+                ? "Release to refresh"
+                : "Pull to refresh"}
+            </span>
+          </div>
+        </div>
+      )}
 
-              <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
-                  <TrendingUp size={17} />
-                  DOCTOR ANALYTICS CENTER
-                </div>
+      <div className="mx-auto max-w-5xl px-3 pt-3 sm:px-4 lg:px-6 lg:pt-5">
+        <DoctorTopBar
+          doctor={doctor}
+          today={today}
+          unreadCount={unreadCount}
+          onNotifications={() => navigate("/doctor/notifications")}
+        />
 
-                <h1 className="text-4xl md:text-5xl font-black text-slate-950">
-                  Dr. {doctor?.doctorName}
-                </h1>
+        <DoctorKPIs
+          todayCount={todayAppointments.length}
+          activeCount={waitingToday}
+          videoCount={videoToday}
+          completedCount={completedToday}
+        />
 
-                <p className="text-slate-500 mt-2 text-lg">
-                  {doctor?.specialization || "Medical Specialist"}
-                </p>
-              </div>
-            </div>
+        <section className="mt-3">
+          <NextPatientCard
+            appointment={nextAppointment}
+            onCheckIn={openCheckIn}
+            onViewPrescription={viewPrescription}
+            onFollowUp={openFollowUpModal}
+          />
+        </section>
 
-            <div className="flex flex-wrap gap-3">
+        <section className="mt-3 rounded-[1.5rem] border border-slate-100 bg-white p-3 shadow-sm">
+          <SectionHeader
+            title="Doctor Work Queue"
+            subtitle={`${todayAppointments.length} today`}
+            action={
               <Link
-                to="/doctor/profile"
-                className="inline-flex items-center justify-center gap-2 border border-cyan-600 text-cyan-700 px-5 py-3 rounded-2xl font-black hover:bg-cyan-50 transition"
+                to="/doctor/appointments"
+                className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-700"
               >
-                <UserRound size={18} />
-                My Profile
+                View All
               </Link>
+            }
+          />
 
-              <Link
-                to="/doctor/calendar"
-                className="inline-flex items-center justify-center gap-2 bg-cyan-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-cyan-700 transition"
-              >
-                <CalendarCheck size={18} />
-                Calendar
-              </Link>
+          <div className="mt-3 space-y-4">
+            <QueueGroup
+              title="Requires Attention"
+              tone="red"
+              items={queues.attention}
+              empty="No urgent actions."
+              onCheckIn={openCheckIn}
+              onReview={(appointment) => setReviewAppointment(appointment)}
+              onViewPrescription={viewPrescription}
+              onFollowUp={openFollowUpModal}
+            />
 
-              <button
-                onClick={logout}
-                className="inline-flex items-center justify-center gap-2 bg-red-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-red-700 transition"
-              >
-                <LogOut size={18} />
-                Logout
-              </button>
-            </div>
+            <QueueGroup
+              title="Ready to Consult"
+              tone="emerald"
+              items={queues.ready}
+              empty="No patient ready to consult."
+              onCheckIn={openCheckIn}
+              onReview={(appointment) => setReviewAppointment(appointment)}
+              onViewPrescription={viewPrescription}
+              onFollowUp={openFollowUpModal}
+            />
+
+            <QueueGroup
+              title="Waiting Room"
+              tone="cyan"
+              items={queues.waiting}
+              empty="No patient in waiting room."
+              onCheckIn={openCheckIn}
+              onReview={(appointment) => setReviewAppointment(appointment)}
+              onViewPrescription={viewPrescription}
+              onFollowUp={openFollowUpModal}
+            />
+
+            <QueueGroup
+              title="In Consultation"
+              tone="blue"
+              items={queues.consulting}
+              empty="No active consultation."
+              onCheckIn={openCheckIn}
+              onReview={(appointment) => setReviewAppointment(appointment)}
+              onViewPrescription={viewPrescription}
+              onFollowUp={openFollowUpModal}
+            />
+
+            <QueueGroup
+              title="Documentation Pending"
+              tone="violet"
+              items={queues.documentation}
+              empty="No pending notes."
+              onCheckIn={openCheckIn}
+              onReview={(appointment) => setReviewAppointment(appointment)}
+              onViewPrescription={viewPrescription}
+              onFollowUp={openFollowUpModal}
+            />
+
+            <QueueGroup
+              title="Upcoming Today"
+              tone="slate"
+              items={queues.upcomingToday}
+              empty="No more appointments today."
+              onCheckIn={openCheckIn}
+              onReview={(appointment) => setReviewAppointment(appointment)}
+              onViewPrescription={viewPrescription}
+              onFollowUp={openFollowUpModal}
+            />
+
+            <QueueGroup
+              title="Future Appointments"
+              tone="slate"
+              items={queues.future.slice(0, 5)}
+              empty="No future appointments."
+              onCheckIn={openCheckIn}
+              onReview={(appointment) => setReviewAppointment(appointment)}
+              onViewPrescription={viewPrescription}
+              onFollowUp={openFollowUpModal}
+            />
+
+            <QueueGroup
+              title="Completed Today"
+              tone="emerald"
+              items={queues.completed}
+              empty="No completed consultations today."
+              onCheckIn={openCheckIn}
+              onReview={(appointment) => setReviewAppointment(appointment)}
+              onViewPrescription={viewPrescription}
+              onFollowUp={openFollowUpModal}
+            />
+
+            <QueueGroup
+              title="Missed Appointments"
+              tone="red"
+              items={queues.missed}
+              empty="No missed appointments today."
+              onCheckIn={openCheckIn}
+              onReview={(appointment) => setReviewAppointment(appointment)}
+              onViewPrescription={viewPrescription}
+              onFollowUp={openFollowUpModal}
+            />
           </div>
         </section>
 
-        <section className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
-          {cards.map((card) => (
-            <StatCard key={card.title} {...card} />
-          ))}
+        <section className="mt-3 grid grid-cols-4 gap-2">
+          <QuickAction to="/doctor/availability" icon={Clock} label="Slots" />
+          <QuickAction to="/doctor/prescriptions" icon={FileText} label="Rx" />
+          <QuickAction to="/doctor/follow-ups" icon={Plus} label="Follow" />
+          <QuickAction to="/doctor/reviews" icon={Star} label="Reviews" />
         </section>
 
-        <section className="grid xl:grid-cols-[1fr_360px] gap-8 mb-8">
-          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
-            <div className="flex items-center justify-between gap-4 mb-6">
-              <div>
-                <h2 className="text-2xl font-black text-slate-950">
-                  Monthly Appointments
-                </h2>
+        <section className="mt-3 rounded-[1.5rem] border border-slate-100 bg-white p-3 shadow-sm">
+          <SectionHeader
+            title="Recent Alerts"
+            subtitle={
+              compactAlerts.length
+                ? `${compactAlerts.length} updates`
+                : "No urgent updates"
+            }
+            action={
+              <Link
+                to="/doctor/notifications"
+                className="rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-black text-cyan-700"
+              >
+                Open
+              </Link>
+            }
+          />
 
-                <p className="text-slate-500">
-                  Consultation trend by month
-                </p>
-              </div>
-
-              <div className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm">
-                <Activity size={16} />
-                {appointments.length} Total
-              </div>
-            </div>
-
-            {monthlyStats.length === 0 ? (
-              <EmptyMini text="No appointment trend available." />
+          <div className="mt-3 space-y-2">
+            {compactAlerts.length === 0 ? (
+              <p className="rounded-2xl bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-500">
+                You’re all caught up.
+              </p>
             ) : (
-              <div className="flex items-end gap-4 h-64">
-                {monthlyStats.map((item) => {
-                  const height =
-                    maxMonthlyCount === 0
-                      ? 0
-                      : Math.max(12, (item.count / maxMonthlyCount) * 190);
+              compactAlerts.slice(0, 3).map((alert) => (
+                <div
+                  key={alert}
+                  className="flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-3"
+                >
+                  <span className="h-2.5 w-2.5 rounded-full bg-cyan-500" />
 
-                  return (
-                    <div
-                      key={item.month}
-                      className="flex-1 flex flex-col items-center justify-end gap-3"
-                    >
-                      <div className="text-sm font-black text-slate-700">
-                        {item.count}
-                      </div>
-
-                      <div
-                        className="w-full rounded-t-2xl bg-gradient-to-t from-cyan-600 to-emerald-400 shadow-sm transition-all duration-700"
-                        style={{ height: `${height}px` }}
-                      />
-
-                      <div className="text-xs font-bold text-slate-500">
-                        {item.month}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                  <p className="min-w-0 flex-1 truncate text-sm font-bold text-slate-800">
+                    {alert}
+                  </p>
+                </div>
+              ))
             )}
           </div>
-
-          <aside className="space-y-5">
-            <div className="relative overflow-hidden bg-slate-950 text-white rounded-[2rem] p-6 shadow-sm">
-              <div className="absolute -top-16 -right-16 w-52 h-52 bg-cyan-400/20 rounded-full blur-3xl" />
-
-              <div className="relative">
-                <TrendingUp className="text-cyan-300" size={34} />
-
-                <h2 className="text-2xl font-black mt-5">
-                  Performance Score
-                </h2>
-
-                <p className="text-slate-300 mt-2 text-sm">
-                  Based on completion rate and patient rating.
-                </p>
-
-                <p className="text-6xl font-black mt-7">
-                  {performanceScore}%
-                </p>
-
-                <div className="w-full h-3 bg-white/10 rounded-full mt-5 overflow-hidden">
-                  <div
-                    className="h-full bg-cyan-300 rounded-full"
-                    style={{ width: `${performanceScore}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6">
-              <h3 className="text-xl font-black text-slate-950 mb-4">
-                Today's Schedule
-              </h3>
-
-              {todayAppointments.length === 0 ? (
-                <p className="text-slate-500">No appointments today.</p>
-              ) : (
-                <div className="space-y-3">
-                  {todayAppointments.slice(0, 4).map((appointment) => (
-                    <div
-                      key={appointment.id}
-                      className="bg-slate-50 border border-slate-100 rounded-2xl p-3"
-                    >
-                      <p className="font-black text-slate-950">
-                        {appointment.slot?.startTime} -{" "}
-                        {appointment.patient?.fullName ||
-                          appointment.patientName}
-                      </p>
-
-                      <p className="text-sm text-slate-500">
-                        {appointment.status}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </aside>
         </section>
 
-        <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5 mb-6">
-            <div>
-              <h2 className="text-2xl font-black text-slate-950">
-                My Appointments
-              </h2>
+        <section className="mt-3 rounded-[1.5rem] border border-slate-100 bg-white p-3 shadow-sm">
+          <SectionHeader
+            title="Practice Summary"
+            subtitle="Small view only. Detailed analytics stays on Analytics page."
+          />
 
-              <p className="text-slate-500">
-                Manage patients, consultations and prescriptions.
-              </p>
-            </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <SummaryCard
+              label="Rating"
+              value={Number(reviewSummary.averageRating || 0).toFixed(1)}
+              helper={`${reviewSummary.totalReviews || 0} reviews`}
+            />
 
-            <div className="grid lg:grid-cols-[1fr_220px] gap-3 xl:w-[600px]">
-              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-                <Search className="text-cyan-600" size={20} />
-
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search patient or phone..."
-                  className="w-full bg-transparent outline-none"
-                />
-              </div>
-
-              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-                <Filter className="text-cyan-600" size={20} />
-
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full bg-transparent outline-none font-semibold text-slate-800"
-                >
-                  <option value="ALL">All</option>
-                  <option value="BOOKED">Booked</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="CANCELLED">Cancelled</option>
-                </select>
-              </div>
-            </div>
+            <SummaryCard
+              label="Pending Follow-ups"
+              value={pendingFollowUps.length}
+              helper="Needs review"
+            />
           </div>
-
-          {filteredAppointments.length === 0 ? (
-            <EmptyAppointments />
-          ) : (
-            <div className="space-y-4">
-              {filteredAppointments.map((appointment) => (
-                <AppointmentCard
-                  key={appointment.id}
-                  appointment={appointment}
-                  completeAppointment={completeAppointment}
-                  openPrescriptionModal={openPrescriptionModal}
-                />
-              ))}
-            </div>
-          )}
         </section>
 
-        {selectedAppointment && (
-          <PrescriptionModal
-            appointment={selectedAppointment}
-            form={form}
-            setForm={setForm}
-            onClose={closePrescriptionModal}
-            onSave={savePrescription}
+        {checkInModal && (
+        <CheckInSheet
+  appointment={checkInModal}
+  data={checkInData}
+  onClose={() => {
+    setCheckInModal(null);
+    setCheckInData(null);
+  }}
+  onStartConsultation={(appointment) => {
+    setCheckInModal(null);
+    navigate(`/doctor/consultation/${appointment.id}`);
+  }}
+/>
+        )}
+
+        {followUpAppointment && (
+          <FollowUpSheet
+            appointment={followUpAppointment}
+            form={followUpForm}
+            setForm={setFollowUpForm}
+            saving={followUpSaving}
+            onClose={closeFollowUpModal}
+            onSave={saveFollowUp}
+            addDays={addDays}
           />
         )}
+
+        <ReviewCheckInSheet
+          open={!!reviewAppointment}
+          appointment={reviewAppointment}
+          checkIn={null}
+          onClose={() => setReviewAppointment(null)}
+          onStart={(appointment) => {
+            setReviewAppointment(null);
+            navigate(`/doctor/consultation/${appointment.id}`);
+          }}
+        />
       </div>
-    </div>
+    </main>
   );
 }
 
-function StatCard({ title, value, desc, icon: Icon, tone }) {
-  const styles = {
-    emerald: "bg-emerald-50 text-emerald-600",
-    cyan: "bg-cyan-50 text-cyan-600",
-    amber: "bg-amber-50 text-amber-600",
-    purple: "bg-purple-50 text-purple-600",
-    red: "bg-red-50 text-red-600",
-    yellow: "bg-yellow-50 text-yellow-600",
-  };
-
+function QuickAction({ to, icon: Icon, label }) {
   return (
-    <div className="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition">
-      <div
-        className={`w-12 h-12 rounded-2xl ${
-          styles[tone] || styles.cyan
-        } flex items-center justify-center mb-4`}
-      >
-        <Icon size={24} />
-      </div>
+    <Link
+      to={to}
+      className="rounded-2xl border border-slate-100 bg-white px-2 py-3 text-center shadow-sm active:scale-95"
+    >
+      <Icon className="mx-auto text-cyan-600" size={20} />
+      <p className="mt-1.5 text-[11px] font-black text-slate-800">{label}</p>
+    </Link>
+  );
+}
 
-      <p className="text-sm text-slate-500 font-bold">
-        {title}
-      </p>
+function SummaryCard({ label, value, helper }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-3">
+      <p className="text-2xl font-black text-slate-950">{value}</p>
 
-      <h2 className="text-3xl font-black mt-1 text-slate-950">
-        {value}
-      </h2>
+      <p className="mt-0.5 text-xs font-black text-slate-700">{label}</p>
 
-      <p className="text-sm text-slate-500 mt-2">
-        {desc}
+      <p className="mt-0.5 text-[11px] font-semibold text-slate-500">
+        {helper}
       </p>
     </div>
   );
 }
 
-function AppointmentCard({
+function FollowUpSheet({
   appointment,
-  completeAppointment,
-  openPrescriptionModal,
+  form,
+  setForm,
+  saving,
+  onClose,
+  onSave,
+  addDays,
 }) {
   return (
-    <div className="rounded-[2rem] border border-slate-100 bg-slate-50 p-5">
-      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center overflow-hidden border border-slate-100 shrink-0">
-            {appointment.patient?.profileImage ? (
-              <img
-                src={appointment.patient.profileImage}
-                alt={appointment.patient?.fullName || appointment.patientName}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <UserRound size={30} className="text-cyan-600" />
-            )}
-          </div>
-
-          <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-100 text-emerald-700 font-black text-xs mb-2">
-              <ShieldCheck size={14} />
-              Patient
-            </div>
-
-            <h3 className="font-black text-xl text-slate-950 truncate">
-              {appointment.patient?.fullName || appointment.patientName}
-            </h3>
-
-            <div className="flex flex-wrap gap-3 mt-3">
-              <InfoBadge icon={Phone} text={appointment.patientPhone} />
-
-              <InfoBadge
-                icon={Clock}
-                text={`${appointment.slot?.date || "-"} | ${
-                  appointment.slot?.startTime || ""
-                } - ${appointment.slot?.endTime || ""}`}
-              />
-
-              <StatusBadge status={appointment.status} />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex gap-3 flex-wrap">
-          <Link
-            to={`/doctor/appointment/${appointment.id}/patient-profile`}
-            className="inline-flex items-center gap-2 bg-slate-950 text-white px-4 py-3 rounded-2xl font-black hover:bg-cyan-700 transition"
-          >
-            <UserRound size={17} />
-            Patient
-          </Link>
-
-          {appointment.status === "BOOKED" && appointment.videoRoomId && (
-            <Link
-              to={`/video-call/${appointment.id}`}
-              className="inline-flex items-center gap-2 bg-cyan-600 text-white px-4 py-3 rounded-2xl font-black hover:bg-cyan-700 transition"
-            >
-              <Video size={17} />
-              Video
-            </Link>
-          )}
-
-          {appointment.status === "BOOKED" && (
-            <button
-              onClick={() => completeAppointment(appointment.id)}
-              className="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-2xl font-black hover:bg-emerald-700 transition"
-            >
-              <CheckCircle2 size={17} />
-              Complete
-            </button>
-          )}
-
-          {appointment.status === "COMPLETED" && (
-            <button
-              onClick={() => openPrescriptionModal(appointment)}
-              className="inline-flex items-center gap-2 bg-cyan-600 text-white px-4 py-3 rounded-2xl font-black hover:bg-cyan-700 transition"
-            >
-              <FileText size={17} />
-              Prescription
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PrescriptionModal({ appointment, form, setForm, onClose, onSave }) {
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center px-4">
-      <div className="bg-white rounded-[2rem] shadow-2xl border border-slate-100 w-full max-w-2xl overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-black text-slate-950">
-              Create Prescription
-            </h2>
-
-            <p className="text-slate-500">
-              Patient:{" "}
-              {appointment.patient?.fullName || appointment.patientName}
-            </p>
-          </div>
-
+    <BottomSheet
+      title="Schedule Follow-up"
+      subtitle={getPatientName(appointment)}
+      onClose={onClose}
+    >
+      <div className="grid grid-cols-3 gap-2">
+        {[7, 15, 30].map((days) => (
           <button
-            onClick={onClose}
-            className="w-11 h-11 rounded-2xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center"
+            key={days}
+            type="button"
+            onClick={() =>
+              setForm({
+                ...form,
+                followUpDate: addDays(days),
+              })
+            }
+            className="rounded-2xl bg-cyan-50 py-3 text-xs font-black text-cyan-700"
           >
-            <X size={21} />
+            {days} Days
           </button>
-        </div>
+        ))}
+      </div>
 
-        <div className="p-6 space-y-4">
-          <InputField
-            label="Diagnosis"
-            value={form.diagnosis}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                diagnosis: e.target.value,
-              })
-            }
-            placeholder="Example: Viral fever"
-          />
+      <div className="mt-3 space-y-3">
+        <InputField
+          label="Follow-up Date"
+          type="date"
+          value={form.followUpDate}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              followUpDate: e.target.value,
+            })
+          }
+        />
 
-          <TextAreaField
-            label="Medicines"
-            value={form.medicines}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                medicines: e.target.value,
-              })
-            }
-            placeholder="Example: Paracetamol 500mg - twice daily after food"
-            rows={5}
-          />
+        <TextAreaField
+          label="Notes"
+          value={form.notes}
+          rows={3}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              notes: e.target.value,
+            })
+          }
+          placeholder="Example: Review after medicine course"
+        />
 
-          <TextAreaField
-            label="Notes"
-            value={form.notes}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                notes: e.target.value,
-              })
-            }
-            placeholder="Additional instructions"
-            rows={3}
-          />
-        </div>
-
-        <div className="p-6 border-t border-slate-100 flex flex-wrap justify-end gap-3">
+        <div className="grid grid-cols-2 gap-2 pt-1">
           <button
+            type="button"
             onClick={onClose}
-            className="border border-slate-300 px-5 py-3 rounded-2xl font-black hover:bg-slate-50"
+            className="h-12 rounded-2xl border border-slate-200 bg-white text-sm font-black text-slate-700"
           >
             Cancel
           </button>
 
           <button
+            type="button"
             onClick={onSave}
-            className="flex items-center gap-2 bg-cyan-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-cyan-700"
+            disabled={saving}
+            className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-violet-600 text-sm font-black text-white disabled:bg-slate-300"
           >
-            <Save size={18} />
-            Save Prescription
+            {saving && <Loader2 size={16} className="animate-spin" />}
+            Schedule
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function InputField({ label, value, onChange, placeholder }) {
-  return (
-    <label className="block">
-      <p className="text-sm font-black text-slate-700 mb-2">
-        {label}
-      </p>
-
-      <input
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-cyan-500"
-      />
-    </label>
-  );
-}
-
-function TextAreaField({ label, value, onChange, placeholder, rows }) {
-  return (
-    <label className="block">
-      <p className="text-sm font-black text-slate-700 mb-2">
-        {label}
-      </p>
-
-      <textarea
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        rows={rows}
-        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-cyan-500 resize-none"
-      />
-    </label>
-  );
-}
-
-function InfoBadge({ icon: Icon, text }) {
-  return (
-    <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-white border border-slate-100 text-slate-600 text-sm font-bold">
-      <Icon size={15} className="text-cyan-600" />
-      {text || "-"}
-    </span>
-  );
-}
-
-function StatusBadge({ status }) {
-  const style =
-    status === "COMPLETED"
-      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-      : status === "CANCELLED"
-      ? "bg-red-50 text-red-700 border-red-100"
-      : "bg-cyan-50 text-cyan-700 border-cyan-100";
-
-  return (
-    <span
-      className={`inline-flex items-center px-3 py-2 rounded-full border text-sm font-black ${style}`}
-    >
-      {status}
-    </span>
-  );
-}
-
-function EmptyMini({ text }) {
-  return (
-    <div className="text-slate-500 bg-slate-50 border border-slate-100 rounded-2xl p-6">
-      {text}
-    </div>
-  );
-}
-
-function EmptyAppointments() {
-  return (
-    <div className="bg-slate-50 rounded-[2rem] border border-slate-100 p-10 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center mx-auto mb-4">
-        <CalendarCheck className="text-cyan-600" size={32} />
-      </div>
-
-      <h3 className="text-2xl font-black text-slate-950">
-        No appointments found
-      </h3>
-
-      <p className="text-slate-500 mt-2">
-        Appointments assigned to you will appear here.
-      </p>
-    </div>
+    </BottomSheet>
   );
 }

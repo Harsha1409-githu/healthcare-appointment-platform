@@ -11,6 +11,15 @@ import { Exclude } from 'class-transformer';
 import { Hospital } from '../hospital/hospital.entity';
 import { Slot } from '../slot/slot.entity';
 
+export enum DoctorLiveStatus {
+  AVAILABLE = 'AVAILABLE',
+  IN_CONSULTATION = 'IN_CONSULTATION',
+  VIDEO_CONSULTATION = 'VIDEO_CONSULTATION',
+  BREAK = 'BREAK',
+  OFFLINE = 'OFFLINE',
+  VACATION = 'VACATION',
+}
+
 @Entity()
 export class Doctor {
   @PrimaryGeneratedColumn('uuid')
@@ -58,4 +67,17 @@ profileImage: string;
 
   @Column({ nullable: true })
   state: string;
+
+  @Column({
+  type: 'enum',
+  enum: DoctorLiveStatus,
+  default: DoctorLiveStatus.AVAILABLE,
+})
+liveStatus: DoctorLiveStatus;
+
+@Column({
+  type: 'timestamp',
+  nullable: true,
+})
+blockedUntil: Date | null;
 }

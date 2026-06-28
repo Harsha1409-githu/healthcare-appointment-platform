@@ -10,6 +10,7 @@ import { MedicalRecord } from './medical-record.entity';
 import { CreateMedicalRecordDto } from './dto/create-medical-record.dto';
 
 import { Patient } from '../patient/patient.entity';
+import { FamilyMember } from '../family-member/family-member.entity';
 
 @Injectable()
 export class MedicalRecordService {
@@ -19,6 +20,9 @@ export class MedicalRecordService {
 
     @InjectRepository(Patient)
     private patientRepo: Repository<Patient>,
+
+    @InjectRepository(FamilyMember)
+    private familyMemberRepo: Repository<FamilyMember>,
   ) {}
 
   async create(
@@ -33,13 +37,32 @@ export class MedicalRecordService {
       throw new NotFoundException('Patient not found');
     }
 
+    let familyMember: FamilyMember | null = null;
+
+    if (dto.familyMemberId) {
+      familyMember = await this.familyMemberRepo.findOne({
+        where: {
+          id: dto.familyMemberId,
+          patient: { id: patient.id },
+        },
+        relations: {
+          patient: true,
+        },
+      });
+
+      if (!familyMember) {
+        throw new NotFoundException('Family member not found');
+      }
+    }
+
     const record = this.medicalRecordRepo.create({
       title: dto.title,
       recordType: dto.recordType,
       fileUrl: dto.fileUrl,
       fileName: dto.fileName,
       patient,
-    });
+      familyMember,
+    } as Partial<MedicalRecord>);
 
     return this.medicalRecordRepo.save(record);
   }
@@ -50,6 +73,10 @@ export class MedicalRecordService {
         patient: {
           id: patientId,
         },
+      },
+      relations: {
+        patient: true,
+        familyMember: true,
       },
       order: {
         uploadedAt: 'DESC',
@@ -64,6 +91,10 @@ export class MedicalRecordService {
         patient: {
           id: patientId,
         },
+      },
+      relations: {
+        patient: true,
+        familyMember: true,
       },
     });
 

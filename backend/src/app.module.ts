@@ -42,9 +42,24 @@ import { MedicineReminder } from './medicine-reminder/medicine-reminder.entity';
 import { MedicineReminderModule } from './medicine-reminder/medicine-reminder.module';
 import { LabTestModule } from './lab-test/lab-test.module';
 import { LabTest } from './lab-test/lab-test.entity';
+import { LabOrder } from './lab-test/lab-order.entity';
+import { LabOrderItem } from './lab-test/lab-order-item.entity';
 import { ChatModule } from './chat/chat.module';
 import { ChatMessage } from './chat/chat-message.entity';
 import { ScheduleModule } from '@nestjs/schedule';
+import { FollowUpModule } from './follow-up/follow-up.module';
+import { FollowUp } from './follow-up/follow-up.entity';
+import { LeaveModule } from './leave/leave.module';
+import { DoctorLeave } from './leave/doctor-leave.entity';
+import { AiConsultationModule } from './ai-consultation/ai-consultation.module';
+import { FamilyMemberModule } from './family-member/family-member.module';
+import { FamilyMember } from './family-member/family-member.entity';
+import { EmergencyProfileModule } from './emergency-profile/emergency-profile.module';
+import { EmergencyProfile } from './emergency-profile/emergency-profile.entity';
+import { CheckInModule } from './check-in/check-in.module';
+import { CheckIn } from './check-in/check-in.entity';
+import { Consultation } from './consultation/consultation.entity';
+import { ConsultationModule } from './consultation/consultation.module';
 
 
 @Module({
@@ -82,7 +97,16 @@ import { ScheduleModule } from '@nestjs/schedule';
         MedicalRecord,
         MedicineReminder,
         LabTest,
-        ChatMessage,
+             LabOrder,
+LabOrderItem,
+        ChatMessage,  
+        FollowUp,
+        DoctorLeave,
+        FamilyMember,
+        EmergencyProfile,
+        CheckIn,
+        Consultation,
+   
       ],
 
       synchronize: true,
@@ -106,6 +130,13 @@ import { ScheduleModule } from '@nestjs/schedule';
     MedicineReminderModule,
     LabTestModule,
     ChatModule,
+    FollowUpModule,
+    LeaveModule,
+    AiConsultationModule,
+    FamilyMemberModule,
+    EmergencyProfileModule,
+    CheckInModule,
+    ConsultationModule,
   ],
 
   controllers: [AppController],  // ✅ FIX

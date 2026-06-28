@@ -44,7 +44,7 @@ export default function HowItWorks() {
       <div className="relative max-w-7xl mx-auto px-6">
         <div className="text-center mb-20">
           <span className="inline-flex items-center px-5 py-2 rounded-full bg-blue-50 border border-blue-100 text-blue-700 font-bold">
-            How MediCare Works
+            How TryDoc Works
           </span>
 
           <h2 className="text-5xl md:text-6xl font-black text-slate-900 mt-6">

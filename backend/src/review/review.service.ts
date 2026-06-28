@@ -9,6 +9,7 @@ import { Review } from './review.entity';
 import { Doctor } from '../doctor/doctor.entity';
 import { Patient } from '../patient/patient.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class ReviewService {
@@ -21,6 +22,8 @@ export class ReviewService {
 
     @InjectRepository(Patient)
     private patientRepo: Repository<Patient>,
+
+    private readonly notificationService: NotificationService,
   ) {}
 
   async createReview(dto: CreateReviewDto, patientId: string) {
@@ -47,13 +50,25 @@ export class ReviewService {
       comment: dto.comment,
     });
 
-    return this.reviewRepo.save(review);
+    const savedReview = await this.reviewRepo.save(review);
+
+    await this.notificationService.create({
+      userId: doctor.id,
+      role: 'doctor',
+      title: 'New Review Received',
+      message: `${patient.fullName} rated you ${dto.rating}★`,
+    });
+
+    return savedReview;
   }
 
   async getReviewsByDoctor(doctorId: string) {
     return this.reviewRepo.find({
       where: {
         doctor: { id: doctorId },
+      },
+      relations: {
+        patient: true,
       },
       order: {
         id: 'DESC',

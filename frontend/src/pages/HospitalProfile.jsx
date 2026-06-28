@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Building2,
@@ -7,12 +7,11 @@ import {
   MapPin,
   FileText,
   Save,
-  ShieldCheck,
   Camera,
   Loader2,
   Lock,
   Activity,
-  BadgeCheck,
+  ChevronRight,
 } from "lucide-react";
 import api from "../api/axios";
 
@@ -37,22 +36,6 @@ export default function HospitalProfile() {
   useEffect(() => {
     loadProfile();
   }, []);
-
-  const profileCompletion = useMemo(() => {
-    const fields = [
-      profile.hospitalName,
-      profile.email,
-      profile.mobile,
-      profile.city,
-      profile.state,
-      profile.address,
-      profile.licenseNumber,
-      profile.profileImage,
-    ];
-
-    const completed = fields.filter(Boolean).length;
-    return Math.round((completed / fields.length) * 100);
-  }, [profile]);
 
   const loadProfile = async () => {
     try {
@@ -80,7 +63,6 @@ export default function HospitalProfile() {
 
   const handleImagePreview = async (e) => {
     const file = e.target.files?.[0];
-
     if (!file) return;
 
     const formData = new FormData();
@@ -109,7 +91,6 @@ export default function HospitalProfile() {
       );
 
       window.dispatchEvent(new Event("hospitalProfileUpdated"));
-
       alert("Hospital logo uploaded successfully");
     } catch (error) {
       console.error("Hospital logo upload error:", error);
@@ -148,7 +129,6 @@ export default function HospitalProfile() {
       );
 
       window.dispatchEvent(new Event("hospitalProfileUpdated"));
-
       alert("Hospital profile updated successfully");
     } catch (error) {
       console.error("Update hospital profile error:", error);
@@ -160,151 +140,118 @@ export default function HospitalProfile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4fbff] flex items-center justify-center">
-        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 text-center">
-          <Loader2 className="mx-auto text-cyan-600 animate-spin mb-4" size={38} />
+      <main className="min-h-screen bg-[#f4f8fb] flex items-center justify-center px-4">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 text-center">
+          <Loader2 className="mx-auto text-cyan-600 animate-spin" size={34} />
 
-          <p className="text-slate-500 font-semibold">
+          <p className="text-slate-500 font-bold mt-3">
             Loading hospital profile...
           </p>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f4fbff]">
-      <div className="max-w-[1450px] mx-auto px-6 py-8">
-        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
-          <div className="grid lg:grid-cols-[1fr_360px] gap-8 items-center">
-            <div className="flex flex-col md:flex-row md:items-center gap-6">
-              <div className="relative w-28 h-28 shrink-0">
-                {previewImage ? (
-                  <img
-                    src={previewImage}
-                    alt="Hospital Logo"
-                    className="w-28 h-28 rounded-[2rem] object-cover border border-slate-100 shadow-sm"
-                  />
-                ) : (
-                  <div className="w-28 h-28 rounded-[2rem] bg-cyan-50 border border-cyan-100 flex items-center justify-center">
-                    <Building2 size={48} className="text-cyan-600" />
-                  </div>
-                )}
+    <form onSubmit={saveProfile} className="min-h-screen bg-[#f4f8fb] pb-32">
+      <div className="max-w-md mx-auto px-4 pt-4">
+        <header className="mb-3">
+          <div className="inline-flex items-center gap-1.5 text-cyan-700 font-black text-xs">
+            <Building2 size={15} />
+            HOSPITAL PROFILE
+          </div>
 
-                <label className="absolute -bottom-2 -right-2 bg-cyan-600 text-white p-3 rounded-2xl shadow-lg cursor-pointer hover:bg-cyan-700 transition">
-                  <Camera size={18} />
+          <h1 className="text-2xl font-black text-slate-950 mt-1">
+            Hospital Profile
+          </h1>
 
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImagePreview}
-                    className="hidden"
-                  />
-                </label>
-              </div>
+          <p className="text-sm text-slate-500 font-semibold">
+            Manage hospital details
+          </p>
+        </header>
 
-              <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
-                  <ShieldCheck size={17} />
-                  HOSPITAL PROFILE
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+          <div className="flex items-center gap-3">
+            <div className="relative w-20 h-20 shrink-0">
+              {previewImage ? (
+                <img
+                  src={previewImage}
+                  alt="Hospital Logo"
+                  className="w-20 h-20 rounded-3xl object-cover border border-slate-100"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-3xl bg-cyan-50 border border-cyan-100 flex items-center justify-center">
+                  <Building2 size={36} className="text-cyan-600" />
                 </div>
+              )}
 
-                <h1 className="text-4xl md:text-5xl font-black text-slate-950">
-                  {profile.hospitalName || "Hospital Profile"}
-                </h1>
+              <label className="absolute -bottom-1 -right-1 bg-cyan-600 text-white p-2 rounded-2xl shadow cursor-pointer active:scale-95">
+                <Camera size={15} />
 
-                <p className="text-slate-500 mt-3 text-lg">
-                  Manage hospital information, contact details, license data and
-                  account security.
-                </p>
-              </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImagePreview}
+                  className="hidden"
+                />
+              </label>
             </div>
 
-            <div className="bg-slate-50 rounded-3xl border border-slate-100 p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-500 font-semibold">
-                    Profile Completion
-                  </p>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg font-black text-slate-950 truncate">
+                {profile.hospitalName || "Hospital Name"}
+              </h2>
 
-                  <h3 className="text-3xl font-black text-slate-950 mt-1">
-                    {profileCompletion}%
-                  </h3>
-                </div>
+              <p className="text-sm text-slate-500 truncate mt-1">
+                {profile.email || "hospital@example.com"}
+              </p>
 
-                <div className="w-14 h-14 rounded-2xl bg-cyan-50 flex items-center justify-center">
-                  <Activity className="text-cyan-600" size={28} />
-                </div>
-              </div>
-
-              <div className="mt-5 h-3 bg-white rounded-full overflow-hidden border border-slate-100">
-                <div
-                  className="h-full bg-cyan-600 rounded-full transition-all"
-                  style={{ width: `${profileCompletion}%` }}
-                />
-              </div>
-
-              <p className="text-xs text-slate-500 mt-3">
-                Complete your hospital profile to improve trust and visibility.
+              <p className="text-xs text-cyan-700 font-black truncate mt-1">
+                {profile.city || "City not set"}
               </p>
             </div>
           </div>
         </section>
 
-        <div className="grid lg:grid-cols-[1fr_360px] gap-8">
-          <form
-            onSubmit={saveProfile}
-            className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 md:p-8"
-          >
-            <div className="flex items-center gap-3 mb-7">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center">
-                <Building2 className="text-cyan-600" size={25} />
-              </div>
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <h2 className="text-lg font-black text-slate-950 mb-4">
+            Hospital Information
+          </h2>
 
-              <div>
-                <h2 className="text-2xl font-black text-slate-950">
-                  Hospital Information
-                </h2>
+          <div className="space-y-3">
+            <Input
+              icon={Building2}
+              label="Hospital Name"
+              name="hospitalName"
+              value={profile.hospitalName}
+              onChange={handleChange}
+            />
 
-                <p className="text-slate-500">
-                  Keep your hospital profile updated for patients and doctors.
-                </p>
-              </div>
-            </div>
+            <Input
+              icon={Mail}
+              label="Email"
+              name="email"
+              value={profile.email}
+              disabled
+            />
 
-            <div className="grid md:grid-cols-2 gap-5">
-              <Input
-                icon={Building2}
-                label="Hospital Name"
-                name="hospitalName"
-                value={profile.hospitalName}
-                onChange={handleChange}
-              />
+            <Input
+              icon={Phone}
+              label="Mobile"
+              name="mobile"
+              value={profile.mobile}
+              onChange={handleChange}
+            />
 
-              <Input
-                icon={Mail}
-                label="Email"
-                name="email"
-                value={profile.email}
-                disabled
-              />
+            <Input
+              icon={FileText}
+              label="License Number"
+              name="licenseNumber"
+              value={profile.licenseNumber}
+              onChange={handleChange}
+            />
 
-              <Input
-                icon={Phone}
-                label="Mobile"
-                name="mobile"
-                value={profile.mobile}
-                onChange={handleChange}
-              />
-
-              <Input
-                icon={FileText}
-                label="License Number"
-                name="licenseNumber"
-                value={profile.licenseNumber}
-                onChange={handleChange}
-              />
-
+            <div className="grid grid-cols-2 gap-3">
               <Input
                 icon={MapPin}
                 label="City"
@@ -320,132 +267,85 @@ export default function HospitalProfile() {
                 value={profile.state}
                 onChange={handleChange}
               />
-
-              <div className="md:col-span-2">
-                <label>
-                  <p className="text-sm font-black text-slate-700 mb-2">
-                    Address
-                  </p>
-
-                  <div className="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-cyan-500">
-                    <MapPin size={19} className="text-cyan-600 mt-1" />
-
-                    <textarea
-                      name="address"
-                      value={profile.address}
-                      onChange={handleChange}
-                      rows="4"
-                      className="w-full bg-transparent outline-none text-slate-800 resize-none"
-                    />
-                  </div>
-                </label>
-              </div>
             </div>
 
-            <div className="mt-8 flex justify-end">
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex items-center gap-2 bg-cyan-600 text-white px-6 py-4 rounded-2xl font-black hover:bg-cyan-700 transition disabled:bg-gray-400"
-              >
-                <Save size={19} />
-                {saving ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-          </form>
+            <label className="block">
+              <p className="text-xs font-black text-slate-700 mb-1.5">
+                Address
+              </p>
 
-          <aside className="space-y-5">
-            <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center">
-                  <BadgeCheck className="text-emerald-600" size={25} />
-                </div>
+              <div className="flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-3 focus-within:ring-2 focus-within:ring-cyan-500">
+                <MapPin size={17} className="text-cyan-600 mt-0.5 shrink-0" />
 
-                <div>
-                  <h2 className="text-xl font-black text-slate-950">
-                    Hospital Summary
-                  </h2>
-
-                  <p className="text-sm text-slate-500">
-                    Public hospital details
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <SummaryItem label="Hospital" value={profile.hospitalName || "Not Set"} />
-                <SummaryItem label="Mobile" value={profile.mobile || "Not Set"} />
-                <SummaryItem label="License" value={profile.licenseNumber || "Not Set"} />
-                <SummaryItem
-                  label="Location"
-                  value={
-                    profile.city || profile.state
-                      ? `${profile.city || "-"}, ${profile.state || "-"}`
-                      : "Not Set"
-                  }
+                <textarea
+                  name="address"
+                  value={profile.address}
+                  onChange={handleChange}
+                  rows="3"
+                  className="w-full bg-transparent outline-none text-sm text-slate-800 resize-none"
+                  placeholder="Hospital full address"
                 />
               </div>
-            </div>
+            </label>
+          </div>
+        </section>
 
-            <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center">
-                  <Lock className="text-red-600" size={24} />
-                </div>
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <MenuItem
+            icon={Activity}
+            title="Dashboard"
+            subtitle="View hospital dashboard"
+            onClick={() => navigate("/hospital/dashboard")}
+          />
 
-                <div>
-                  <h2 className="text-xl font-black text-slate-950">
-                    Security
-                  </h2>
+          <MenuItem
+            icon={Lock}
+            title="Change Password"
+            subtitle="Update account security"
+            onClick={() => navigate("/hospital/change-password")}
+          />
+        </section>
+      </div>
 
-                  <p className="text-sm text-slate-500">
-                    Protect your hospital account
-                  </p>
-                </div>
-              </div>
-
-              <p className="text-slate-500 text-sm leading-relaxed mb-5">
-                Update your password regularly to keep hospital data secure.
-              </p>
-
-              <button
-                onClick={() => navigate("/hospital/change-password")}
-                className="w-full bg-red-600 text-white px-6 py-3 rounded-2xl font-black hover:bg-red-700 transition"
-              >
-                Change Password
-              </button>
-            </div>
-
-            <div className="bg-cyan-600 rounded-[2rem] shadow-sm p-6 text-white">
-              <ShieldCheck className="mb-4" size={28} />
-
-              <h2 className="text-xl font-black">
-                Verified Hospital Profile
-              </h2>
-
-              <p className="text-cyan-100 text-sm mt-2 leading-relaxed">
-                Updated hospital profiles help patients trust your hospital,
-                doctors and appointment availability.
-              </p>
-            </div>
-          </aside>
+      <div className="fixed bottom-4 left-0 right-0 z-40 px-4">
+        <div className="max-w-md mx-auto">
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full flex items-center justify-center gap-2 bg-cyan-600 text-white py-4 rounded-2xl font-black shadow-lg disabled:bg-slate-400 active:scale-95 transition"
+          >
+            <Save size={18} />
+            {saving ? "Saving..." : "Save Changes"}
+          </button>
         </div>
       </div>
-    </div>
+    </form>
   );
 }
 
-function SummaryItem({ label, value }) {
+function MenuItem({ icon: Icon, title, subtitle, onClick }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-      <p className="text-sm text-slate-500 font-semibold">
-        {label}
-      </p>
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center gap-3 py-3 border-b border-slate-100 last:border-b-0 text-left"
+    >
+      <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center">
+        <Icon className="text-cyan-600" size={20} />
+      </div>
 
-      <p className="font-black text-slate-950 text-right">
-        {value}
-      </p>
-    </div>
+      <div className="flex-1">
+        <h3 className="font-black text-slate-900 text-sm">
+          {title}
+        </h3>
+
+        <p className="text-xs text-slate-500">
+          {subtitle}
+        </p>
+      </div>
+
+      <ChevronRight size={18} className="text-slate-400" />
+    </button>
   );
 }
 
@@ -459,19 +359,19 @@ function Input({
   disabled = false,
 }) {
   return (
-    <label>
-      <p className="text-sm font-black text-slate-700 mb-2">
+    <label className="block">
+      <p className="text-xs font-black text-slate-700 mb-1.5">
         {label}
       </p>
 
       <div
-        className={`flex items-center gap-3 border rounded-2xl px-4 py-3 ${
+        className={`flex items-center gap-2 border rounded-2xl px-3 py-3 ${
           disabled
             ? "bg-slate-100 border-slate-200"
             : "bg-slate-50 border-slate-200 focus-within:ring-2 focus-within:ring-cyan-500"
         }`}
       >
-        <Icon size={19} className="text-cyan-600" />
+        <Icon size={17} className="text-cyan-600 shrink-0" />
 
         <input
           name={name}
@@ -479,7 +379,7 @@ function Input({
           value={value}
           onChange={onChange}
           disabled={disabled}
-          className="w-full bg-transparent outline-none text-slate-800 disabled:text-slate-500"
+          className="w-full bg-transparent outline-none text-sm text-slate-800 disabled:text-slate-500"
         />
       </div>
     </label>

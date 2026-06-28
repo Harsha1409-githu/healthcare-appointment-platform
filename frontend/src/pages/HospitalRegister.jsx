@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Building2,
@@ -13,8 +13,6 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  CheckCircle2,
-  ClipboardCheck,
 } from "lucide-react";
 import api from "../api/axios";
 
@@ -34,30 +32,6 @@ export default function HospitalRegister() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  const profileCompletion = useMemo(() => {
-    const fields = Object.values(form);
-    const completed = fields.filter((value) => String(value).trim()).length;
-    return Math.round((completed / fields.length) * 100);
-  }, [form]);
-
-  const passwordStrength = useMemo(() => {
-    const password = form.password;
-
-    let score = 0;
-
-    if (password.length >= 6) score += 30;
-    if (password.length >= 8) score += 25;
-    if (/[A-Z]/.test(password)) score += 15;
-    if (/[0-9]/.test(password)) score += 15;
-    if (/[^A-Za-z0-9]/.test(password)) score += 15;
-
-    if (score >= 80) return { label: "Strong", score, color: "bg-emerald-500" };
-    if (score >= 50) return { label: "Medium", score, color: "bg-yellow-500" };
-    if (score > 0) return { label: "Weak", score, color: "bg-red-500" };
-
-    return { label: "Not Set", score: 0, color: "bg-slate-300" };
-  }, [form.password]);
 
   const handleChange = (e) => {
     setForm({
@@ -90,186 +64,107 @@ export default function HospitalRegister() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4fbff] flex items-center justify-center px-6 py-10">
-      <div className="max-w-7xl w-full grid xl:grid-cols-[460px_1fr] bg-white rounded-[2rem] overflow-hidden shadow-2xl border border-slate-100">
-        <aside className="relative overflow-hidden bg-slate-950 text-white p-8 md:p-10">
-          <div className="absolute -top-20 -right-20 w-80 h-80 bg-cyan-400/20 rounded-full blur-3xl" />
-          <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-blue-400/20 rounded-full blur-3xl" />
-
-          <div className="relative">
-            <div className="w-20 h-20 rounded-[2rem] bg-white/10 border border-white/20 flex items-center justify-center mb-8">
-              <Building2 size={42} className="text-cyan-300" />
+    <main className="min-h-screen bg-[#f4f8fb] px-4 pt-6 pb-10">
+      <div className="max-w-md mx-auto">
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+          <div className="text-center">
+            <div className="w-18 h-18 mx-auto rounded-3xl bg-cyan-50 flex items-center justify-center mb-4">
+              <Building2 size={36} className="text-cyan-600" />
             </div>
 
-            <h1 className="text-4xl md:text-5xl font-black leading-tight">
-              Hospital
-              <span className="block text-cyan-300">Registration</span>
-            </h1>
-
-            <p className="text-cyan-100 mt-6 text-lg leading-relaxed">
-              Register your hospital with MediCare. Admin approval is required
-              before accessing the hospital dashboard.
-            </p>
-
-            <div className="mt-10 space-y-4">
-              <Feature text="Admin approval workflow" />
-              <Feature text="Manage doctors and availability" />
-              <Feature text="Track appointments and analytics" />
-              <Feature text="Secure hospital profile access" />
-            </div>
-
-            <div className="mt-10 bg-white/10 border border-white/10 rounded-[2rem] p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-cyan-100 text-sm">
-                    Form Completion
-                  </p>
-
-                  <p className="text-3xl font-black mt-1">
-                    {profileCompletion}%
-                  </p>
-                </div>
-
-                <ClipboardCheck className="text-cyan-300" size={34} />
-              </div>
-
-              <div className="h-3 bg-white/10 rounded-full mt-5 overflow-hidden">
-                <div
-                  className="h-full bg-cyan-300 rounded-full transition-all"
-                  style={{ width: `${profileCompletion}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        <main className="p-6 md:p-10">
-          <div className="mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
-              <ShieldCheck size={17} />
+            <div className="inline-flex items-center gap-1.5 text-cyan-700 font-black text-xs">
+              <ShieldCheck size={14} />
               HOSPITAL ONBOARDING
             </div>
 
-            <h2 className="text-3xl md:text-4xl font-black text-slate-950">
-              Create Hospital Account
-            </h2>
+            <h1 className="text-2xl font-black text-slate-950 mt-2">
+              Register Hospital
+            </h1>
 
-            <p className="text-slate-500 mt-3">
-              Fill the details below to submit your hospital for verification.
+            <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+              Submit your hospital details for admin approval.
             </p>
           </div>
 
-          <form onSubmit={registerHospital}>
-            <div className="grid md:grid-cols-2 gap-5">
-              <Input
-                icon={Building2}
-                label="Hospital Name"
-                name="hospitalName"
-                value={form.hospitalName}
-                onChange={handleChange}
-                placeholder="Example: Apollo Hospital"
-              />
+          <form onSubmit={registerHospital} className="space-y-4 mt-6">
+            <Input
+              icon={Building2}
+              name="hospitalName"
+              value={form.hospitalName}
+              onChange={handleChange}
+              placeholder="Hospital Name"
+            />
 
-              <Input
-                icon={Mail}
-                label="Email"
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="hospital@example.com"
-              />
+            <Input
+              icon={Mail}
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="Hospital Email"
+            />
 
-              <PasswordInput
-                label="Password"
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                showPassword={showPassword}
-                setShowPassword={setShowPassword}
-              />
+            <PasswordInput
+              value={form.password}
+              onChange={handleChange}
+              showPassword={showPassword}
+              setShowPassword={setShowPassword}
+            />
 
-              <Input
-                icon={Phone}
-                label="Mobile"
-                name="mobile"
-                value={form.mobile}
-                onChange={handleChange}
-                placeholder="+91 98765 43210"
-              />
+            <Input
+              icon={Phone}
+              name="mobile"
+              value={form.mobile}
+              onChange={handleChange}
+              placeholder="Mobile Number"
+            />
 
+            <div className="grid grid-cols-2 gap-3">
               <Input
                 icon={MapPin}
-                label="City"
                 name="city"
                 value={form.city}
                 onChange={handleChange}
-                placeholder="Chennai"
+                placeholder="City"
               />
 
               <Input
                 icon={MapPin}
-                label="State"
                 name="state"
                 value={form.state}
                 onChange={handleChange}
-                placeholder="Tamil Nadu"
+                placeholder="State"
               />
-
-              <Input
-                icon={FileText}
-                label="License Number"
-                name="licenseNumber"
-                value={form.licenseNumber}
-                onChange={handleChange}
-                placeholder="Hospital license number"
-              />
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-black text-slate-700">
-                    Password Strength
-                  </p>
-
-                  <p className="text-sm font-black text-slate-500">
-                    {passwordStrength.label}
-                  </p>
-                </div>
-
-                <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${passwordStrength.color} rounded-full transition-all`}
-                    style={{ width: `${passwordStrength.score}%` }}
-                  />
-                </div>
-
-                <p className="text-xs text-slate-400 mt-2">
-                  Use at least 6 characters with numbers or symbols.
-                </p>
-              </div>
-
-              <div className="md:col-span-2">
-                <label>
-                  <p className="text-sm font-black text-slate-700 mb-2">
-                    Address
-                  </p>
-
-                  <textarea
-                    name="address"
-                    value={form.address}
-                    onChange={handleChange}
-                    rows="4"
-                    required
-                    placeholder="Full hospital address"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500 resize-none text-slate-800"
-                  />
-                </label>
-              </div>
             </div>
+
+            <Input
+              icon={FileText}
+              name="licenseNumber"
+              value={form.licenseNumber}
+              onChange={handleChange}
+              placeholder="License Number"
+            />
+
+            <label>
+              <div className="flex gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-cyan-500">
+                <MapPin size={18} className="text-cyan-600 shrink-0 mt-0.5" />
+
+                <textarea
+                  name="address"
+                  value={form.address}
+                  onChange={handleChange}
+                  rows="3"
+                  required
+                  placeholder="Full Hospital Address"
+                  className="w-full bg-transparent outline-none resize-none text-sm text-slate-800 placeholder:text-slate-400"
+                />
+              </div>
+            </label>
 
             <button
               disabled={loading}
-              className="mt-7 w-full flex items-center justify-center gap-2 bg-cyan-600 text-white py-4 rounded-2xl font-black hover:bg-cyan-700 transition disabled:bg-slate-400"
+              type="submit"
+              className="w-full h-14 rounded-2xl bg-cyan-600 text-white font-black flex items-center justify-center gap-2 disabled:bg-slate-400 active:scale-95 transition"
             >
               {loading ? (
                 <>
@@ -284,30 +179,48 @@ export default function HospitalRegister() {
                 </>
               )}
             </button>
-
-            <p className="text-center text-slate-500 mt-6">
-              Already registered?{" "}
-              <Link
-                to="/hospital/login"
-                className="text-cyan-600 font-black hover:text-cyan-700"
-              >
-                Login here
-              </Link>
-            </p>
-
-            <p className="text-center text-slate-400 text-sm mt-3">
-              Hospital accounts remain pending until admin approval.
-            </p>
           </form>
-        </main>
+
+          <div className="mt-4 bg-cyan-50 border border-cyan-100 rounded-2xl p-3 flex gap-3">
+            <ShieldCheck size={19} className="text-cyan-600 shrink-0 mt-0.5" />
+
+            <div>
+              <p className="font-black text-slate-900 text-sm">
+                Admin Approval Required
+              </p>
+
+              <p className="text-xs text-slate-500 mt-0.5">
+                Hospital dashboard access starts after approval.
+              </p>
+            </div>
+          </div>
+
+          <div className="text-center mt-5">
+            <p className="text-sm text-slate-500">
+              Already registered?
+            </p>
+
+            <Link
+              to="/hospital/login"
+              className="text-cyan-600 font-black text-sm"
+            >
+              Login here
+            </Link>
+          </div>
+
+          <div className="text-center mt-4">
+            <Link to="/" className="text-cyan-600 font-black text-sm">
+              ← Back to Home
+            </Link>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
 
 function Input({
   icon: Icon,
-  label,
   name,
   value,
   onChange,
@@ -315,77 +228,55 @@ function Input({
   placeholder,
 }) {
   return (
-    <label>
-      <p className="text-sm font-black text-slate-700 mb-2">
-        {label}
-      </p>
+    <div className="relative">
+      <Icon
+        size={18}
+        className="absolute left-4 top-1/2 -translate-y-1/2 text-cyan-600"
+      />
 
-      <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-cyan-500">
-        <Icon size={19} className="text-cyan-600 shrink-0" />
-
-        <input
-          name={name}
-          type={type}
-          value={value}
-          onChange={onChange}
-          required
-          placeholder={placeholder}
-          className="w-full bg-transparent outline-none text-slate-800"
-        />
-      </div>
-    </label>
+      <input
+        name={name}
+        type={type}
+        value={value}
+        onChange={onChange}
+        required
+        placeholder={placeholder}
+        className="w-full h-14 pl-12 pr-4 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-cyan-500 outline-none text-sm text-slate-800 placeholder:text-slate-400"
+      />
+    </div>
   );
 }
 
 function PasswordInput({
-  label,
-  name,
   value,
   onChange,
   showPassword,
   setShowPassword,
 }) {
   return (
-    <label>
-      <p className="text-sm font-black text-slate-700 mb-2">
-        {label}
-      </p>
+    <div className="relative">
+      <Lock
+        size={18}
+        className="absolute left-4 top-1/2 -translate-y-1/2 text-cyan-600"
+      />
 
-      <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-cyan-500">
-        <Lock size={19} className="text-cyan-600 shrink-0" />
+      <input
+        name="password"
+        type={showPassword ? "text" : "password"}
+        value={value}
+        onChange={onChange}
+        required
+        placeholder="Create Password"
+        className="w-full h-14 pl-12 pr-12 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-cyan-500 outline-none text-sm text-slate-800 placeholder:text-slate-400"
+      />
 
-        <input
-          name={name}
-          type={showPassword ? "text" : "password"}
-          value={value}
-          onChange={onChange}
-          required
-          placeholder="Create secure password"
-          className="w-full bg-transparent outline-none text-slate-800"
-        />
-
-        <button
-          type="button"
-          onClick={() => setShowPassword(!showPassword)}
-          className="text-slate-400 hover:text-cyan-600"
-        >
-          {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
-        </button>
-      </div>
-    </label>
-  );
-}
-
-function Feature({ text }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center">
-        <CheckCircle2 size={16} className="text-cyan-300" />
-      </div>
-
-      <span className="font-semibold text-cyan-50">
-        {text}
-      </span>
+      <button
+        type="button"
+        onClick={() => setShowPassword(!showPassword)}
+        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+      >
+        {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+      </button>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 
 import { Patient } from '../patient/patient.entity';
+import { FamilyMember } from '../family-member/family-member.entity';
 
 export enum RecordType {
   LAB_REPORT = 'LAB_REPORT',
@@ -43,6 +44,13 @@ export class MedicalRecord {
     nullable: false,
   })
   patient: Patient;
+
+  @ManyToOne(() => FamilyMember, {
+    eager: true,
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  familyMember: FamilyMember;
 
   @CreateDateColumn()
   uploadedAt: Date;

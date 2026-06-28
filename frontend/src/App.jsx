@@ -28,6 +28,16 @@ import Notifications from "./pages/Notifications";
 import VideoCall from "./pages/VideoCall";
 import VideoConsult from "./pages/VideoConsult";
 import AppointmentCalendar from "./pages/AppointmentCalendar";
+import Account from "./pages/Account";
+import AuthLanding from "./pages/AuthLanding";
+import OtpLogin from "./pages/OtpLogin";
+import RootRedirect from "./pages/RootRedirect";
+import PatientProfileSelect from "./pages/PatientProfileSelect";
+import AppointmentCheckIn from "./pages/AppointmentCheckIn";
+import DoctorVideoConsult from "./pages/DoctorVideoConsult";
+import DoctorHub from "./pages/DoctorHub";
+import DoctorAppointmentDetails from "./pages/DoctorAppointmentDetails";
+
 
 import HospitalLogin from "./pages/HospitalLogin";
 import HospitalDashboard from "./pages/HospitalDashboard";
@@ -38,14 +48,26 @@ import HospitalProfile from "./pages/HospitalProfile";
 import HospitalAnalytics from "./pages/HospitalAnalytics";
 import HospitalRegister from "./pages/HospitalRegister";
 import Hospitals from "./pages/Hospitals";
+import HospitalDetails from "./pages/HospitalDetails";
 
 import DoctorLogin from "./pages/DoctorLogin";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import DoctorMyProfile from "./pages/DoctorMyProfile";
 import DoctorPatientProfile from "./pages/DoctorPatientProfile";
+import DoctorAppointments from "./pages/DoctorAppointments";
+import DoctorAvailability from "./pages/DoctorAvailability";
+import DoctorPatients from "./pages/DoctorPatients";
+import DoctorAnalytics from "./pages/DoctorAnalytics";
+import DoctorReviews from "./pages/DoctorReviews";
+import DoctorFollowUps from "./pages/DoctorFollowUps";
+import DoctorLeaveManagement from "./pages/DoctorLeaveManagement";
+import DoctorNotifications from "./pages/DoctorNotifications";
+import DoctorEarnings from "./pages/DoctorEarnings";
+import DoctorSettings from "./pages/DoctorSettings";
+import DoctorConsultationWorkspace from "./pages/DoctorConsultationWorkspace";
+
 import AIDoctorMatch from "./pages/AIDoctorMatch";
 import AIHealthInsights from "./pages/AIHealthInsights";
-import FloatingAI from "./components/FloatingAI";
 import AIHealthAssistant from "./pages/AIHealthAssistant";
 
 import AdminLogin from "./pages/AdminLogin";
@@ -61,32 +83,48 @@ import MedicineReminders from "./pages/MedicineReminders";
 import HealthTimeline from "./pages/HealthTimeline";
 import LabTests from "./pages/LabTests";
 import ChatRoom from "./pages/ChatRoom";
+import EmergencyProfile from "./pages/EmergencyProfile";
+import ManageProfiles from "./pages/ManageProfiles";
+import EditFamilyProfile from "./pages/EditFamilyProfile";
+import AppointmentDetails from "./pages/AppointmentDetails";
+
 
 function App() {
   return (
     <>
       <Routes>
         <Route element={<PublicLayout />}>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<RootRedirect />} />
+<Route path="/home" element={<Home />} />
+<Route path="/welcome" element={<AuthLanding />} />
+          
           <Route path="/doctors" element={<Doctors />} />
           <Route path="/hospitals" element={<Hospitals />} />
           <Route path="/lab-tests" element={<LabTests />} />
           <Route path="/video-consult" element={<VideoConsult />} />
-
+          
           <Route path="/doctor/:id" element={<DoctorProfile />} />
-          <Route path="/success" element={<SuccessPage />} />
-
+          <Route path="/account" element={<Account />} />
+          <Route path="/otp-login" element={<OtpLogin />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/doctor/login" element={<DoctorLogin />} />
           <Route path="/hospital/login" element={<HospitalLogin />} />
           <Route path="/hospital/register" element={<HospitalRegister />} />
           <Route path="/admin/login" element={<AdminLogin />} />
-
+ <Route path="/hospital/:id" element={<HospitalDetails />} />
           <Route path="/symptom-checker" element={<SymptomChecker />} />
           <Route path="/ai-doctor-match" element={<AIDoctorMatch />} />
           <Route path="/ai-health-assistant" element={<AIHealthAssistant />} />
-          <Route path="/notifications" element={<Notifications />} />
+         
+         <Route
+  path="/notifications"
+  element={
+    <ProtectedRoute>
+      <Notifications />
+    </ProtectedRoute>
+  }
+/>
 
           <Route path="/video-call/:appointmentId" element={<VideoCall />} />
 
@@ -155,27 +193,52 @@ function App() {
         </Route>
 
         <Route
-          path="/patient"
-          element={
-            <ProtectedRoute>
-              <PatientLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Dashboard />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="appointments" element={<Appointments />} />
-          <Route path="prescriptions" element={<MyPrescriptions />} />
-          <Route path="symptom-history" element={<SymptomHistory />} />
-          <Route path="profile" element={<PatientProfile />} />
-          <Route path="medical-records" element={<MedicalRecords />} />
-          <Route path="medicine-reminders" element={<MedicineReminders />} />
-          <Route path="health-timeline" element={<HealthTimeline />} />
-          <Route path="lab-tests" element={<LabTests />} />
-          <Route path="ai-health-insights" element={<AIHealthInsights />} />
-          <Route path="change-password" element={<ChangePassword />} />
-        </Route>
+  path="/patient/select-profile"
+  element={
+    <ProtectedRoute>
+      <PatientProfileSelect />
+    </ProtectedRoute>
+  }
+/>
 
+        <Route
+  path="/patient"
+  element={
+    <ProtectedRoute>
+      <PatientLayout />
+    </ProtectedRoute>
+  }
+>
+  
+  <Route index element={<Dashboard />} />
+  <Route path="dashboard" element={<Dashboard />} />
+  <Route path="success" element={<SuccessPage />} />
+  <Route path="appointments" element={<Appointments />} />
+  <Route
+  path="appointments/:id"
+  element={<AppointmentDetails />}
+/>
+<Route
+  path="appointments/:id/checkin"
+  element={<AppointmentCheckIn />}
+/>
+  <Route path="notifications" element={<Notifications />} />
+  <Route path="prescriptions" element={<MyPrescriptions />} />
+  <Route path="symptom-history" element={<SymptomHistory />} />
+  <Route path="profile" element={<PatientProfile />} />
+  <Route path="manage-profiles" element={<ManageProfiles />} />
+  <Route path="edit-family-profile/:id" element={<EditFamilyProfile />} />
+  <Route path="medical-records" element={<MedicalRecords />} />
+  <Route
+  path="emergency-profile"
+  element={<EmergencyProfile />}
+/>
+  <Route path="medicine-reminders" element={<MedicineReminders />} />
+  <Route path="health-timeline" element={<HealthTimeline />} />
+  <Route path="lab-tests" element={<LabTests />} />
+  <Route path="ai-health-insights" element={<AIHealthInsights />} />
+  <Route path="change-password" element={<ChangePassword />} />
+</Route>
         <Route
           path="/doctor"
           element={
@@ -186,11 +249,36 @@ function App() {
         >
           <Route path="dashboard" element={<DoctorDashboard />} />
           <Route path="profile" element={<DoctorMyProfile />} />
-          <Route path="appointments" element={<Appointments />} />
+          <Route path="appointments" element={<DoctorAppointments />} />
+          <Route
+  path="/doctor/appointment/:appointmentId/details"
+  element={<DoctorAppointmentDetails />}
+/>
+          <Route path="availability" element={<DoctorAvailability />} />
+         <Route path="hub" element={<DoctorHub />} />
+          <Route path="follow-ups" element={<DoctorFollowUps />} /> 
+          <Route path="patients" element={<DoctorPatients />} />
+          <Route path="analytics" element={<DoctorAnalytics />} />
+         <Route path="settings" element={<DoctorSettings />} />
+          <Route path="reviews" element={<DoctorReviews />} />
+      <Route path="leave" element={<DoctorLeaveManagement />} />
+      <Route
+  path="consultation/:appointmentId"
+  element={<DoctorConsultationWorkspace />}
+/>
           <Route
             path="appointment/:appointmentId/patient-profile"
             element={<DoctorPatientProfile />}
           />
+          <Route
+  path="notifications"
+  element={<DoctorNotifications />}
+/>
+          <Route path="earnings" element={<DoctorEarnings />} />
+          <Route
+  path="/doctor/video-consult/:appointmentId"
+  element={<DoctorVideoConsult />}
+/>
           <Route path="prescriptions" element={<DoctorPrescriptions />} />
           <Route path="calendar" element={<AppointmentCalendar />} />
           <Route path="change-password" element={<ChangePassword />} />
@@ -206,6 +294,7 @@ function App() {
         >
           <Route path="dashboard" element={<HospitalDashboard />} />
           <Route path="doctors" element={<HospitalDoctors />} />
+         
           <Route path="availability" element={<HospitalAvailability />} />
           <Route path="appointments" element={<HospitalAppointments />} />
           <Route path="profile" element={<HospitalProfile />} />
@@ -228,8 +317,6 @@ function App() {
           <Route path="analytics" element={<AdminAnalytics />} />
         </Route>
       </Routes>
-
-      <FloatingAI />
     </>
   );
 }

@@ -57,10 +57,10 @@ export default function PatientSidebar() {
 
   return (
     <aside
-      className={`min-h-screen bg-white border-r border-slate-100 p-5 shrink-0 transition-all duration-300 ${
-        collapsed ? "w-24" : "w-72"
-      }`}
-    >
+  className={`h-screen sticky top-0 overflow-y-auto bg-white border-r border-slate-100 p-5 shrink-0 transition-all duration-300 ${
+    collapsed ? "w-24" : "w-72"
+  }`}
+>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-12 h-12 rounded-2xl bg-cyan-600 flex items-center justify-center overflow-hidden shrink-0">
@@ -78,7 +78,7 @@ export default function PatientSidebar() {
           {!collapsed && (
             <div className="min-w-0">
               <h1 className="text-2xl font-black text-slate-950">
-                MediCare
+                TryDoc
               </h1>
 
               <p className="text-xs text-slate-500 truncate max-w-[170px]">
@@ -248,7 +248,7 @@ export default function PatientSidebar() {
             <SidebarItem
   to="/ai-health-assistant"
   icon={Brain}
-  label="MediCare AI"
+  label="TryDoc AI"
   collapsed={collapsed}
   linkClass={linkClass}
 />

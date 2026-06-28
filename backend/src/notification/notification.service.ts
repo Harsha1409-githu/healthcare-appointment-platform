@@ -97,4 +97,18 @@ export class NotificationService {
       message: 'All notifications marked as read',
     };
   }
+
+  async getUnreadCount(userId: string, role: string) {
+  const count = await this.notificationRepo.count({
+    where: {
+      userId,
+      role,
+      isRead: false,
+    },
+  });
+
+  return {
+    count,
+  };
+}
 }

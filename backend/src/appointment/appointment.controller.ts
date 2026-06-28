@@ -20,18 +20,17 @@ export class AppointmentController {
     private readonly appointmentService: AppointmentService,
   ) {}
 
-  // TEMP DEV MODE: public booking for OTP testing
   @Post()
-book(@Body() dto: CreateAppointmentDto) {
-  if (!dto.patientId) {
-    throw new BadRequestException('patientId is required');
-  }
+  book(@Body() dto: CreateAppointmentDto) {
+    if (!dto.patientId) {
+      throw new BadRequestException('patientId is required');
+    }
 
-  return this.appointmentService.bookAppointment(
-    dto,
-    dto.patientId,
-  );
-}
+    return this.appointmentService.bookAppointment(
+      dto,
+      dto.patientId,
+    );
+  }
 
   @Get()
   getAll() {
@@ -46,40 +45,59 @@ book(@Body() dto: CreateAppointmentDto) {
   @UseGuards(JwtAuthGuard)
   @Get('my')
   getMyAppointments(@Req() req: any) {
-    return this.appointmentService.getMyAppointments(
-      req.user.sub,
-    );
+    return this.appointmentService.getMyAppointments(req.user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('hospital/my')
   getHospitalAppointments(@Req() req: any) {
-    return this.appointmentService.getAppointmentsByHospital(
-      req.user.sub,
-    );
+    return this.appointmentService.getAppointmentsByHospital(req.user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('hospital/analytics')
   getHospitalAnalytics(@Req() req: any) {
-    return this.appointmentService.getHospitalAnalytics(
-      req.user.sub,
-    );
+    return this.appointmentService.getHospitalAnalytics(req.user.sub);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Get(':id')
-  getAppointmentById(@Param('id') id: string) {
-    return this.appointmentService.getAppointmentById(
-      Number(id),
-    );
+  @Get(':id/patient-profile')
+  getPatientProfile(@Param('id') id: string) {
+    return this.appointmentService.getPatientProfile(Number(id));
+  }
+
+  @Patch(':id/no-show-patient')
+  markPatientNoShow(@Param('id') id: string) {
+    return this.appointmentService.markPatientNoShow(Number(id));
+  }
+
+  @Patch(':id/no-show-doctor')
+  markDoctorNoShow(@Param('id') id: string) {
+    return this.appointmentService.markDoctorNoShow(Number(id));
+  }
+
+  @Patch(':id/documentation-pending')
+  markDocumentationPending(@Param('id') id: string) {
+    return this.appointmentService.markDocumentationPending(Number(id));
+  }
+
+  @Patch(':id/consultation-active')
+  markConsultationActive(@Param('id') id: string) {
+    return this.appointmentService.markConsultationActive(Number(id));
+  }
+
+  @Patch(':id/check-in')
+  markCheckedIn(@Param('id') id: string) {
+    return this.appointmentService.markCheckedIn(Number(id));
+  }
+
+  @Get('doctor/:doctorId/earnings')
+  getDoctorEarnings(@Param('doctorId') doctorId: string) {
+    return this.appointmentService.getDoctorEarnings(doctorId);
   }
 
   @Get('doctor/:doctorId')
   getByDoctor(@Param('doctorId') doctorId: string) {
-    return this.appointmentService.getAppointmentsByDoctor(
-      doctorId,
-    );
+    return this.appointmentService.getAppointmentsByDoctor(doctorId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -92,10 +110,28 @@ book(@Body() dto: CreateAppointmentDto) {
     );
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/reschedule')
+  reschedule(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Body() body: { newSlotId: string },
+  ) {
+    return this.appointmentService.rescheduleAppointment(
+      Number(id),
+      body.newSlotId,
+      req.user.sub,
+    );
+  }
+
   @Patch(':id/complete')
   complete(@Param('id') id: string) {
-    return this.appointmentService.completeAppointment(
-      Number(id),
-    );
+    return this.appointmentService.completeAppointment(Number(id));
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  getAppointmentById(@Param('id') id: string) {
+    return this.appointmentService.getAppointmentById(Number(id));
   }
 }

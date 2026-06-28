@@ -6,120 +6,114 @@ import {
   BadgeCheck,
   Clock,
   ArrowRight,
+  Building2,
+  Video,
+  Award,
 } from "lucide-react";
 
 export default function DoctorCard({ doctor, onBook }) {
+  const doctorImage =
+    doctor.profileImage ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      doctor.doctorName || "Doctor"
+    )}&background=0891b2&color=fff&size=200`;
+
   return (
-    <div className="group bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-cyan-600 to-blue-600 p-6 text-white">
-        <div className="flex items-center gap-4">
+    <article className="bg-white rounded-3xl border border-slate-100 shadow-sm p-3 active:scale-[0.99] transition">
+      <div className="flex gap-3">
+        <div className="relative shrink-0">
           <img
-            src={
-              doctor.profileImage ||
-              `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                doctor.doctorName
-              )}&background=0891b2&color=fff&size=200`
-            }
-            alt={doctor.doctorName}
-            className="w-20 h-20 rounded-3xl object-cover border-4 border-white/20"
+            src={doctorImage}
+            alt={doctor.doctorName || "Doctor"}
+            className="w-20 h-20 rounded-3xl object-cover border border-slate-100 shadow-sm"
           />
 
-          <div className="flex-1">
-            <h2 className="text-xl font-black">
-              {doctor.doctorName}
-            </h2>
+          <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center border-4 border-white">
+            <BadgeCheck size={14} className="text-white" />
+          </div>
+        </div>
 
-            <p className="text-cyan-100 font-semibold">
-              {doctor.specialization}
-            </p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h2 className="text-base font-black text-slate-950 truncate">
+                {doctor.doctorName || "Doctor"}
+              </h2>
 
-            <div className="flex items-center gap-2 mt-2">
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/20 text-xs font-black">
-                <BadgeCheck size={13} />
-                Verified
-              </span>
-
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500 text-white text-xs font-black">
-                <Star size={13} />
-                4.8
-              </span>
+              <p className="text-sm text-cyan-700 font-black truncate">
+                {doctor.specialization || "Specialist"}
+              </p>
             </div>
+
+            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black">
+              <Star size={11} className="fill-emerald-600" />
+              4.8
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-500 mt-1 truncate">
+            {doctor.qualification || "Qualification not added"}
+          </p>
+
+          <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold mt-2">
+            <Award size={13} className="text-cyan-600" />
+            {doctor.experience || 0}+ years experience
           </div>
         </div>
       </div>
 
-      {/* Body */}
-      <div className="p-6">
-        <div className="space-y-4">
-          <InfoRow
-            icon={Stethoscope}
-            text={`${doctor.experience || 0} Years Experience`}
-            color="text-cyan-600"
-          />
+      <div className="grid grid-cols-2 gap-2 mt-3">
+        <InfoPill
+          icon={Building2}
+          text={doctor.hospital?.hospitalName || "Independent Practice"}
+        />
 
-          <InfoRow
-            icon={IndianRupee}
-            text={`Consultation Fee ₹${doctor.consultationFee || 0}`}
-            color="text-emerald-600"
-          />
+        <InfoPill
+          icon={MapPin}
+          text={doctor.city || doctor.hospital?.city || "Available"}
+        />
 
-          <InfoRow
-            icon={MapPin}
-            text={
-              doctor.city ||
-              doctor.hospital?.city ||
-              "Chennai"
-            }
-            color="text-orange-500"
-          />
-
-          <InfoRow
-            icon={Clock}
-            text="Available Today"
-            color="text-purple-600"
-          />
-        </div>
-
-        <div className="mt-5 bg-slate-50 rounded-2xl p-4">
-          <p className="text-xs font-black text-slate-400 uppercase">
-            Hospital
-          </p>
-
-          <p className="font-bold text-slate-800 mt-1">
-            {doctor.hospital?.hospitalName ||
-              "Independent Practice"}
-          </p>
-        </div>
-
-        <button
-          onClick={() => onBook(doctor)}
-          className="
-            w-full mt-6
-            bg-gradient-to-r from-cyan-600 to-blue-600
-            hover:from-cyan-700 hover:to-blue-700
-            text-white
-            py-4
-            rounded-2xl
-            font-black
-            flex items-center justify-center gap-2
-            transition
-          "
-        >
-          Book Appointment
-          <ArrowRight size={18} />
-        </button>
+        <InfoPill icon={Video} text="Video consult" />
+        <InfoPill icon={Clock} text="Available today" />
       </div>
-    </div>
+
+      <div className="mt-3 bg-slate-50 rounded-2xl border border-slate-100 p-3 flex items-center justify-between">
+        <div>
+          <p className="text-xs text-slate-500 font-bold">
+            Consultation Fee
+          </p>
+
+          <div className="flex items-center text-xl font-black text-slate-950 mt-0.5">
+            <IndianRupee size={17} />
+            {doctor.consultationFee || 0}
+          </div>
+        </div>
+
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-black">
+          <BadgeCheck size={13} />
+          Verified
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onBook(doctor)}
+        className="w-full mt-3 bg-cyan-600 text-white py-3 rounded-2xl text-sm font-black active:scale-95 transition flex items-center justify-center gap-1.5"
+      >
+        Book Appointment
+        <ArrowRight size={16} />
+      </button>
+    </article>
   );
 }
 
-function InfoRow({ icon: Icon, text, color }) {
+function InfoPill({ icon: Icon, text }) {
   return (
-    <div className="flex items-center gap-3">
-      <Icon size={18} className={color} />
-      <span className="text-slate-700 font-medium">
-        {text}
+    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 rounded-2xl px-2 py-2 min-w-0">
+      <Icon size={13} className="text-cyan-600 shrink-0" />
+
+      <span className="truncate text-[11px] font-bold text-slate-600">
+        {text || "-"}
       </span>
     </div>
   );

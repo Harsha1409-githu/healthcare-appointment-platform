@@ -4,8 +4,9 @@ import {
   Stethoscope,
   HeartPulse,
   Activity,
-  ArrowRight,
   AlertTriangle,
+  Bot,
+  ChevronRight,
   Sparkles,
 } from "lucide-react";
 
@@ -13,74 +14,71 @@ export default function AIHealthAssistant() {
   const aiFeatures = [
     {
       title: "Symptom Checker",
-      desc: "Enter symptoms and get possible condition, urgency and advice.",
+      desc: "Analyze symptoms with AI",
       icon: Brain,
       to: "/symptom-checker",
-      button: "Check Symptoms",
     },
     {
-      title: "AI Doctor Match",
-      desc: "Find the right specialist and recommended doctors based on symptoms.",
+      title: "Find Doctor",
+      desc: "Match with specialists",
       icon: Stethoscope,
       to: "/ai-doctor-match",
-      button: "Find Doctor",
     },
     {
-      title: "AI Health Insights",
-      desc: "View personalized health score, appointments, prescriptions and reminders.",
+      title: "Health Insights",
+      desc: "View AI health summary",
       icon: HeartPulse,
       to: "/patient/ai-health-insights",
-      button: "View Insights",
     },
     {
       title: "Health Timeline",
-      desc: "Track your appointments, reminders and health activities in one place.",
+      desc: "Appointments & records",
       icon: Activity,
       to: "/patient/health-timeline",
-      button: "View Timeline",
     },
   ];
 
   return (
-    <div className="min-h-screen bg-[#f4fbff] py-10 px-6">
-      <div className="max-w-7xl mx-auto">
-        <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-900 text-white p-8 md:p-12 shadow-2xl mb-8">
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl" />
+    <main className="min-h-screen bg-[#f4f8fb] px-4 pt-4 pb-24">
+      <div className="max-w-md mx-auto">
+        <header className="mb-3">
+          <div className="inline-flex items-center gap-1.5 text-cyan-700 font-black text-xs">
+            <Sparkles size={15} />
+            AI HEALTH
+          </div>
 
-          <div className="relative max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 mb-6">
-              <Sparkles size={18} className="text-cyan-300" />
-              <span className="font-black">MediCare AI</span>
+          <h1 className="text-2xl font-black text-slate-950 mt-1">
+            TryDoc AI
+          </h1>
+
+          <p className="text-sm text-slate-500 font-semibold">
+            Smart health guidance in one place
+          </p>
+        </header>
+
+        <section className="bg-cyan-600 rounded-3xl p-5 text-white shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-black text-cyan-100">
+                AI ASSISTANT
+              </p>
+
+              <h2 className="text-2xl font-black mt-1">
+                Your Personal Health Guide
+              </h2>
+
+              <p className="text-sm text-cyan-100 mt-2 leading-relaxed">
+                Check symptoms, match doctors and track your health faster.
+              </p>
             </div>
 
-            <h1 className="text-4xl md:text-6xl font-black leading-tight">
-              Your AI Health Assistant
-            </h1>
-
-            <p className="text-blue-100 text-lg mt-4">
-              Check symptoms, find the right doctor, view health insights and
-              track your medical journey from one place.
-            </p>
+            <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
+              <Bot size={28} />
+            </div>
           </div>
         </section>
 
-        <div className="bg-red-50 border border-red-100 rounded-[2rem] p-5 mb-8 flex gap-4">
-          <AlertTriangle className="text-red-600 shrink-0" size={28} />
-
-          <div>
-            <h3 className="font-black text-red-700">
-              Emergency Notice
-            </h3>
-
-            <p className="text-red-600 mt-1">
-              AI suggestions are only for guidance. For chest pain, breathing
-              difficulty, severe bleeding, fainting or emergency symptoms,
-              contact emergency care immediately.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6">
+        <section className="grid grid-cols-2 gap-3 mt-3">
           {aiFeatures.map((feature) => {
             const Icon = feature.icon;
 
@@ -88,32 +86,48 @@ export default function AIHealthAssistant() {
               <Link
                 key={feature.title}
                 to={feature.to}
-                className="group bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 hover:-translate-y-2 hover:shadow-xl transition"
+                className="bg-white rounded-3xl border border-slate-100 p-4 shadow-sm active:scale-95 transition"
               >
-                <div className="w-14 h-14 rounded-2xl bg-cyan-50 flex items-center justify-center mb-5">
-                  <Icon className="text-cyan-600" size={28} />
+                <div className="w-11 h-11 rounded-2xl bg-cyan-50 flex items-center justify-center mb-3">
+                  <Icon className="text-cyan-600" size={22} />
                 </div>
 
-                <h2 className="text-xl font-black text-slate-950">
+                <h3 className="font-black text-slate-900 text-sm">
                   {feature.title}
-                </h2>
+                </h3>
 
-                <p className="text-slate-500 mt-3">
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                   {feature.desc}
                 </p>
 
-                <div className="mt-6 flex items-center gap-2 text-cyan-600 font-black">
-                  {feature.button}
-                  <ArrowRight
-                    size={18}
-                    className="group-hover:translate-x-1 transition"
-                  />
+                <div className="mt-3 flex justify-end">
+                  <ChevronRight className="text-cyan-600" size={18} />
                 </div>
               </Link>
             );
           })}
-        </div>
+        </section>
+
+        <section className="mt-3 bg-amber-50 border border-amber-100 rounded-3xl p-4">
+          <div className="flex gap-3">
+            <AlertTriangle
+              size={18}
+              className="text-amber-600 shrink-0 mt-0.5"
+            />
+
+            <div>
+              <p className="text-xs font-black text-amber-800">
+                Important Notice
+              </p>
+
+              <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                AI suggestions are informational only and do not replace medical
+                advice. Contact emergency services for urgent conditions.
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

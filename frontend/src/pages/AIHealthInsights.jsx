@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Brain,
   HeartPulse,
@@ -7,21 +8,15 @@ import {
   FileText,
   Sparkles,
   Activity,
-  ShieldCheck,
   Stethoscope,
-  ClipboardList,
-  ArrowRight,
   RefreshCcw,
 } from "lucide-react";
-import { Link } from "react-router-dom";
 import api from "../api/axios";
 
 export default function AIHealthInsights() {
-  const patient = JSON.parse(
-    localStorage.getItem("patientUser") ||
-      localStorage.getItem("user") ||
-      "null"
-  );
+  const patient =
+    JSON.parse(localStorage.getItem("patientUser") || "null") ||
+    JSON.parse(localStorage.getItem("user") || "null");
 
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -43,6 +38,7 @@ export default function AIHealthInsights() {
       setInsights(res.data);
     } catch (error) {
       console.error("AI insights error:", error);
+      setInsights(null);
     } finally {
       setLoading(false);
     }
@@ -59,304 +55,229 @@ export default function AIHealthInsights() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4fbff] flex items-center justify-center">
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center mx-auto mb-4">
-            <Brain className="text-cyan-600 animate-pulse" size={34} />
-          </div>
-
-          <p className="text-slate-500 font-semibold">
-            Loading AI Health Insights...
+      <main className="min-h-screen bg-[#f4f8fb] flex items-center justify-center px-4">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 text-center">
+          <Brain className="text-cyan-600 animate-pulse mx-auto" size={34} />
+          <p className="text-slate-500 font-bold mt-3">
+            Loading insights...
           </p>
         </div>
-      </div>
+      </main>
     );
   }
 
   if (!insights) {
     return (
-      <div className="min-h-screen bg-[#f4fbff] px-6 py-8">
-        <div className="max-w-[900px] mx-auto bg-white rounded-[2rem] border border-slate-100 shadow-sm p-10 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center mx-auto mb-4">
-            <Brain className="text-cyan-600" size={34} />
-          </div>
+      <main className="min-h-screen bg-[#f4f8fb] px-4 pt-4 pb-24">
+        <div className="max-w-md mx-auto">
+          <header className="mb-4">
+            <div className="inline-flex items-center gap-1.5 text-cyan-700 font-black text-xs">
+              <Brain size={15} />
+              AI HEALTH
+            </div>
 
-          <h2 className="text-2xl font-black text-slate-950">
-            No insights available
-          </h2>
+            <h1 className="text-2xl font-black text-slate-950 mt-1">
+              Health Insights
+            </h1>
 
-          <p className="text-slate-500 mt-2">
-            Book appointments, add prescriptions or create medicine reminders to
-            generate AI health insights.
-          </p>
+            <p className="text-sm text-slate-500 font-semibold">
+              Your AI health summary will appear here.
+            </p>
+          </header>
 
-          <button
-            onClick={fetchInsights}
-            className="mt-6 inline-flex items-center gap-2 bg-cyan-600 text-white px-5 py-3 rounded-2xl font-black hover:bg-cyan-700"
-          >
-            <RefreshCcw size={18} />
-            Refresh Insights
-          </button>
+          <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-cyan-50 flex items-center justify-center mx-auto mb-4">
+              <Brain className="text-cyan-600" size={32} />
+            </div>
+
+            <h2 className="text-lg font-black text-slate-950">
+              No insights available
+            </h2>
+
+            <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+              Book appointments, add prescriptions or create medicine reminders
+              to generate insights.
+            </p>
+
+            <button
+              onClick={fetchInsights}
+              className="mt-5 inline-flex items-center gap-2 bg-cyan-600 text-white px-5 py-3 rounded-2xl font-black"
+            >
+              <RefreshCcw size={17} />
+              Refresh
+            </button>
+          </section>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f4fbff]">
-      <div className="max-w-[1450px] mx-auto px-6 py-8">
-        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 mb-8">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-4">
-                <Brain size={17} />
-                AI HEALTH INSIGHTS
-              </div>
-
-              <h1 className="text-4xl md:text-5xl font-black text-slate-950">
-                Personalized Health Summary
-              </h1>
-
-              <p className="text-slate-500 mt-3 max-w-2xl text-lg leading-relaxed">
-                AI-powered overview based on your appointments, prescriptions
-                and active medicine reminders.
-              </p>
-            </div>
-
-            <button
-              onClick={fetchInsights}
-              className="inline-flex items-center justify-center gap-2 bg-cyan-600 text-white px-6 py-4 rounded-2xl font-black hover:bg-cyan-700 transition"
-            >
-              <RefreshCcw size={18} />
-              Refresh
-            </button>
+    <main className="min-h-screen bg-[#f4f8fb] px-4 pt-4 pb-24">
+      <div className="max-w-md mx-auto">
+        <header className="mb-4">
+          <div className="inline-flex items-center gap-1.5 text-cyan-700 font-black text-xs">
+            <Brain size={15} />
+            AI HEALTH
           </div>
-        </section>
 
-        <section className="grid lg:grid-cols-[380px_1fr] gap-8 mb-8">
-          <div className="relative overflow-hidden bg-slate-950 rounded-[2rem] p-6 text-white shadow-sm">
-            <div className="absolute -top-16 -right-16 w-56 h-56 bg-cyan-400/20 rounded-full blur-3xl" />
+          <h1 className="text-2xl font-black text-slate-950 mt-1">
+            Health Insights
+          </h1>
 
-            <div className="relative">
-              <div className="w-16 h-16 rounded-3xl bg-white/10 border border-white/20 flex items-center justify-center mb-5">
-                <HeartPulse className="text-cyan-300" size={34} />
-              </div>
+          <p className="text-sm text-slate-500 font-semibold">
+            Personalized summary from your health activity.
+          </p>
+        </header>
 
-              <p className="text-cyan-100 font-bold">
+        <section className="bg-slate-950 rounded-3xl p-5 text-white shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-cyan-200 font-bold text-sm">
                 Health Score
               </p>
 
-              <h2 className="text-6xl font-black mt-2">
+              <h2 className="text-5xl font-black mt-1">
                 {healthScore}
-                <span className="text-2xl text-cyan-100">/100</span>
+                <span className="text-lg text-cyan-100">/100</span>
               </h2>
 
-              <div className="w-full h-3 bg-white/10 rounded-full mt-6 overflow-hidden">
-                <div
-                  className="h-full bg-cyan-300 rounded-full transition-all"
-                  style={{ width: `${healthScore}%` }}
-                />
-              </div>
-
-              <div className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/10 text-cyan-100 font-black">
-                <ShieldCheck size={17} />
+              <p className="text-sm text-cyan-100 font-black mt-1">
                 {scoreLabel}
-              </div>
-
-              <p className="text-sm text-cyan-100 mt-5 leading-relaxed">
-                Score is calculated from consultations, prescriptions and active
-                medicine reminders.
               </p>
+            </div>
+
+            <div className="w-16 h-16 rounded-3xl bg-white/10 flex items-center justify-center">
+              <HeartPulse className="text-cyan-300" size={34} />
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <InsightCard
+          <div className="h-2 bg-white/10 rounded-full mt-5 overflow-hidden">
+            <div
+              className="h-full bg-cyan-300 rounded-full"
+              style={{ width: `${healthScore}%` }}
+            />
+          </div>
+        </section>
+
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <div className="flex gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-cyan-50 flex items-center justify-center shrink-0">
+              <Sparkles className="text-cyan-600" size={22} />
+            </div>
+
+            <div>
+              <h2 className="text-lg font-black text-slate-950">
+                AI Recommendation
+              </h2>
+
+              <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+                {insights.suggestion ||
+                  "Keep your profile updated and continue tracking appointments, prescriptions and medicines for better insights."}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <h2 className="text-lg font-black text-slate-950 mb-3">
+            Health Summary
+          </h2>
+
+          <div className="grid grid-cols-2 gap-3">
+            <SummaryBox
               icon={CalendarCheck}
-              title="Upcoming"
               value={insights.upcomingAppointments}
-              subtitle="Appointments"
+              label="Upcoming"
             />
 
-            <InsightCard
+            <SummaryBox
               icon={Activity}
-              title="Completed"
               value={insights.completedAppointments}
-              subtitle="Consultations"
+              label="Completed"
             />
 
-            <InsightCard
+            <SummaryBox
               icon={FileText}
-              title="Prescriptions"
               value={insights.prescriptions}
-              subtitle="Available"
+              label="Prescriptions"
             />
 
-            <InsightCard
+            <SummaryBox
               icon={Pill}
-              title="Medicines"
               value={insights.activeReminders}
-              subtitle="Active reminders"
+              label="Medicines"
             />
           </div>
         </section>
 
-        <section className="grid xl:grid-cols-[1fr_360px] gap-8">
-          <main className="space-y-6">
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center shrink-0">
-                  <Sparkles className="text-cyan-600" size={24} />
-                </div>
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mt-3">
+          <h2 className="text-lg font-black text-slate-950 mb-3">
+            Quick Actions
+          </h2>
 
-                <div>
-                  <h2 className="text-2xl font-black text-slate-950">
-                    AI Recommendation
-                  </h2>
-
-                  <p className="text-slate-600 mt-2 font-medium leading-relaxed">
-                    {insights.suggestion ||
-                      "Keep your profile updated and continue tracking appointments, prescriptions and medicines for better insights."}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-5">
-              <CareCard
-                icon={Stethoscope}
-                title="Regular Care"
-                desc="Book timely consultations and follow doctor advice."
-                to="/doctors"
-              />
-
-              <CareCard
-                icon={Pill}
-                title="Medicine Routine"
-                desc="Use reminders to stay consistent with prescribed medicines."
-                to="/patient/medicine-reminders"
-              />
-
-              <CareCard
-                icon={FileText}
-                title="Medical Records"
-                desc="Keep your reports and prescriptions organized."
-                to="/patient/medical-records"
-              />
-            </div>
-          </main>
-
-          <aside className="space-y-5">
-            <SummaryCard
-              icon={ClipboardList}
-              title="Insight Factors"
-              items={[
-                ["Upcoming Appointments", insights.upcomingAppointments],
-                ["Completed Consultations", insights.completedAppointments],
-                ["Prescriptions", insights.prescriptions],
-                ["Active Medicines", insights.activeReminders],
-              ]}
+          <div className="grid grid-cols-3 gap-3">
+            <QuickAction
+              to="/doctors"
+              icon={Stethoscope}
+              title="Doctors"
             />
 
-            <div className="bg-cyan-600 rounded-[2rem] p-6 text-white">
-              <Brain size={30} className="mb-4" />
+            <QuickAction
+              to="/patient/medicine-reminders"
+              icon={Pill}
+              title="Meds"
+            />
 
-              <h3 className="text-xl font-black">
-                Improve your score
-              </h3>
-
-              <p className="text-cyan-100 text-sm mt-2 leading-relaxed">
-                Complete your profile, attend scheduled appointments and keep
-                prescriptions updated.
-              </p>
-
-              <Link
-                to="/patient/profile"
-                className="mt-5 inline-flex items-center gap-2 bg-white text-cyan-700 px-5 py-3 rounded-2xl font-black"
-              >
-                Update Profile
-                <ArrowRight size={17} />
-              </Link>
-            </div>
-          </aside>
+            <QuickAction
+              to="/patient/medical-records"
+              icon={FileText}
+              title="Records"
+            />
+          </div>
         </section>
+
+        <button
+          onClick={fetchInsights}
+          className="mt-3 w-full bg-white border border-slate-200 text-slate-700 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 active:scale-95 transition"
+        >
+          <RefreshCcw size={17} />
+          Refresh Insights
+        </button>
       </div>
-    </div>
+    </main>
   );
 }
 
-function InsightCard({ icon: Icon, title, value, subtitle }) {
+function SummaryBox({ icon: Icon, value, label }) {
   return (
-    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-5">
-      <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center mb-4">
-        <Icon className="text-cyan-600" size={24} />
+    <div className="bg-slate-50 rounded-2xl border border-slate-100 p-3">
+      <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center mb-2">
+        <Icon className="text-cyan-600" size={20} />
       </div>
 
-      <p className="text-3xl font-black text-slate-950">
-        {value}
+      <p className="text-2xl font-black text-slate-950">
+        {value || 0}
       </p>
 
-      <p className="font-black text-slate-700 mt-1">
-        {title}
-      </p>
-
-      <p className="text-sm text-slate-500">
-        {subtitle}
+      <p className="text-xs text-slate-500 font-black">
+        {label}
       </p>
     </div>
   );
 }
 
-function CareCard({ icon: Icon, title, desc, to }) {
+function QuickAction({ to, icon: Icon, title }) {
   return (
     <Link
       to={to}
-      className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-5 hover:shadow-xl hover:-translate-y-1 transition"
+      className="bg-slate-50 border border-slate-100 rounded-2xl p-3 text-center active:scale-95 transition"
     >
-      <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center mb-4">
-        <Icon className="text-cyan-600" size={24} />
-      </div>
+      <Icon className="text-cyan-600 mx-auto" size={22} />
 
-      <h3 className="font-black text-slate-950">
+      <p className="text-xs font-black text-slate-800 mt-2">
         {title}
-      </h3>
-
-      <p className="text-sm text-slate-500 mt-2 leading-relaxed">
-        {desc}
       </p>
     </Link>
-  );
-}
-
-function SummaryCard({ icon: Icon, title, items }) {
-  return (
-    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6">
-      <div className="flex items-center gap-3 mb-5">
-        <div className="w-11 h-11 rounded-2xl bg-cyan-50 flex items-center justify-center">
-          <Icon className="text-cyan-600" size={22} />
-        </div>
-
-        <h3 className="text-xl font-black text-slate-950">
-          {title}
-        </h3>
-      </div>
-
-      <div className="space-y-3">
-        {items.map(([label, value]) => (
-          <div
-            key={label}
-            className="flex items-center justify-between gap-4 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0"
-          >
-            <p className="text-sm text-slate-500 font-semibold">
-              {label}
-            </p>
-
-            <p className="font-black text-slate-950">
-              {value}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }

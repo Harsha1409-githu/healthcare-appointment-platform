@@ -6,24 +6,16 @@ import {
   Stethoscope,
   IndianRupee,
   BadgeCheck,
-  CalendarCheck,
-  ArrowRight,
-  SlidersHorizontal,
   Award,
   Building2,
   X,
-  Video,
   Clock,
-  ShieldCheck,
-  Star,
-  HeartPulse,
-  Filter,
   Loader2,
+  CalendarCheck,
 } from "lucide-react";
-
 import api from "../api/axios";
 
-function useDebounce(value, delay = 500) {
+function useDebounce(value, delay = 400) {
   const [debounced, setDebounced] = useState(value);
 
   useEffect(() => {
@@ -38,9 +30,10 @@ export default function Doctors() {
   const [searchParams] = useSearchParams();
 
   const urlCity =
-  searchParams.get("city") ||
-  localStorage.getItem("selectedCity") ||
-  "Chennai";
+    searchParams.get("city") ||
+    localStorage.getItem("selectedCity") ||
+    "Chennai";
+
   const urlSpecialization = searchParams.get("specialization") || "All";
 
   const [city, setCity] = useState(urlCity);
@@ -48,10 +41,8 @@ export default function Doctors() {
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.get("search") || "");
   const [specialization, setSpecialization] = useState(urlSpecialization);
-  const [experienceFilter, setExperienceFilter] = useState("All");
-  const [feeFilter, setFeeFilter] = useState("All");
   const [sortBy, setSortBy] = useState("relevance");
 
   const debouncedSearch = useDebounce(search);
@@ -70,11 +61,11 @@ export default function Doctors() {
         const data = res.data?.data || [];
         const activeDoctors = data.filter((d) => d.isActive);
 
-        setDoctors(data);
+        setDoctors(activeDoctors);
         setFiltered(activeDoctors);
       })
       .catch((err) => {
-        console.error("API ERROR:", err);
+        console.error("Doctors API error:", err);
         setDoctors([]);
         setFiltered([]);
       })
@@ -90,18 +81,20 @@ export default function Doctors() {
   );
 
   const cities = [
-  ...new Set([
-    localStorage.getItem("selectedCity"),
-    "Chennai",
-    "Mumbai",
-    "Delhi",
-    "Bangalore",
-    "Hyderabad",
-  ].filter(Boolean)),
-];
+    ...new Set(
+      [
+        localStorage.getItem("selectedCity"),
+        "Chennai",
+        "Mumbai",
+        "Delhi",
+        "Bangalore",
+        "Hyderabad",
+      ].filter(Boolean)
+    ),
+  ];
 
   useEffect(() => {
-    let result = [...doctors].filter((d) => d.isActive);
+    let result = [...doctors];
 
     if (debouncedSearch) {
       result = result.filter((d) =>
@@ -119,30 +112,6 @@ export default function Doctors() {
           ?.toLowerCase()
           .includes(specialization.toLowerCase())
       );
-    }
-
-    if (experienceFilter !== "All") {
-      result = result.filter((d) => {
-        const exp = Number(d.experience || 0);
-
-        if (experienceFilter === "0-5") return exp <= 5;
-        if (experienceFilter === "5-10") return exp > 5 && exp <= 10;
-        if (experienceFilter === "10+") return exp > 10;
-
-        return true;
-      });
-    }
-
-    if (feeFilter !== "All") {
-      result = result.filter((d) => {
-        const fee = Number(d.consultationFee || 0);
-
-        if (feeFilter === "below-500") return fee < 500;
-        if (feeFilter === "500-1000") return fee >= 500 && fee <= 1000;
-        if (feeFilter === "above-1000") return fee > 1000;
-
-        return true;
-      });
     }
 
     if (sortBy === "experience") {
@@ -168,448 +137,245 @@ export default function Doctors() {
     }
 
     setFiltered(result);
-  }, [
-    debouncedSearch,
-    specialization,
-    doctors,
-    experienceFilter,
-    feeFilter,
-    sortBy,
-  ]);
+  }, [debouncedSearch, specialization, doctors, sortBy]);
 
   const clearFilters = () => {
     setSearch("");
     setSpecialization("All");
-    setExperienceFilter("All");
-    setFeeFilter("All");
     setSortBy("relevance");
   };
 
-  const hasFilters =
-    search ||
-    specialization !== "All" ||
-    experienceFilter !== "All" ||
-    feeFilter !== "All" ||
-    sortBy !== "relevance";
-
-  const activeDoctorsCount = doctors.filter((d) => d.isActive).length;
+  const clearLocation = () => {
+    localStorage.removeItem("selectedCity");
+    setCity("Chennai");
+  };
 
   return (
-    <div className="bg-[#f4fbff] min-h-screen">
-      <section className="bg-white border-b border-slate-100">
-        <div className="max-w-[1450px] mx-auto px-6 py-10">
-          <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm mb-5">
-                <Stethoscope size={17} />
-                VERIFIED DOCTORS
-              </div>
-
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight text-slate-950">
-                Find Doctors in{" "}
-                <span className="text-cyan-600">{city}</span>
-              </h1>
-
-              {localStorage.getItem("selectedCity") && (
-  <div className="mt-4">
-    <button
-      onClick={() => {
-        localStorage.removeItem("selectedCity");
-        setCity("Chennai");
-      }}
-      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-50 text-red-600 font-black"
-    >
-      <X size={16} />
-      Clear Location
-    </button>
-  </div>
-)}
-
-              <p className="mt-4 text-slate-500 text-lg max-w-2xl leading-relaxed">
-                Search verified doctors by specialty, city, hospital,
-                experience and consultation fee.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <TopStat
-                icon={ShieldCheck}
-                value={activeDoctorsCount}
-                label="Verified"
-              />
-
-              <TopStat
-                icon={Video}
-                value="Online"
-                label="Consult"
-              />
-
-              <TopStat
-                icon={CalendarCheck}
-                value="Today"
-                label="Available"
-              />
-            </div>
+    <main className="min-h-screen bg-[#f4f8fb] px-4 pt-4 pb-24">
+      <div className="max-w-md mx-auto">
+        <header className="mb-3">
+          <div className="inline-flex items-center gap-1.5 text-cyan-700 font-black text-xs">
+            <Stethoscope size={15} />
+            DOCTORS
           </div>
-        </div>
-      </section>
 
-      <div className="max-w-[1450px] mx-auto px-6 py-8">
-        <div className="grid lg:grid-cols-[330px_1fr] gap-8">
-          <aside className="lg:sticky lg:top-24 h-fit">
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6">
-              <div className="flex items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-cyan-50 flex items-center justify-center">
-                    <SlidersHorizontal className="text-cyan-600" size={21} />
-                  </div>
+          <h1 className="text-2xl font-black text-slate-950 mt-1">
+            Find Doctors
+          </h1>
 
-                  <div>
-                    <h2 className="font-black text-xl text-slate-950">
-                      Filters
-                    </h2>
+          <p className="text-sm text-slate-500 font-semibold">
+            {loading
+              ? "Searching verified doctors..."
+              : `${filtered.length} doctors available in ${city}`}
+          </p>
+        </header>
 
-                    <p className="text-sm text-slate-500">
-                      Refine doctors
-                    </p>
-                  </div>
-                </div>
+        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-3">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-3">
+            <Search size={17} className="text-cyan-600 shrink-0" />
 
-                {hasFilters && (
-                  <button
-                    onClick={clearFilters}
-                    className="text-sm font-black text-cyan-600 hover:text-cyan-700"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search doctor, speciality, hospital"
+              className="w-full bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400"
+            />
 
-              <div className="space-y-5">
-                <FilterField label="Search">
-                  <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-cyan-500 transition">
-                    <Search className="text-slate-400" size={20} />
-
-                    <input
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Doctor, specialty, hospital"
-                      className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
-                    />
-                  </div>
-                </FilterField>
-
-                <FilterField label="City">
-                  <SelectBox
-                    icon={MapPin}
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    options={cities.map((c) => [c, c])}
-                  />
-                </FilterField>
-
-                <FilterField label="Specialization">
-                  <SelectBox
-                    icon={Stethoscope}
-                    value={specialization}
-                    onChange={(e) => setSpecialization(e.target.value)}
-                    options={specs.map((s) => [s, s])}
-                  />
-                </FilterField>
-
-                <FilterField label="Experience">
-                  <SelectBox
-                    icon={Award}
-                    value={experienceFilter}
-                    onChange={(e) => setExperienceFilter(e.target.value)}
-                    options={[
-                      ["All", "All Experience"],
-                      ["0-5", "0 - 5 Years"],
-                      ["5-10", "5 - 10 Years"],
-                      ["10+", "10+ Years"],
-                    ]}
-                  />
-                </FilterField>
-
-                <FilterField label="Consultation Fee">
-                  <SelectBox
-                    icon={IndianRupee}
-                    value={feeFilter}
-                    onChange={(e) => setFeeFilter(e.target.value)}
-                    options={[
-                      ["All", "All Fees"],
-                      ["below-500", "Below ₹500"],
-                      ["500-1000", "₹500 - ₹1000"],
-                      ["above-1000", "Above ₹1000"],
-                    ]}
-                  />
-                </FilterField>
-              </div>
-
-              <div className="mt-6 bg-cyan-50 border border-cyan-100 rounded-2xl p-4">
-                <div className="flex items-center gap-2 text-cyan-700 font-black">
-                  <HeartPulse size={18} />
-                  Need help choosing?
-                </div>
-
-                <p className="text-sm text-cyan-700 mt-2 leading-relaxed">
-                  Use AI symptom checker to find the right specialist.
-                </p>
-
-                <Link
-                  to="/symptom-checker"
-                  className="inline-flex items-center gap-2 mt-3 text-cyan-800 font-black"
-                >
-                  Open checker
-                  <ArrowRight size={16} />
-                </Link>
-              </div>
-            </div>
-          </aside>
-
-          <main>
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-5 mb-6">
-              <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
-                <div>
-                  <h2 className="text-2xl font-black text-slate-950">
-                    {loading ? "Searching Doctors..." : `${filtered.length} Doctors Found`}
-                  </h2>
-
-                  <p className="text-slate-500 mt-1">
-                    Showing active doctors matching your search
-                  </p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none text-slate-800 font-semibold"
-                  >
-                    <option value="relevance">Sort: Relevance</option>
-                    <option value="experience">Experience: High to Low</option>
-                    <option value="fee-low">Fee: Low to High</option>
-                    <option value="fee-high">Fee: High to Low</option>
-                  </select>
-                </div>
-              </div>
-
-              {hasFilters && (
-                <div className="flex flex-wrap gap-2 mt-5">
-                  {city && <Chip label={city} />}
-
-                  {specialization !== "All" && (
-                    <Chip
-                      label={specialization}
-                      onRemove={() => setSpecialization("All")}
-                    />
-                  )}
-
-                  {experienceFilter !== "All" && (
-                    <Chip
-                      label={`Experience: ${experienceFilter}`}
-                      onRemove={() => setExperienceFilter("All")}
-                    />
-                  )}
-
-                  {feeFilter !== "All" && (
-                    <Chip
-                      label={
-                        feeFilter === "below-500"
-                          ? "Below ₹500"
-                          : feeFilter === "500-1000"
-                          ? "₹500 - ₹1000"
-                          : "Above ₹1000"
-                      }
-                      onRemove={() => setFeeFilter("All")}
-                    />
-                  )}
-
-                  {search && (
-                    <Chip
-                      label={`Search: ${search}`}
-                      onRemove={() => setSearch("")}
-                    />
-                  )}
-
-                  {sortBy !== "relevance" && (
-                    <Chip
-                      label={
-                        sortBy === "experience"
-                          ? "Sort: Experience"
-                          : sortBy === "fee-low"
-                          ? "Sort: Fee Low"
-                          : "Sort: Fee High"
-                      }
-                      onRemove={() => setSortBy("relevance")}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
-
-            {loading ? (
-              <LoadingDoctors />
-            ) : filtered.length === 0 ? (
-              <EmptyDoctors clearFilters={clearFilters} />
-            ) : (
-              <div className="space-y-5">
-                {filtered.map((doc) => (
-                  <DoctorCard key={doc.id} doc={doc} />
-                ))}
-              </div>
+            {search && (
+              <button onClick={() => setSearch("")}>
+                <X size={16} className="text-slate-400" />
+              </button>
             )}
-          </main>
-        </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <StatCard value={filtered.length} label="Doctors" />
+            <StatCard value="100%" label="Verified" />
+            <StatCard value="24x7" label="Booking" />
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto mt-3 pb-1">
+            {specs.map((spec) => (
+              <button
+                key={spec}
+                onClick={() => setSpecialization(spec)}
+                className={`shrink-0 px-3 py-2 rounded-full text-xs font-black border ${
+                  specialization === spec
+                    ? "bg-cyan-600 text-white border-cyan-600"
+                    : "bg-white text-slate-600 border-slate-200"
+                }`}
+              >
+                {spec}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto mt-3 pb-1">
+            <select
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="shrink-0 bg-white border border-slate-200 rounded-2xl px-3 py-2.5 text-xs font-black text-slate-700"
+            >
+              {cities.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="shrink-0 bg-white border border-slate-200 rounded-2xl px-3 py-2.5 text-xs font-black text-slate-700"
+            >
+              <option value="relevance">Relevance</option>
+              <option value="experience">Experience</option>
+              <option value="fee-low">Fee Low</option>
+              <option value="fee-high">Fee High</option>
+            </select>
+
+            {localStorage.getItem("selectedCity") && (
+              <button
+                onClick={clearLocation}
+                className="shrink-0 inline-flex items-center gap-1 bg-red-50 text-red-600 border border-red-100 rounded-2xl px-3 py-2.5 text-xs font-black"
+              >
+                <X size={13} />
+                Clear
+              </button>
+            )}
+          </div>
+        </section>
+
+        <section className="mt-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-black text-slate-950">
+              Verified Doctors
+            </h2>
+
+            {(search || specialization !== "All" || sortBy !== "relevance") && (
+              <button
+                onClick={clearFilters}
+                className="text-xs font-black text-cyan-700"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+
+          {loading ? (
+            <LoadingDoctors />
+          ) : filtered.length === 0 ? (
+            <EmptyDoctors clearFilters={clearFilters} />
+          ) : (
+            <div className="space-y-3">
+              {filtered.map((doc) => (
+                <DoctorCard key={doc.id} doc={doc} />
+              ))}
+            </div>
+          )}
+        </section>
       </div>
-    </div>
-  );
-}
-
-function FilterField({ label, children }) {
-  return (
-    <div>
-      <label className="block text-sm font-black text-slate-700 mb-2">
-        {label}
-      </label>
-
-      {children}
-    </div>
-  );
-}
-
-function SelectBox({ icon: Icon, value, onChange, options }) {
-  return (
-    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-      <Icon className="text-cyan-600" size={20} />
-
-      <select
-        value={value}
-        onChange={onChange}
-        className="w-full bg-transparent outline-none text-slate-800 font-semibold"
-      >
-        {options.map(([value, label]) => (
-          <option key={value} value={value}>
-            {label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function Chip({ label, onRemove }) {
-  return (
-    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-50 text-cyan-700 font-black text-sm border border-cyan-100">
-      {label}
-
-      {onRemove && (
-        <button onClick={onRemove}>
-          <X size={14} />
-        </button>
-      )}
-    </span>
+    </main>
   );
 }
 
 function DoctorCard({ doc }) {
   return (
-    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition overflow-hidden">
-      <div className="p-6">
-        <div className="grid xl:grid-cols-[1fr_250px] gap-6">
-          <div className="flex flex-col md:flex-row gap-5">
-            <div className="relative shrink-0">
-              <img
-                src={
-                  doc.profileImage ||
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                    doc.doctorName || "Doctor"
-                  )}&background=0891b2&color=fff&bold=true`
-                }
-                alt={doc.doctorName}
-                className="w-28 h-28 rounded-3xl border border-slate-100 shadow-sm object-cover"
-              />
+    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+      <div className="flex gap-3">
+        <div className="relative shrink-0">
+          <img
+            src={
+              doc.profileImage ||
+              `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                doc.doctorName || "Doctor"
+              )}&background=0891b2&color=fff&bold=true`
+            }
+            alt={doc.doctorName}
+            className="w-16 h-16 rounded-2xl object-cover border border-slate-100"
+          />
 
-              <div className="absolute -bottom-2 -right-2 w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center border-4 border-white">
-                <BadgeCheck size={17} className="text-white" />
-              </div>
-            </div>
+          <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center border-2 border-white">
+            <BadgeCheck size={12} className="text-white" />
+          </div>
+        </div>
 
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-black text-xs border border-emerald-100">
-                  <BadgeCheck size={14} />
-                  Verified Doctor
-                </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-black text-slate-950 truncate">
+            {doc.doctorName}
+          </h3>
 
-                <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-50 text-yellow-700 font-black text-xs border border-yellow-100">
-                  <Star size={14} className="fill-yellow-500 text-yellow-500" />
-                  Trusted
-                </div>
-              </div>
+          <p className="text-xs text-cyan-700 font-black truncate">
+            {doc.specialization || "Specialist"}
+          </p>
 
-              <h3 className="text-2xl font-black text-slate-950">
-                {doc.doctorName}
-              </h3>
-
-              <p className="text-cyan-700 font-black mt-1">
-                {doc.specialization || "Specialist"}
-              </p>
-
-              <div className="flex flex-wrap gap-2 mt-4">
-                <SmallBadge icon={Award} text={`${doc.experience || 0}+ Years`} />
-                <SmallBadge icon={Video} text="Video Consult" />
-                <SmallBadge icon={Clock} text="Available Today" green />
-              </div>
-
-              <div className="mt-5 grid sm:grid-cols-2 gap-3">
-                <InfoLine
-                  icon={Building2}
-                  text={doc.hospital?.hospitalName || "Hospital Not Available"}
-                />
-
-                <InfoLine
-                  icon={MapPin}
-                  text={doc.city || doc.hospital?.city || "Available"}
-                />
-              </div>
-            </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <SmallBadge icon={Award} text={`${doc.experience || 0}+ yrs`} />
+            <SmallBadge icon={Clock} text="Available Today" green />
           </div>
 
-          <div className="xl:border-l border-slate-100 xl:pl-6 flex flex-col justify-between">
-            <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5">
-              <p className="text-sm text-slate-500 font-semibold">
-                Consultation Fee
-              </p>
+          <div className="mt-2 space-y-1">
+            <InfoLine
+              icon={Building2}
+              text={doc.hospital?.hospitalName || "Hospital"}
+            />
 
-              <div className="flex items-center text-3xl font-black text-slate-950 mt-2">
-                <IndianRupee size={24} />
-                {doc.consultationFee || 0}
-              </div>
-
-              <p className="text-sm text-emerald-700 font-black mt-3 flex items-center gap-2">
-                <CalendarCheck size={17} />
-                Instant appointment booking
-              </p>
-            </div>
-
-            <div className="grid gap-3 mt-5">
-              <Link to={`/doctor/${doc.id}`}>
-                <button className="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black hover:bg-cyan-700 transition flex items-center justify-center gap-2">
-                  Book Appointment
-                  <ArrowRight size={18} />
-                </button>
-              </Link>
-
-              <Link to={`/doctor/${doc.id}`}>
-                <button className="w-full border border-cyan-600 text-cyan-700 py-4 rounded-2xl font-black hover:bg-cyan-50 transition">
-                  View Profile
-                </button>
-              </Link>
-            </div>
+            <InfoLine
+              icon={MapPin}
+              text={doc.city || doc.hospital?.city || "Available"}
+            />
           </div>
         </div>
       </div>
+
+      <div className="mt-4 border-t border-slate-100 pt-3">
+        <div className="flex items-center justify-between mb-3">
+         <div className="flex flex-col gap-1">
+  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-100">
+    <Building2 size={11} />
+    In-Person ₹{doc.consultationFee || 0}
+  </span>
+
+  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-100">
+    🎥
+    Video-Consult ₹{Math.max(Number(doc.consultationFee || 0) - 100, 0)}
+  </span>
+</div>
+          
+
+          <div className="text-right">
+            <p className="text-[11px] text-slate-500 font-bold">
+              Status
+            </p>
+
+            <p className="text-xs text-emerald-600 font-black">
+              Verified
+            </p>
+          </div>
+        </div>
+
+        <Link
+          to={`/doctor/${doc.id}`}
+          className="w-full flex items-center justify-center gap-2 bg-cyan-600 text-white py-3 rounded-2xl font-black text-sm active:scale-95 transition"
+        >
+          <CalendarCheck size={17} />
+          Book Appointment
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ value, label }) {
+  return (
+    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 text-center">
+      <p className="text-base font-black text-slate-950">
+        {value}
+      </p>
+
+      <p className="text-[10px] text-slate-500 font-bold">
+        {label}
+      </p>
     </div>
   );
 }
@@ -617,13 +383,13 @@ function DoctorCard({ doc }) {
 function SmallBadge({ icon: Icon, text, green }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black border ${
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black border ${
         green
           ? "bg-emerald-50 text-emerald-700 border-emerald-100"
           : "bg-cyan-50 text-cyan-700 border-cyan-100"
       }`}
     >
-      <Icon size={14} />
+      <Icon size={11} />
       {text}
     </span>
   );
@@ -631,44 +397,24 @@ function SmallBadge({ icon: Icon, text, green }) {
 
 function InfoLine({ icon: Icon, text }) {
   return (
-    <div className="flex items-center gap-3 text-slate-600 bg-slate-50 border border-slate-100 rounded-2xl px-3 py-2 min-w-0">
-      <Icon size={18} className="text-cyan-600 shrink-0" />
+    <div className="flex items-center gap-1.5 text-xs text-slate-500 min-w-0">
+      <Icon size={13} className="text-cyan-600 shrink-0" />
       <span className="truncate">{text}</span>
-    </div>
-  );
-}
-
-function TopStat({ icon: Icon, value, label }) {
-  return (
-    <div className="min-w-[105px] bg-slate-50 rounded-2xl border border-slate-100 p-3">
-      <div className="w-9 h-9 rounded-xl bg-cyan-50 flex items-center justify-center mb-2">
-        <Icon className="text-cyan-600" size={18} />
-      </div>
-
-      <p className="text-lg font-black text-slate-950">
-        {value}
-      </p>
-
-      <p className="text-xs text-slate-500 font-bold">
-        {label}
-      </p>
     </div>
   );
 }
 
 function LoadingDoctors() {
   return (
-    <div className="bg-white rounded-[2rem] p-12 text-center shadow-sm border border-slate-100">
-      <div className="w-20 h-20 rounded-3xl bg-cyan-50 flex items-center justify-center mx-auto mb-5">
-        <Loader2 className="text-cyan-600 animate-spin" size={34} />
-      </div>
+    <div className="bg-white rounded-3xl p-8 text-center shadow-sm border border-slate-100">
+      <Loader2 className="text-cyan-600 animate-spin mx-auto" size={34} />
 
-      <h3 className="text-2xl font-black text-slate-950">
+      <h3 className="text-lg font-black text-slate-950 mt-4">
         Searching Doctors
       </h3>
 
-      <p className="text-slate-500 mt-2">
-        Please wait while we find verified specialists.
+      <p className="text-sm text-slate-500 mt-1">
+        Finding verified specialists near you.
       </p>
     </div>
   );
@@ -676,22 +422,20 @@ function LoadingDoctors() {
 
 function EmptyDoctors({ clearFilters }) {
   return (
-    <div className="bg-white rounded-[2rem] p-12 text-center shadow-sm border border-slate-100">
-      <div className="w-20 h-20 rounded-3xl bg-cyan-50 flex items-center justify-center mx-auto mb-5">
-        <Search className="text-cyan-600" size={34} />
-      </div>
+    <div className="bg-white rounded-3xl p-8 text-center shadow-sm border border-slate-100">
+      <Search className="text-cyan-600 mx-auto" size={34} />
 
-      <h3 className="text-2xl font-black text-slate-950">
+      <h3 className="text-lg font-black text-slate-950 mt-4">
         No Doctors Found
       </h3>
 
-      <p className="text-slate-500 mt-2">
+      <p className="text-sm text-slate-500 mt-1">
         Try changing city, specialty or removing filters.
       </p>
 
       <button
         onClick={clearFilters}
-        className="mt-6 bg-cyan-600 text-white px-6 py-3 rounded-2xl font-black hover:bg-cyan-700 transition"
+        className="mt-5 bg-cyan-600 text-white px-5 py-3 rounded-2xl font-black text-sm"
       >
         Clear Filters
       </button>

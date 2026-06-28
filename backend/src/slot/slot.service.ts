@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { DoctorAvailability } from '../availability/doctor-availability.entity';
-import { Slot } from './slot.entity';
+import { Slot, SlotType } from './slot.entity';
 import { Doctor } from '../doctor/doctor.entity';
 
 @Injectable()
@@ -19,9 +19,6 @@ export class SlotService {
     private doctorRepo: Repository<Doctor>,
   ) {}
 
-  // =========================
-  // GENERATE SLOTS
-  // =========================
   async generateSlotsForDoctor(doctorId: string, date: string) {
     const doctor = await this.doctorRepo.findOne({
       where: { id: doctorId },
@@ -37,9 +34,7 @@ export class SlotService {
       throw new NotFoundException('No availability found');
     }
 
-    const normalizedDate = new Date(date)
-      .toISOString()
-      .split('T')[0]; // YYYY-MM-DD
+    const normalizedDate = new Date(date).toISOString().split('T')[0];
 
     const existingSlots = await this.slotRepo.find({
       where: {
@@ -48,41 +43,53 @@ export class SlotService {
       },
     });
 
-    if (existingSlots.length > 0) {
+    const existingKeys = new Set(
+      existingSlots.map((slot) => `${slot.date}-${slot.startTime}`),
+    );
+
+    const slotsToCreate: Slot[] = [];
+
+    for (const rule of availability) {
+      const finalSlotType = rule.slotType || SlotType.BOTH;
+
+      let current = this.toMinutes(rule.startTime);
+      const end = this.toMinutes(rule.endTime);
+      const duration = Number(rule.slotDuration ?? 30);
+
+      while (current + duration <= end) {
+        const startTime = this.toTime(current);
+        const endTime = this.toTime(current + duration);
+        const key = `${normalizedDate}-${startTime}`;
+
+        if (!existingKeys.has(key)) {
+          existingKeys.add(key);
+
+          slotsToCreate.push(
+            this.slotRepo.create({
+              doctor,
+              date: normalizedDate,
+              startTime,
+              endTime,
+              slotType: finalSlotType,
+              isAvailable: true,
+            }),
+          );
+        }
+
+        current += duration;
+      }
+    }
+
+    if (!slotsToCreate.length) {
       return {
         message: 'Slots already generated',
         count: existingSlots.length,
       };
     }
 
-    const slotsToCreate: Slot[] = [];
-
-    for (const rule of availability) {
-      let current = this.toMinutes(rule.startTime);
-      const end = this.toMinutes(rule.endTime);
-      const duration = Number(rule.slotDuration ?? 30);
-
-      while (current + duration <= end) {
-        slotsToCreate.push(
-          this.slotRepo.create({
-            doctor,
-            date: normalizedDate,
-            startTime: this.toTime(current),
-            endTime: this.toTime(current + duration),
-            isAvailable: true,
-          }),
-        );
-
-        current += duration;
-      }
-    }
-
     return this.slotRepo.save(slotsToCreate);
   }
 
-  // =========================
-  // GET SLOTS BY DOCTOR
-  // =========================
   async getSlotsByDoctor(doctorId: string) {
     return this.slotRepo.find({
       where: {
@@ -91,14 +98,15 @@ export class SlotService {
       relations: {
         doctor: true,
       },
+      order: {
+        date: 'ASC',
+        startTime: 'ASC',
+      },
     });
   }
 
-  // =========================
-  // GET AVAILABLE SLOTS
-  // =========================
-  async getAvailableSlots(doctorId: string) {
-    return this.slotRepo.find({
+  async getAvailableSlots(doctorId: string, appointmentType?: SlotType) {
+    const slots = await this.slotRepo.find({
       where: {
         doctor: { id: doctorId },
         isAvailable: true,
@@ -106,12 +114,47 @@ export class SlotService {
       relations: {
         doctor: true,
       },
+      order: {
+        date: 'ASC',
+        startTime: 'ASC',
+      },
     });
+
+    const now = new Date();
+    const uniqueSlots = new Map<string, Slot>();
+
+    for (const slot of slots) {
+      const slotDateTime = new Date(`${slot.date}T${slot.startTime}`);
+
+      if (slotDateTime <= now) continue;
+
+      if (
+        slot.doctor?.liveStatus === 'BREAK' &&
+        slot.doctor?.blockedUntil &&
+        slotDateTime < new Date(slot.doctor.blockedUntil)
+      ) {
+        continue;
+      }
+
+      if (
+        appointmentType &&
+        appointmentType !== SlotType.BOTH &&
+        slot.slotType !== appointmentType &&
+        slot.slotType !== SlotType.BOTH
+      ) {
+        continue;
+      }
+
+      const key = `${slot.date}-${slot.startTime}`;
+
+      if (!uniqueSlots.has(key)) {
+        uniqueSlots.set(key, slot);
+      }
+    }
+
+    return Array.from(uniqueSlots.values());
   }
 
-  // =========================
-  // HELPERS
-  // =========================
   private toMinutes(time: string): number {
     const [h, m] = time.split(':').map(Number);
     return h * 60 + m;

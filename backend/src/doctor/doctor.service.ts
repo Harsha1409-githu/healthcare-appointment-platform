@@ -15,6 +15,8 @@ import { Hospital } from '../hospital/hospital.entity';
 import { SearchDoctorDto } from './dto/search-doctor.dto';
 import { v2 as cloudinary } from 'cloudinary';
 import { Readable } from 'stream';
+import { UpdateDoctorStatusDto } from './dto/update-doctor-status.dto';
+import { DoctorLiveStatus } from './doctor.entity';
 
 
 @Injectable()
@@ -52,6 +54,8 @@ export class DoctorService {
       );
     }
 
+    
+
     const isPasswordValid = await bcrypt.compare(
       password,
       doctor.password,
@@ -81,6 +85,52 @@ export class DoctorService {
       },
     };
   }
+
+  async updateLiveStatus(
+  doctorId: string,
+  dto: UpdateDoctorStatusDto,
+) {
+  const doctor = await this.doctorRepository.findOne({
+    where: { id: doctorId },
+  });
+
+  if (!doctor) {
+    throw new NotFoundException('Doctor not found');
+  }
+
+  if (!Object.values(DoctorLiveStatus).includes(dto.status)) {
+    throw new BadRequestException('Invalid doctor status');
+  }
+
+  doctor.liveStatus = dto.status;
+
+  doctor.blockedUntil =
+    dto.status === DoctorLiveStatus.AVAILABLE
+      ? null
+      : dto.blockedUntil
+      ? new Date(dto.blockedUntil)
+      : null;
+
+  return this.doctorRepository.save(doctor);
+}
+
+async getLiveStatus(doctorId: string) {
+  const doctor = await this.doctorRepository.findOne({
+    where: { id: doctorId },
+  });
+
+  if (!doctor) {
+    throw new NotFoundException('Doctor not found');
+  }
+
+  return {
+    doctorId: doctor.id,
+    doctorName: doctor.doctorName,
+    liveStatus: doctor.liveStatus,
+    blockedUntil: doctor.blockedUntil,
+    updatedAt: new Date(),
+  };
+}
 
   async createDoctor(data: any) {
     const hospital = await this.hospitalRepository.findOne({

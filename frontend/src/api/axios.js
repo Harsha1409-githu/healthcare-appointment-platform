@@ -1,6 +1,8 @@
 import axios from "axios";
 
-console.log("VITE_API_URL:", import.meta.env.VITE_API_URL);
+if (import.meta.env.DEV) {
+  console.log("VITE_API_URL:", import.meta.env.VITE_API_URL);
+}
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -18,7 +20,9 @@ api.interceptors.request.use((config) => {
   } else if (path.startsWith("/doctor")) {
     token = localStorage.getItem("doctorToken");
   } else {
-    token = localStorage.getItem("patientToken") || localStorage.getItem("token");
+    token =
+      localStorage.getItem("patientToken") ||
+      localStorage.getItem("token");
   }
 
   if (token) {

@@ -75,7 +75,7 @@ export default function HospitalLayout() {
             {!collapsed && (
               <div className="min-w-0">
                 <h2 className="font-black text-2xl text-slate-950">
-                  MediCare
+                  TryDoc
                 </h2>
 
                 <p className="text-xs text-slate-500 truncate max-w-[170px]">
