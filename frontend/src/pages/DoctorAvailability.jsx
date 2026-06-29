@@ -5,7 +5,7 @@ import PageHeader from "../components/PageHeader";
 import api from "../api/axios";
 import { VacationHolidaysSection } from "../modules/practice";
 import { TodayStatusHero } from "@/modules/practice";
-import SessionForm from "../doctor/availability/SessionForm";
+import { WorkingHoursForm } from "@/modules/practice";
 import WeeklySessionPlanner from "../doctor/availability/WeeklySessionPlanner";
 import AvailabilityTipCard from "../doctor/availability/AvailabilityTipCard";
 import SmartSetupCard from "../doctor/availability/SmartSetup/SmartSetupCard";
@@ -358,7 +358,7 @@ const [pauseReason, setPauseReason] = useState("Lunch");
           onDelete={deleteSession}
         />
 
-        <SessionForm
+       <WorkingHoursForm
           showForm={showForm}
           editingId={editingId}
           form={form}
