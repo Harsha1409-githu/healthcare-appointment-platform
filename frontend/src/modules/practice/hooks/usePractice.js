@@ -43,6 +43,14 @@ export function usePractice() {
     await practiceService.deleteLeave(id);
   };
 
+  const createPause = async (payload) => {
+  await practiceService.createPause(payload);
+};
+
+const deletePause = async (id) => {
+  await practiceService.deletePause(id);
+};
+
   return {
     loading,
 
@@ -58,5 +66,8 @@ export function usePractice() {
 
     createLeave,
     deleteLeave,
+
+    createPause,
+    deletePause,
   };
 }

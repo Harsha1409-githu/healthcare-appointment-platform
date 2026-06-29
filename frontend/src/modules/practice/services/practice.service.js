@@ -40,4 +40,13 @@ export const practiceService = {
     const res = await api.get(`/availability/pause/${doctorId}`);
     return res.data || [];
   },
+
+  async createPause(payload) {
+  return api.post("/availability/pause", payload);
+},
+
+async deletePause(id) {
+  return api.delete(`/availability/pause/${id}`);
+},
+  
 };

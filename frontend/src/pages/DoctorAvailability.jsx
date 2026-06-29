@@ -10,7 +10,7 @@ import WeeklySessionPlanner from "../doctor/availability/WeeklySessionPlanner";
 import AvailabilityTipCard from "../doctor/availability/AvailabilityTipCard";
 import SmartSetupCard from "../doctor/availability/SmartSetup/SmartSetupCard";
 import SmartSetupWizard from "../doctor/availability/SmartSetup/SmartSetupWizard";
-import PauseCustomSheet from "../doctor/availability/PauseCustomSheet";
+import { PauseCustomSheet } from "@/modules/practice";
 import { DAYS, DEFAULT_SESSION } from "../doctor/availability/availabilityData";
 import {
   todayIso,
