@@ -3,7 +3,7 @@ import toast from "react-hot-toast";
 
 import PageHeader from "../components/PageHeader";
 import api from "../api/axios";
-
+import VacationHolidaysSection from "../doctor/availability/Vacation/VacationHolidaysSection";
 import AvailabilityHero from "../doctor/availability/AvailabilityHero";
 import SessionForm from "../doctor/availability/SessionForm";
 import WeeklySessionPlanner from "../doctor/availability/WeeklySessionPlanner";
@@ -370,6 +370,8 @@ const [pauseReason, setPauseReason] = useState("Lunch");
             setEditingId(null);
           }}
         />
+
+        <VacationHolidaysSection doctorId={doctor?.id} />
 
         <AvailabilityTipCard />
 
