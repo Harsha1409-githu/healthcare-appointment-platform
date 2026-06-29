@@ -332,7 +332,7 @@ const [pauseReason, setPauseReason] = useState("Lunch");
      <PageHeader title="Practice Schedule" subtitle="Manage working hours" />
 
       <div className="mx-auto max-w-md px-3">
-       <AvailabilityHero
+ <AvailabilityHero
   statusConfig={statusConfig}
   blockedUntil={blockedUntil}
   selectedDateSlots={selectedDateSlots}
@@ -379,7 +379,7 @@ const [pauseReason, setPauseReason] = useState("Lunch");
           onClose={() => setShowSmartSetup(false)}
           onCreate={createSmartSetup}
         />
-        <PauseCustomSheet
+    <PauseCustomSheet
   open={showPauseSheet}
   loading={loading}
   pauseUntil={pauseUntil}
