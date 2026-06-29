@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
-import api from "../../../../api/axios";
+import { practiceService } from "../../services/practice.service";
 
 import VacationSummaryCard from "./VacationSummaryCard";
 import VacationForm from "./VacationForm";
@@ -32,8 +32,9 @@ export default function VacationHolidaysSection({ doctorId }) {
     try {
       setLoading(true);
 
-      const res = await api.get(`/leave/doctor/${doctorId}`);
-      setLeaves(res.data || []);
+     const data = await practiceService.getLeaves(doctorId);
+
+setLeaves(data);
     } catch (error) {
       console.error(error);
       toast.error("Unable to load time off");
@@ -62,7 +63,7 @@ export default function VacationHolidaysSection({ doctorId }) {
     try {
       setSaving(true);
 
-      await api.post("/leave", {
+      await practiceService.createLeave({
         doctorId,
         startDate: form.startDate,
         endDate: form.endDate,
@@ -85,7 +86,7 @@ export default function VacationHolidaysSection({ doctorId }) {
     if (!window.confirm("Delete this time off?")) return;
 
     try {
-      await api.delete(`/leave/${id}`);
+      await practiceService.deleteLeave(id);
       toast.success("Time off deleted");
       await loadLeaves();
     } catch (error) {
