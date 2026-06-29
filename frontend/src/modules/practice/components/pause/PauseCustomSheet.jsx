@@ -4,13 +4,8 @@ import {
   TryDocInput,
   TryDocSelect,
 } from "@/shared/ui";
+import { PAUSE_REASONS } from "@/modules/practice/constants/practice.constants";
 
-const PAUSE_REASONS = [
-  { label: "Lunch", value: "Lunch" },
-  { label: "Meeting", value: "Meeting" },
-  { label: "Emergency", value: "Emergency" },
-  { label: "Personal", value: "Personal" },
-];
 
 export default function PauseCustomSheet({
   open,

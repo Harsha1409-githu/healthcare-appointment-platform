@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
 import { WorkingHoursDay } from "@/modules/practice";
+import { formatDay } from "@/modules/practice/utils/time.utils";
 
 export default function WeeklySessionPlanner({
   groupedAvailability,
@@ -120,8 +121,3 @@ export default function WeeklySessionPlanner({
   );
 }
 
-function formatDay(day) {
-  return String(day || "")
-    .toLowerCase()
-    .replace(/^\w/, (c) => c.toUpperCase());
-}

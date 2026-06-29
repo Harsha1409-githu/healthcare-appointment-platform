@@ -1,38 +1,12 @@
 import { Building2, Clock, Loader2, Pencil, Save, Video, X } from "lucide-react";
-
-const TEMPLATES = [
-  {
-    title: "Morning Clinic",
-    desc: "In-person OPD",
-    startTime: "09:00",
-    endTime: "13:00",
-    slotType: "IN_PERSON",
-  },
-  {
-    title: "Evening Video",
-    desc: "Online consults",
-    startTime: "17:00",
-    endTime: "20:00",
-    slotType: "VIDEO",
-  },
-  {
-    title: "Full Day Both",
-    desc: "Clinic + video",
-    startTime: "09:00",
-    endTime: "17:00",
-    slotType: "BOTH",
-  },
-];
-
-const DAYS = [
-  "MONDAY",
-  "TUESDAY",
-  "WEDNESDAY",
-  "THURSDAY",
-  "FRIDAY",
-  "SATURDAY",
-  "SUNDAY",
-];
+import {
+  formatDay,
+  buildPreviewSlots,
+} from "@/modules/practice/utils/time.utils";
+import {
+  DAYS,
+  TEMPLATES,
+} from "@/modules/practice/constants/practice.constants";
 
 export default function SessionForm({
   showForm,
@@ -333,42 +307,7 @@ function InputField({ label, type = "text", value, onChange }) {
   );
 }
 
-function formatDay(day) {
-  return String(day || "")
-    .toLowerCase()
-    .replace(/^\w/, (c) => c.toUpperCase());
-}
 
-function buildPreviewSlots(startTime, endTime, duration) {
-  const start = toMinutes(startTime);
-  const end = toMinutes(endTime);
 
-  if (!startTime || !endTime || !duration || start >= end) {
-    return [];
-  }
 
-  const slots = [];
-  let current = start;
 
-  while (current + duration <= end) {
-    slots.push(toTime(current));
-    current += duration;
-  }
-
-  return slots;
-}
-
-function toMinutes(time) {
-  const [h, m] = String(time || "00:00")
-    .split(":")
-    .map(Number);
-
-  return h * 60 + m;
-}
-
-function toTime(min) {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
