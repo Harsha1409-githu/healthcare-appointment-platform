@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
-import api from "../../../api/axios";
+import api from "../../../../api/axios";
 
-import {
-  VacationSummaryCard,
-  VacationForm,
-  VacationList,
-  DEFAULT_VACATION_FORM,
-  getUpcomingVacations,
-} from "../../../modules/practice";
+import VacationSummaryCard from "./VacationSummaryCard";
+import VacationForm from "./VacationForm";
+import VacationList from "./VacationList";
+
+import { DEFAULT_VACATION_FORM } from "./VacationData";
+import { getUpcomingVacations } from "./VacationHelpers";
 
 export default function VacationHolidaysSection({ doctorId }) {
   const [leaves, setLeaves] = useState([]);
