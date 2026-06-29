@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import DaySessions from "./DaySessions";
+import { WorkingHoursDay } from "@/modules/practice";
 
 export default function WeeklySessionPlanner({
   groupedAvailability,
@@ -106,7 +106,7 @@ export default function WeeklySessionPlanner({
 
       <div className="mt-3 space-y-3">
         {activeGroup && (
-          <DaySessions
+          <WorkingHoursDay
             day={activeGroup.day}
             sessions={activeGroup.sessions}
             loading={loading}
