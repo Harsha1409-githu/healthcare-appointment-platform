@@ -4,7 +4,7 @@ import {
   TryDocCard,
   TryDocMetricCard,
   TryDocSectionHeader,
-} from "../../../../shared/ui";
+} from "@/shared/ui";
 
 import { getVacationDays } from "./VacationHelpers";
 

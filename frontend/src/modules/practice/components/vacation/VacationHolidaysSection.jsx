@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
-import { practiceService } from "../../services/practice.service";
+import { usePractice } from "@/modules/practice";
 
 import VacationSummaryCard from "./VacationSummaryCard";
 import VacationForm from "./VacationForm";
@@ -11,10 +11,15 @@ import { DEFAULT_VACATION_FORM } from "./VacationData";
 import { getUpcomingVacations } from "./VacationHelpers";
 
 export default function VacationHolidaysSection({ doctorId }) {
-  const [leaves, setLeaves] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const {
+    loading,
+    leaves,
+    loadLeaves,
+    createLeave,
+    deleteLeave,
+  } = usePractice();
 
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(DEFAULT_VACATION_FORM);
 
   const upcomingVacations = useMemo(
@@ -24,25 +29,9 @@ export default function VacationHolidaysSection({ doctorId }) {
 
   useEffect(() => {
     if (doctorId) {
-      loadLeaves();
+      loadLeaves(doctorId);
     }
-  }, [doctorId]);
-
-  const loadLeaves = async () => {
-    try {
-      setLoading(true);
-
-     const data = await practiceService.getLeaves(doctorId);
-
-setLeaves(data);
-    } catch (error) {
-      console.error(error);
-      toast.error("Unable to load time off");
-      setLeaves([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [doctorId, loadLeaves]);
 
   const applyLeave = async () => {
     if (!form.startDate || !form.endDate) {
@@ -63,7 +52,7 @@ setLeaves(data);
     try {
       setSaving(true);
 
-      await practiceService.createLeave({
+      await createLeave({
         doctorId,
         startDate: form.startDate,
         endDate: form.endDate,
@@ -73,7 +62,7 @@ setLeaves(data);
       setForm(DEFAULT_VACATION_FORM);
 
       toast.success("Time off saved");
-      await loadLeaves();
+      await loadLeaves(doctorId);
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.message || "Failed to save time off");
@@ -82,13 +71,13 @@ setLeaves(data);
     }
   };
 
-  const deleteLeave = async (id) => {
+  const handleDeleteLeave = async (id) => {
     if (!window.confirm("Delete this time off?")) return;
 
     try {
-      await practiceService.deleteLeave(id);
+      await deleteLeave(id);
       toast.success("Time off deleted");
-      await loadLeaves();
+      await loadLeaves(doctorId);
     } catch (error) {
       console.error(error);
       toast.error("Failed to delete time off");
@@ -112,7 +101,7 @@ setLeaves(data);
       <VacationList
         loading={loading}
         upcomingVacations={upcomingVacations}
-        onDelete={deleteLeave}
+        onDelete={handleDeleteLeave}
       />
     </section>
   );

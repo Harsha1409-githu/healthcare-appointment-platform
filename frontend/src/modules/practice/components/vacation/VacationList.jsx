@@ -7,7 +7,7 @@ import {
   TryDocEmptyState,
   TryDocLoading,
   TryDocSectionHeader,
-} from "../../../../shared/ui";
+} from "@/shared/ui";
 
 import {
   formatVacationDate,

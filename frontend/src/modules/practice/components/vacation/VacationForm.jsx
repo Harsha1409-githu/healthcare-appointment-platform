@@ -4,7 +4,7 @@ import {
   TryDocChip,
   TryDocInput,
   TryDocSectionHeader,
-} from "../../../../shared/ui";
+} from "@/shared/ui";
 
 import { VACATION_REASONS } from "./VacationData";
 import { getVacationDays } from "./VacationHelpers";
