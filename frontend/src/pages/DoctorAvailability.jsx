@@ -6,7 +6,7 @@ import api from "../api/axios";
 import { VacationHolidaysSection } from "../modules/practice";
 import { TodayStatusHero } from "@/modules/practice";
 import { WorkingHoursForm } from "@/modules/practice";
-import WeeklySessionPlanner from "../doctor/availability/WeeklySessionPlanner";
+import { WeeklyPracticePlanner } from "@/modules/practice";
 import AvailabilityTipCard from "../doctor/availability/AvailabilityTipCard";
 import SmartSetupCard from "../doctor/availability/SmartSetup/SmartSetupCard";
 import SmartSetupWizard from "../doctor/availability/SmartSetup/SmartSetupWizard";
@@ -348,7 +348,7 @@ const [pauseReason, setPauseReason] = useState("Lunch");
 
         <SmartSetupCard onStart={() => setShowSmartSetup(true)} />
 
-        <WeeklySessionPlanner
+        <WeeklyPracticePlanner
           groupedAvailability={groupedAvailability}
           activeDay={activeDay}
           setActiveDay={setActiveDay}
