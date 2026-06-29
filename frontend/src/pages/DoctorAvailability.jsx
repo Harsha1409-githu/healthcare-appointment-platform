@@ -7,7 +7,7 @@ import { VacationHolidaysSection } from "../modules/practice";
 import { TodayStatusHero } from "@/modules/practice";
 import { WorkingHoursForm } from "@/modules/practice";
 import { WeeklyPracticePlanner } from "@/modules/practice";
-import AvailabilityTipCard from "../doctor/availability/AvailabilityTipCard";
+import { PracticeTipsCard } from "@/modules/practice";
 import SmartSetupCard from "../doctor/availability/SmartSetup/SmartSetupCard";
 import SmartSetupWizard from "../doctor/availability/SmartSetup/SmartSetupWizard";
 import { PauseCustomSheet } from "@/modules/practice";
@@ -373,7 +373,7 @@ const [pauseReason, setPauseReason] = useState("Lunch");
 
         <VacationHolidaysSection doctorId={doctor?.id} />
 
-        <AvailabilityTipCard />
+      <PracticeTipsCard />
 
         <SmartSetupWizard
           open={showSmartSetup}
