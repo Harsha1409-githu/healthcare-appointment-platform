@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import PageHeader from "../components/PageHeader";
 import api from "../api/axios";
 import { VacationHolidaysSection } from "../modules/practice";
-import AvailabilityHero from "../doctor/availability/AvailabilityHero";
+import { TodayStatusHero } from "@/modules/practice";
 import SessionForm from "../doctor/availability/SessionForm";
 import WeeklySessionPlanner from "../doctor/availability/WeeklySessionPlanner";
 import AvailabilityTipCard from "../doctor/availability/AvailabilityTipCard";
@@ -332,7 +332,7 @@ const [pauseReason, setPauseReason] = useState("Lunch");
      <PageHeader title="Practice Schedule" subtitle="Manage working hours" />
 
       <div className="mx-auto max-w-md px-3">
- <AvailabilityHero
+<TodayStatusHero
   statusConfig={statusConfig}
   blockedUntil={blockedUntil}
   selectedDateSlots={selectedDateSlots}
