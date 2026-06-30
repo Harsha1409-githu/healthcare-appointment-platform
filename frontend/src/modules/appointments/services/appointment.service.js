@@ -61,4 +61,29 @@ export const appointmentService = {
     const res = await api.get(`/slot/${slotId}`);
     return res.data;
   },
+
+  // Doctor Check-In
+async getCheckInByAppointment(id) {
+  const res = await api.get(`/check-in/doctor/appointment/${id}`);
+  return res.data;
+},
+
+// Consultation
+async saveConsultation(payload) {
+  const res = await api.post("/consultation", payload);
+  return res.data;
+},
+
+// Follow-up
+async scheduleFollowUp(payload) {
+  const res = await api.post("/follow-up", payload);
+  return res.data;
+},
+
+// Prescription
+async getPrescriptionByAppointment(id) {
+  const res = await api.get(`/prescription/appointment/${id}`);
+  return res.data;
+},
+
 };

@@ -29,6 +29,7 @@ import {
   CheckInSheet,
   ConsultationSheet,
   FollowUpSheet,
+  useDoctorAppointments,
 } from "@/modules/appointments";
 
 const todayIso = () => new Date().toISOString().split("T")[0];
@@ -36,15 +37,25 @@ const todayIso = () => new Date().toISOString().split("T")[0];
 
 
 export default function DoctorAppointments() {
-  const doctor = JSON.parse(localStorage.getItem("doctorUser") || "null");
 
-  const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [actionLoadingId, setActionLoadingId] = useState(null);
-
-  const [search, setSearch] = useState("");
-  const [dateFilter, setDateFilter] = useState(todayIso());
-  const [view, setView] = useState("TODAY");
+  const {
+  doctor,
+  appointments,
+  filteredAppointments,
+  groupedAppointments,
+  stats,
+  loading,
+  actionLoadingId,
+  setActionLoadingId,
+  search,
+  setSearch,
+  view,
+  setView,
+  dateFilter,
+  setDateFilter,
+  fetchAppointments,
+} = useDoctorAppointments();
+ 
 
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [checkInModal, setCheckInModal] = useState(null);
@@ -70,90 +81,14 @@ export default function DoctorAppointments() {
     await fetchAppointments(false);
   });
 
-  useEffect(() => {
-    fetchAppointments();
-  }, []);
+ 
 
-  const fetchAppointments = async (showLoader = true) => {
-    try {
-      if (showLoader) setLoading(true);
 
-      if (!doctor?.id) {
-        setAppointments([]);
-        return;
-      }
+ 
 
-      const res = await api.get(`/appointment/doctor/${doctor.id}`);
-      setAppointments(res.data || []);
-    } catch (err) {
-      console.error("Doctor appointments error:", err);
-      toast.error("Unable to load appointments");
-      setAppointments([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+ 
 
-  const filteredAppointments = useMemo(() => {
-    return appointments
-      .filter((appointment) => {
-        const appointmentDate = appointment.slot?.date;
-        const text = `
-          ${appointment.patientName || ""}
-          ${appointment.patientPhone || ""}
-          ${appointment.patient?.fullName || ""}
-          ${appointment.familyMember?.fullName || ""}
-          ${appointment.status || ""}
-        `.toLowerCase();
-
-        const matchesSearch = text.includes(search.toLowerCase().trim());
-
-        if (view === "TODAY") return matchesSearch && appointmentDate === todayIso();
-        if (view === "UPCOMING") return matchesSearch && appointmentDate > todayIso();
-        if (view === "COMPLETED") return matchesSearch && appointment.status === "COMPLETED";
-        if (view === "CUSTOM") return matchesSearch && appointmentDate === dateFilter;
-
-        return matchesSearch;
-      })
-      .sort((a, b) => {
-        const dateCompare = String(a.slot?.date || "").localeCompare(String(b.slot?.date || ""));
-        if (dateCompare !== 0) return dateCompare;
-        return String(a.slot?.startTime || "").localeCompare(String(b.slot?.startTime || ""));
-      });
-  }, [appointments, search, view, dateFilter]);
-
-  const stats = useMemo(() => {
-    const todayItems = appointments.filter((item) => item.slot?.date === todayIso());
-    return {
-      today: todayItems.length,
-      waiting: todayItems.filter((item) => item.status === "BOOKED").length,
-      video: todayItems.filter((item) => item.appointmentType === "VIDEO").length,
-      done: todayItems.filter((item) => item.status === "COMPLETED").length,
-    };
-  }, [appointments]);
-
-  const groupedAppointments = useMemo(() => {
-    return {
-      booked: filteredAppointments.filter((item) => item.status === "BOOKED"),
-      prescription: filteredAppointments.filter(
-        (item) =>
-          item.status === "COMPLETED" &&
-          !item.prescriptionCompleted
-      ),
-      followUp: filteredAppointments.filter(
-        (item) =>
-          item.status === "COMPLETED" &&
-          item.prescriptionCompleted &&
-          !item.followUpScheduled
-      ),
-      completed: filteredAppointments.filter(
-        (item) =>
-          item.status === "COMPLETED" &&
-          item.prescriptionCompleted
-      ),
-      cancelled: filteredAppointments.filter((item) => item.status === "CANCELLED"),
-    };
-  }, [filteredAppointments]);
+ 
 
   const openCheckIn = async (appointment) => {
     try {

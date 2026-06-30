@@ -1,11 +1,6 @@
 import { CalendarCheck, Search, X } from "lucide-react";
 
-const VIEW_OPTIONS = [
-  ["TODAY", "Today"],
-  ["UPCOMING", "Next"],
-  ["COMPLETED", "Done"],
-  ["CUSTOM", "Date"],
-];
+import { QUICK_FILTERS } from "../../constants/appointment.constants";
 
 export default function DoctorAppointmentToolbar({
   search,
@@ -35,7 +30,7 @@ export default function DoctorAppointmentToolbar({
       </div>
 
       <div className="grid grid-cols-4 gap-2">
-        {VIEW_OPTIONS.map(([key, label]) => (
+        {QUICK_FILTERS.map(({ key, label }) => (
           <button
             key={key}
             type="button"
