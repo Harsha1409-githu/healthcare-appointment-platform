@@ -26,6 +26,9 @@ import {
   DoctorAppointmentStage,
   DoctorAppointmentStats,
   DoctorAppointmentToolbar,
+  CheckInSheet,
+  ConsultationSheet,
+  FollowUpSheet,
 } from "@/modules/appointments";
 
 const todayIso = () => new Date().toISOString().split("T")[0];
@@ -443,136 +446,6 @@ export default function DoctorAppointments() {
   );
 }
 
-
-
-
-
-function CheckInSheet({ appointment, data, onClose }) {
-  return (
-    <BottomSheet title={`${getPatientName(appointment)} Check-In`} onClose={onClose}>
-      {!data ? (
-        <p className="rounded-2xl bg-slate-50 p-4 text-center text-sm font-semibold text-slate-500">
-          No check-in available.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          <Info label="Temperature" value={data.temperature} />
-          <Info label="Blood Pressure" value={data.bloodPressure} />
-          <Info label="Weight" value={data.weight} />
-          <Info label="Symptoms" value={data.symptoms} />
-          <Info label="Notes" value={data.notes} />
-        </div>
-      )}
-    </BottomSheet>
-  );
-}
-
-function ConsultationSheet({ appointment, form, setForm, saving, onClose, onSave }) {
-  return (
-    <BottomSheet title="Consultation Workspace" subtitle={getPatientName(appointment)} onClose={onClose}>
-      <div className="space-y-3">
-        <InputField
-          label="Diagnosis"
-          value={form.diagnosis}
-          onChange={(e) => setForm({ ...form, diagnosis: e.target.value })}
-          placeholder="Example: Viral fever"
-        />
-
-        <TextAreaField
-          label="Doctor Notes"
-          value={form.doctorNotes}
-          rows={3}
-          onChange={(e) => setForm({ ...form, doctorNotes: e.target.value })}
-          placeholder="Symptoms, history, vitals"
-        />
-
-        <TextAreaField
-          label="Advice"
-          value={form.advice}
-          rows={3}
-          onChange={(e) => setForm({ ...form, advice: e.target.value })}
-          placeholder="Rest, hydration, red flags"
-        />
-
-        <label className="flex items-center gap-2 rounded-2xl bg-slate-50 p-3">
-          <input
-            type="checkbox"
-            checked={form.followUpRequired}
-            onChange={(e) =>
-              setForm({ ...form, followUpRequired: e.target.checked })
-            }
-          />
-          <span className="text-sm font-black text-slate-800">
-            Follow-up Required
-          </span>
-        </label>
-
-        <div className="grid grid-cols-2 gap-2">
-          <button onClick={onClose} className="h-12 rounded-2xl border border-slate-200 font-black">
-            Cancel
-          </button>
-          <button
-            onClick={onSave}
-            disabled={saving}
-            className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-cyan-600 font-black text-white disabled:bg-slate-300"
-          >
-            {saving && <Loader2 size={16} className="animate-spin" />}
-            Save
-          </button>
-        </div>
-      </div>
-    </BottomSheet>
-  );
-}
-
-function FollowUpSheet({ appointment, form, setForm, saving, onClose, onSave, addDays }) {
-  return (
-    <BottomSheet title="Schedule Follow-up" subtitle={getPatientName(appointment)} onClose={onClose}>
-      <div className="grid grid-cols-3 gap-2">
-        {[7, 15, 30].map((days) => (
-          <button
-            key={days}
-            onClick={() => setForm({ ...form, followUpDate: addDays(days) })}
-            className="rounded-2xl bg-cyan-50 py-3 text-xs font-black text-cyan-700"
-          >
-            {days} Days
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-3 space-y-3">
-        <InputField
-          label="Follow-up Date"
-          type="date"
-          value={form.followUpDate}
-          onChange={(e) => setForm({ ...form, followUpDate: e.target.value })}
-        />
-
-        <TextAreaField
-          label="Notes"
-          value={form.notes}
-          rows={3}
-          onChange={(e) => setForm({ ...form, notes: e.target.value })}
-          placeholder="Review after medicine course"
-        />
-
-        <div className="grid grid-cols-2 gap-2">
-          <button onClick={onClose} className="h-12 rounded-2xl border border-slate-200 font-black">
-            Cancel
-          </button>
-          <button
-            onClick={onSave}
-            disabled={saving}
-            className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-violet-600 font-black text-white disabled:bg-slate-300"
-          >
-            {saving && <Loader2 size={16} className="animate-spin" />}
-            Schedule
-          </button>
-        </div>
-      </div>
-    </BottomSheet>
-  );
-}
 
 function BottomSheet({ title, subtitle, onClose, children }) {
   return (
