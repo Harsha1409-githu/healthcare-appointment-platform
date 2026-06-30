@@ -18,21 +18,16 @@ import toast from "react-hot-toast";
 import api from "@/api/axios";
 import PrescriptionModal from "@/components/PrescriptionModal";
 import usePullToRefresh from "@/hooks/usePullToRefresh";
+import {
+  AppointmentEmptyState,
+  AppointmentSkeleton,
+  DoctorAppointmentCard,
+  DoctorAppointmentStats,
+} from "@/modules/appointments";
 
 const todayIso = () => new Date().toISOString().split("T")[0];
 
-const getPatientName = (appointment) =>
-  appointment?.familyMember?.fullName ||
-  appointment?.patient?.fullName ||
-  appointment?.patientName ||
-  "Patient";
 
-const getPatientMeta = (appointment) => {
-  const age = appointment?.familyMember?.age || appointment?.patient?.age;
-  const gender = appointment?.familyMember?.gender || appointment?.patient?.gender;
-  const relation = appointment?.familyMember?.relation || "Self";
-  return [age ? `${age} yrs` : null, gender, relation].filter(Boolean).join(" • ");
-};
 
 export default function DoctorAppointments() {
   const doctor = JSON.parse(localStorage.getItem("doctorUser") || "null");
@@ -329,12 +324,7 @@ export default function DoctorAppointments() {
             </Link>
           </div>
 
-          <div className="mt-3 grid grid-cols-4 gap-2">
-            <Stat label="Today" value={stats.today} />
-            <Stat label="Waiting" value={stats.waiting} />
-            <Stat label="Video" value={stats.video} />
-            <Stat label="Done" value={stats.done} />
-          </div>
+          <DoctorAppointmentStats stats={stats} />
         </section>
 
         <section className="sticky top-0 z-20 mt-3 space-y-2 bg-[#f6f8fb] pb-2 pt-1">
@@ -389,14 +379,14 @@ export default function DoctorAppointments() {
         </section>
 
         {loading ? (
-          <AppointmentsSkeleton />
+          <AppointmentSkeleton />
         ) : filteredAppointments.length === 0 ? (
-          <EmptyState />
+          <AppointmentEmptyState />
         ) : (
           <section className="space-y-3">
             <Stage title="Waiting" count={groupedAppointments.booked.length} tone="cyan">
               {groupedAppointments.booked.map((appointment) => (
-                <AppointmentRow
+                <DoctorAppointmentCard
                   key={appointment.id}
                   appointment={appointment}
                   actionLoadingId={actionLoadingId}
@@ -412,7 +402,7 @@ export default function DoctorAppointments() {
 
             <Stage title="Needs Prescription" count={groupedAppointments.prescription.length} tone="amber">
               {groupedAppointments.prescription.map((appointment) => (
-                <AppointmentRow
+                <DoctorAppointmentCard
                   key={appointment.id}
                   appointment={appointment}
                   actionLoadingId={actionLoadingId}
@@ -428,7 +418,7 @@ export default function DoctorAppointments() {
 
             <Stage title="Ready to Close" count={groupedAppointments.followUp.length} tone="violet">
               {groupedAppointments.followUp.map((appointment) => (
-                <AppointmentRow
+                <DoctorAppointmentCard
                   key={appointment.id}
                   appointment={appointment}
                   actionLoadingId={actionLoadingId}
@@ -444,7 +434,7 @@ export default function DoctorAppointments() {
 
             <Stage title="Completed" count={groupedAppointments.completed.length} tone="emerald">
               {groupedAppointments.completed.slice(0, 6).map((appointment) => (
-                <AppointmentRow
+                <DoctorAppointmentCard
                   key={appointment.id}
                   appointment={appointment}
                   actionLoadingId={actionLoadingId}
@@ -509,14 +499,7 @@ export default function DoctorAppointments() {
   );
 }
 
-function Stat({ label, value }) {
-  return (
-    <div className="rounded-2xl bg-slate-50 px-2 py-3 text-center">
-      <p className="text-xl font-black leading-none text-slate-950">{value}</p>
-      <p className="mt-1 text-[10px] font-black uppercase text-slate-500">{label}</p>
-    </div>
-  );
-}
+
 
 function Stage({ title, count, tone, children }) {
   if (!count) return null;
@@ -547,127 +530,7 @@ function Stage({ title, count, tone, children }) {
   );
 }
 
-function AppointmentRow({
-  appointment,
-  actionLoadingId,
-  onCheckIn,
-  onConsult,
-  onPrescription,
-  onViewPrescription,
-  onFollowUp,
-  onComplete,
-}) {
-  const isBooked = appointment.status === "BOOKED";
-  const isCompleted = appointment.status === "COMPLETED";
-  const isVideo = appointment.appointmentType === "VIDEO";
-  const patientName = getPatientName(appointment);
 
-  return (
-    <article className="rounded-2xl border border-slate-100 bg-slate-50 p-2.5">
-      <div className="grid grid-cols-[46px_1fr_auto] items-center gap-2">
-        <div className="text-center">
-          <p className="text-sm font-black text-slate-950">
-            {formatTime(appointment.slot?.startTime) || "--"}
-          </p>
-          <p className="text-[9px] font-black text-slate-400">
-            {appointment.slot?.date?.slice(5) || ""}
-          </p>
-        </div>
-
-        <div className="min-w-0">
-          <h3 className="truncate text-sm font-black text-slate-950">
-            {patientName}
-          </h3>
-          <p className="truncate text-[11px] font-semibold text-slate-500">
-            {getPatientMeta(appointment) || "Patient"} • {isVideo ? "Video" : "Clinic"}
-          </p>
-        </div>
-
-        <StatusBadge status={appointment.status} />
-      </div>
-
-      <div className="mt-2 grid grid-cols-4 gap-1.5">
-        <button
-          type="button"
-          onClick={() => onCheckIn(appointment)}
-          className="rounded-xl bg-white py-2 text-[10px] font-black text-slate-700"
-        >
-          Check
-        </button>
-
-        {isVideo && isBooked ? (
-          <Link
-            to={`/doctor/video-consult/${appointment.id}`}
-            className="rounded-xl bg-cyan-600 py-2 text-center text-[10px] font-black text-white"
-          >
-            Join
-          </Link>
-        ) : (
-          <Link
-  to={`/doctor/consultation/${appointment.id}`}
-  className={`rounded-xl py-2 text-center text-[10px] font-black ${
-    isBooked
-      ? "bg-cyan-600 text-white"
-      : "pointer-events-none bg-slate-300 text-white"
-  }`}
->
-  Consult
-</Link>
-        )}
-
-        <button
-          type="button"
-          onClick={() =>
-            appointment.prescriptionCompleted
-              ? onViewPrescription(appointment)
-              : onPrescription(appointment)
-          }
-          className="rounded-xl bg-white py-2 text-[10px] font-black text-slate-700"
-        >
-          Rx
-        </button>
-
-        <button
-          type="button"
-          disabled={actionLoadingId === appointment.id || !isCompleted}
-          onClick={() => onComplete(appointment)}
-          className="flex items-center justify-center gap-1 rounded-xl bg-emerald-600 py-2 text-[10px] font-black text-white disabled:bg-slate-300"
-        >
-          {actionLoadingId === appointment.id ? (
-            <Loader2 size={12} className="animate-spin" />
-          ) : (
-            "Done"
-          )}
-        </button>
-      </div>
-
-      {isCompleted && (
-        <button
-          type="button"
-          onClick={() => onFollowUp(appointment)}
-          className="mt-1.5 w-full rounded-xl bg-violet-50 py-2 text-[10px] font-black text-violet-700"
-        >
-          Follow-up
-        </button>
-      )}
-    </article>
-  );
-}
-
-function StatusBadge({ status }) {
-  const style =
-    status === "COMPLETED"
-      ? "bg-emerald-100 text-emerald-700"
-      : status === "CANCELLED"
-      ? "bg-red-100 text-red-700"
-      : "bg-cyan-100 text-cyan-700";
-
-  return (
-    <span className={`rounded-full px-2 py-1 text-[9px] font-black ${style}`}>
-      {status || "BOOKED"}
-    </span>
-  );
-}
 
 function CheckInSheet({ appointment, data, onClose }) {
   return (
@@ -856,26 +719,3 @@ function Info({ label, value }) {
   );
 }
 
-function AppointmentsSkeleton() {
-  return (
-    <section className="space-y-3">
-      {[1, 2, 3, 4].map((item) => (
-        <div key={item} className="h-24 animate-pulse rounded-2xl bg-white" />
-      ))}
-    </section>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="rounded-[1.5rem] border border-slate-100 bg-white p-8 text-center shadow-sm">
-      <CalendarCheck className="mx-auto text-cyan-600" size={36} />
-      <h3 className="mt-2 text-lg font-black text-slate-950">
-        No appointments found
-      </h3>
-      <p className="mt-1 text-sm text-slate-500">
-        Try Today, Next, Done, or Date filter.
-      </p>
-    </div>
-  );
-}
