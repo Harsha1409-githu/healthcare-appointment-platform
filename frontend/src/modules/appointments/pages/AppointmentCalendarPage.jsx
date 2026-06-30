@@ -21,9 +21,9 @@ import {
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
-import PageHeader from "../components/PageHeader";
-import api from "../api/axios";
-import PrescriptionModal from "../components/PrescriptionModal";
+import PageHeader from "@/components/PageHeader";
+import api from "@/api/axios";
+import PrescriptionModal from "@/components/PrescriptionModal";
 
 const STATUS_FILTERS = ["ALL", "BOOKED", "COMPLETED", "CANCELLED"];
 

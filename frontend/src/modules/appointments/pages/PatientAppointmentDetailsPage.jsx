@@ -13,8 +13,8 @@ import {
   CheckCircle2,
   ArrowLeft,
 } from "lucide-react";
-import api from "../api/axios";
-import VideoConsultCountdown from "../components/VideoConsultCountdown";
+import api from "@/api/axios";
+import VideoConsultCountdown from "@/components/VideoConsultCountdown";
 import { ClipboardCheck } from "lucide-react";
 
 function getAppointmentDateTime(appointment) {

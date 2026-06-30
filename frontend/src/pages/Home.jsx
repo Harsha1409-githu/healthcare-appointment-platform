@@ -4,7 +4,7 @@ import Hero from "../components/Hero";
 import HomeSearchSuggestions from "../components/HomeSearchSuggestions";
 import HomeTabs from "../components/HomeTabs";
 import Testimonials from "../components/Testimonials";
-import AppointmentSummaryCard from "../components/AppointmentSummaryCard";
+import { AppointmentSummaryCard } from "@/modules/appointments";
 import TryDocLogo from "../components/TryDocLogo";
 
 export default function Home() {

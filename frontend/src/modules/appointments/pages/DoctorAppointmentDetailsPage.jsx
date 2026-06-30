@@ -10,7 +10,7 @@ import {
   UserRound,
   Video,
 } from "lucide-react";
-import api from "../api/axios";
+import api from "@/api/axios";
 
 export default function DoctorAppointmentDetails() {
   const { appointmentId } = useParams();

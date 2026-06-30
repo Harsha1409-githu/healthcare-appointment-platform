@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { CalendarDays, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import api from "../api/axios";
+import api from "@/api/axios";
 
 export default function AppointmentSummaryCard() {
   const patient =

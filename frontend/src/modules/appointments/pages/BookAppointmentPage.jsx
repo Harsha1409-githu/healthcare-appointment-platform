@@ -21,8 +21,8 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-import api from "../api/axios";
-import usePullToRefresh from "../hooks/usePullToRefresh";
+import api from "@/api/axios";
+import usePullToRefresh from "@/hooks/usePullToRefresh";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Video } from "lucide-react";
 

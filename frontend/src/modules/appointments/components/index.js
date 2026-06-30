@@ -1,0 +1,1 @@
+export { default as AppointmentSummaryCard } from "./shared/AppointmentSummaryCard";

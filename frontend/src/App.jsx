@@ -14,9 +14,9 @@ import HospitalProtectedRoute from "./components/HospitalProtectedRoute";
 import Home from "./pages/Home";
 import Doctors from "./pages/Doctors";
 import DoctorProfile from "./pages/DoctorProfile";
-import BookAppointment from "./pages/BookAppointment";
+
 import SuccessPage from "./pages/SuccessPage";
-import Appointments from "./pages/Appointments";
+
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -27,23 +27,32 @@ import ChangePassword from "./pages/ChangePassword";
 import Notifications from "./pages/Notifications";
 import VideoCall from "./pages/VideoCall";
 import VideoConsult from "./pages/VideoConsult";
-import AppointmentCalendar from "./pages/AppointmentCalendar";
+
 import Account from "./pages/Account";
 import AuthLanding from "./pages/AuthLanding";
 import OtpLogin from "./pages/OtpLogin";
 import RootRedirect from "./pages/RootRedirect";
 import PatientProfileSelect from "./pages/PatientProfileSelect";
-import AppointmentCheckIn from "./pages/AppointmentCheckIn";
+
 import DoctorVideoConsult from "./pages/DoctorVideoConsult";
 import DoctorHub from "./pages/DoctorHub";
-import DoctorAppointmentDetails from "./pages/DoctorAppointmentDetails";
+import {
+  AppointmentCalendarPage,
+  AppointmentCheckInPage,
+  BookAppointmentPage,
+  DoctorAppointmentDetailsPage,
+  DoctorAppointmentsPage,
+  HospitalAppointmentsPage,
+  PatientAppointmentDetailsPage,
+  PatientAppointmentsPage,
+} from "@/modules/appointments";
 
 
 import HospitalLogin from "./pages/HospitalLogin";
 import HospitalDashboard from "./pages/HospitalDashboard";
 import HospitalDoctors from "./pages/HospitalDoctors";
 import HospitalAvailability from "./pages/HospitalAvailability";
-import HospitalAppointments from "./pages/HospitalAppointments";
+
 import HospitalProfile from "./pages/HospitalProfile";
 import HospitalAnalytics from "./pages/HospitalAnalytics";
 import HospitalRegister from "./pages/HospitalRegister";
@@ -54,7 +63,7 @@ import DoctorLogin from "./pages/DoctorLogin";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import DoctorMyProfile from "./pages/DoctorMyProfile";
 import DoctorPatientProfile from "./pages/DoctorPatientProfile";
-import DoctorAppointments from "./pages/DoctorAppointments";
+
 import DoctorAvailability from "./pages/DoctorAvailability";
 import DoctorPatients from "./pages/DoctorPatients";
 import DoctorAnalytics from "./pages/DoctorAnalytics";
@@ -86,7 +95,7 @@ import ChatRoom from "./pages/ChatRoom";
 import EmergencyProfile from "./pages/EmergencyProfile";
 import ManageProfiles from "./pages/ManageProfiles";
 import EditFamilyProfile from "./pages/EditFamilyProfile";
-import AppointmentDetails from "./pages/AppointmentDetails";
+
 
 
 function App() {
@@ -159,7 +168,7 @@ function App() {
             path="/appointments"
             element={
               <ProtectedRoute>
-                <Appointments />
+                <PatientAppointmentsPage />
               </ProtectedRoute>
             }
           />
@@ -186,7 +195,7 @@ function App() {
             path="/book/:doctorId/:slotId"
             element={
               <ProtectedRoute>
-                <BookAppointment />
+               <BookAppointmentPage />
               </ProtectedRoute>
             }
           />
@@ -213,14 +222,14 @@ function App() {
   <Route index element={<Dashboard />} />
   <Route path="dashboard" element={<Dashboard />} />
   <Route path="success" element={<SuccessPage />} />
-  <Route path="appointments" element={<Appointments />} />
+  <Route path="appointments" element={<PatientAppointmentsPage />} />
   <Route
   path="appointments/:id"
-  element={<AppointmentDetails />}
+  element={<PatientAppointmentDetailsPage />}
 />
 <Route
   path="appointments/:id/checkin"
-  element={<AppointmentCheckIn />}
+  element={<AppointmentCheckInPage />}
 />
   <Route path="notifications" element={<Notifications />} />
   <Route path="prescriptions" element={<MyPrescriptions />} />
@@ -249,10 +258,10 @@ function App() {
         >
           <Route path="dashboard" element={<DoctorDashboard />} />
           <Route path="profile" element={<DoctorMyProfile />} />
-          <Route path="appointments" element={<DoctorAppointments />} />
+          <Route path="appointments" element={<DoctorAppointmentsPage />} />
           <Route
   path="/doctor/appointment/:appointmentId/details"
-  element={<DoctorAppointmentDetails />}
+  element={<DoctorAppointmentDetailsPage />}
 />
           <Route path="availability" element={<DoctorAvailability />} />
          <Route path="hub" element={<DoctorHub />} />
@@ -280,7 +289,7 @@ function App() {
   element={<DoctorVideoConsult />}
 />
           <Route path="prescriptions" element={<DoctorPrescriptions />} />
-          <Route path="calendar" element={<AppointmentCalendar />} />
+          <Route path="calendar" element={<AppointmentCalendarPage />} />
           <Route path="change-password" element={<ChangePassword />} />
         </Route>
 
@@ -296,9 +305,9 @@ function App() {
           <Route path="doctors" element={<HospitalDoctors />} />
          
           <Route path="availability" element={<HospitalAvailability />} />
-          <Route path="appointments" element={<HospitalAppointments />} />
+          <Route path="appointments" element={<HospitalAppointmentsPage />} />
           <Route path="profile" element={<HospitalProfile />} />
-          <Route path="calendar" element={<AppointmentCalendar />} />
+          <Route path="calendar" element={<AppointmentCalendarPage />} />
           <Route path="analytics" element={<HospitalAnalytics />} />
           <Route path="change-password" element={<ChangePassword />} />
         </Route>

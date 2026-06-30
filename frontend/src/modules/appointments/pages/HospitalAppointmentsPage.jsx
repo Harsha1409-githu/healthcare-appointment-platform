@@ -16,8 +16,8 @@ import {
   Mail,
   X,
 } from "lucide-react";
-import PageHeader from "../components/PageHeader";
-import api from "../api/axios";
+import PageHeader from "@/components/PageHeader";
+import api from "@/api/axios";
 
 export default function HospitalAppointments() {
   const [appointments, setAppointments] = useState([]);

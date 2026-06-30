@@ -21,11 +21,11 @@ import {
   ArrowRight,
   CheckCircle2,
 } from "lucide-react";
-import api from "../api/axios";
+import api from "@/api/axios";
 import toast from "react-hot-toast";
-import usePullToRefresh from "../hooks/usePullToRefresh";
-import PageHeader from "../components/PageHeader";
-import VideoConsultCountdown from "../components/VideoConsultCountdown";
+import usePullToRefresh from "@/hooks/usePullToRefresh";
+import PageHeader from "@/components/PageHeader";
+import VideoConsultCountdown from "@/components/VideoConsultCountdown";
 
 export default function Appointments() {
   const [appointments, setAppointments] = useState([]);

@@ -15,9 +15,9 @@ import {
 import toast from "react-hot-toast";
 
 
-import api from "../api/axios";
-import PrescriptionModal from "../components/PrescriptionModal";
-import usePullToRefresh from "../hooks/usePullToRefresh";
+import api from "@/api/axios";
+import PrescriptionModal from "@/components/PrescriptionModal";
+import usePullToRefresh from "@/hooks/usePullToRefresh";
 
 const todayIso = () => new Date().toISOString().split("T")[0];
 
