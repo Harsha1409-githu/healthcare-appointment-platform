@@ -22,6 +22,8 @@ import {
   AppointmentEmptyState,
   AppointmentSkeleton,
   DoctorAppointmentCard,
+  DoctorAppointmentHeader,
+  DoctorAppointmentStage,
   DoctorAppointmentStats,
 } from "@/modules/appointments";
 
@@ -302,30 +304,14 @@ export default function DoctorAppointments() {
       )}
 
       <div className="mx-auto max-w-md px-3 pt-3">
-        <section className="rounded-[1.7rem] border border-slate-100 bg-white p-3 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-wide text-cyan-700">
-                Doctor OPD
-              </p>
-              <h1 className="text-xl font-black text-slate-950">
-                Appointments
-              </h1>
-              <p className="text-xs font-semibold text-slate-500">
-                Today • {stats.today} patients
-              </p>
-            </div>
+        <DoctorAppointmentHeader
+  totalAppointments={stats.today}
+  loading={loading}
+  doctorStatus="AVAILABLE"
+  onRefresh={() => fetchAppointments(false)}
+/>
 
-            <Link
-              to="/doctor/dashboard"
-              className="rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white"
-            >
-              Dashboard
-            </Link>
-          </div>
-
-          <DoctorAppointmentStats stats={stats} />
-        </section>
+<DoctorAppointmentStats stats={stats} />
 
         <section className="sticky top-0 z-20 mt-3 space-y-2 bg-[#f6f8fb] pb-2 pt-1">
           <div className="flex items-center gap-2 rounded-2xl border border-slate-100 bg-white px-3 py-3 shadow-sm">
@@ -384,7 +370,7 @@ export default function DoctorAppointments() {
           <AppointmentEmptyState />
         ) : (
           <section className="space-y-3">
-            <Stage title="Waiting" count={groupedAppointments.booked.length} tone="cyan">
+            <DoctorAppointmentStage title="Waiting" count={groupedAppointments.booked.length} tone="cyan">
               {groupedAppointments.booked.map((appointment) => (
                 <DoctorAppointmentCard
                   key={appointment.id}
@@ -398,9 +384,9 @@ export default function DoctorAppointments() {
                   onComplete={markCompleted}
                 />
               ))}
-            </Stage>
+            </DoctorAppointmentStage>
 
-            <Stage title="Needs Prescription" count={groupedAppointments.prescription.length} tone="amber">
+            <DoctorAppointmentStage title="Needs Prescription" count={groupedAppointments.prescription.length} tone="amber">
               {groupedAppointments.prescription.map((appointment) => (
                 <DoctorAppointmentCard
                   key={appointment.id}
@@ -414,9 +400,9 @@ export default function DoctorAppointments() {
                   onComplete={markCompleted}
                 />
               ))}
-            </Stage>
+            </DoctorAppointmentStage>
 
-            <Stage title="Ready to Close" count={groupedAppointments.followUp.length} tone="violet">
+            <DoctorAppointmentStage title="Ready to Close" count={groupedAppointments.followUp.length} tone="violet">
               {groupedAppointments.followUp.map((appointment) => (
                 <DoctorAppointmentCard
                   key={appointment.id}
@@ -430,9 +416,9 @@ export default function DoctorAppointments() {
                   onComplete={markCompleted}
                 />
               ))}
-            </Stage>
+            </DoctorAppointmentStage>
 
-            <Stage title="Completed" count={groupedAppointments.completed.length} tone="emerald">
+            <DoctorAppointmentStage title="Completed" count={groupedAppointments.completed.length} tone="emerald">
               {groupedAppointments.completed.slice(0, 6).map((appointment) => (
                 <DoctorAppointmentCard
                   key={appointment.id}
@@ -446,7 +432,7 @@ export default function DoctorAppointments() {
                   onComplete={markCompleted}
                 />
               ))}
-            </Stage>
+            </DoctorAppointmentStage>
           </section>
         )}
 
@@ -500,35 +486,6 @@ export default function DoctorAppointments() {
 }
 
 
-
-function Stage({ title, count, tone, children }) {
-  if (!count) return null;
-
-  const dot =
-    tone === "emerald"
-      ? "bg-emerald-500"
-      : tone === "amber"
-      ? "bg-amber-500"
-      : tone === "violet"
-      ? "bg-violet-500"
-      : "bg-cyan-500";
-
-  return (
-    <div className="rounded-[1.5rem] border border-slate-100 bg-white p-3 shadow-sm">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className={`h-2.5 w-2.5 rounded-full ${dot}`} />
-          <h2 className="text-sm font-black text-slate-950">{title}</h2>
-        </div>
-        <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black text-slate-600">
-          {count}
-        </span>
-      </div>
-
-      <div className="space-y-2">{children}</div>
-    </div>
-  );
-}
 
 
 
