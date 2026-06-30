@@ -998,3 +998,9 @@ function AppointmentTimeline({ appointment }) {
   );
 }
 
+function formatTime(time) {
+  if (!time) return "";
+
+  return String(time).slice(0, 5);
+}
+
