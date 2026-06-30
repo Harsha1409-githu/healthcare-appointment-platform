@@ -72,20 +72,42 @@ export default function SessionForm({
         <div className="grid grid-cols-3 gap-2">
           {TEMPLATES.map((template) => (
             <button
-              key={template.title}
-              type="button"
-              onClick={() => applyTemplate(template)}
-              className="rounded-2xl border border-slate-100 bg-slate-50 px-2 py-3 text-left active:scale-95"
-            >
-              <p className="text-xs font-black text-slate-900">
+  key={template.title}
+  type="button"
+  onClick={() => applyTemplate(template)}
+  className={`rounded-2xl border px-2 py-3 text-left active:scale-95 ${
+    form.startTime === template.startTime &&
+    form.endTime === template.endTime &&
+    form.slotType === template.slotType
+      ? "border-cyan-600 bg-cyan-600 text-white shadow-sm"
+      : "border-slate-100 bg-slate-50 text-slate-800"
+  }`}
+>
+              <p className="text-xs font-black">
                 {template.title}
               </p>
 
-              <p className="mt-0.5 text-[10px] font-bold text-slate-500">
+              <p
+  className={`mt-0.5 text-[10px] font-bold ${
+    form.startTime === template.startTime &&
+    form.endTime === template.endTime &&
+    form.slotType === template.slotType
+      ? "text-cyan-50"
+      : "text-slate-500"
+  }`}
+>
                 {template.desc}
               </p>
 
-              <p className="mt-1 text-[9px] font-black text-cyan-700">
+              <p
+  className={`mt-1 text-[9px] font-black ${
+    form.startTime === template.startTime &&
+    form.endTime === template.endTime &&
+    form.slotType === template.slotType
+      ? "text-white"
+      : "text-cyan-700"
+  }`}
+>
                 {template.startTime}-{template.endTime}
               </p>
             </button>

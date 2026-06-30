@@ -32,6 +32,7 @@ export default function DoctorAvailability() {
   const [showPauseSheet, setShowPauseSheet] = useState(false);
 const [pauseUntil, setPauseUntil] = useState("");
 const [pauseReason, setPauseReason] = useState("Lunch");
+const [activePauseType, setActivePauseType] = useState("");
 
   const todayDate = useMemo(() => todayIso(), []);
 
@@ -87,22 +88,37 @@ const [pauseReason, setPauseReason] = useState("Lunch");
     }
   };
 
-  const blockTime = async (minutes) => {
-    const until = new Date();
-    until.setMinutes(until.getMinutes() + minutes);
+  const blockTime = async (minutes, pauseType) => {
+  if (!doctor?.id) {
+    toast.error("Doctor not found");
+    return;
+  }
 
-    try {
-      await api.patch(`/doctor/${doctor.id}/status`, {
-        status: "BREAK",
-        blockedUntil: until.toISOString(),
-      });
+  const until = new Date();
+  until.setMinutes(until.getMinutes() + minutes);
 
-      await loadDoctorStatus();
-      toast.success(`Bookings paused for ${minutes} minutes`);
-    } catch {
-      toast.error("Failed to pause bookings");
-    }
-  };
+  try {
+    setLoading(true);
+
+    await api.patch(`/doctor/${doctor.id}/status`, {
+      status: "BREAK",
+      blockedUntil: until.toISOString(),
+    });
+
+    setActivePauseType(pauseType);
+    await loadDoctorStatus();
+
+    toast.success(`Bookings paused for ${minutes} minutes`);
+  } catch (error) {
+  console.log(error);
+  console.log(error.response);
+  console.log(error.response?.data);
+
+  toast.error(error.response?.data?.message || "Failed to pause bookings");
+} finally {
+    setLoading(false);
+  }
+};
 
   const resumeAvailability = async () => {
     try {
@@ -316,10 +332,11 @@ const [pauseReason, setPauseReason] = useState("Lunch");
       reason: pauseReason,
     });
 
-    await loadDoctorStatus();
-    setShowPauseSheet(false);
+   await loadDoctorStatus();
+setActivePauseType("custom");
+setShowPauseSheet(false);
 
-    toast.success(`Bookings paused until ${pauseUntil}`);
+toast.success(`Bookings paused until ${pauseUntil}`);
   } catch {
     toast.error("Failed to pause bookings");
   } finally {
@@ -338,12 +355,27 @@ const [pauseReason, setPauseReason] = useState("Lunch");
   selectedDateSlots={selectedDateSlots}
   availableSlots={availableSlots}
   bookedSlots={bookedSlots}
-  nextAvailableSlot={nextAvailableSlot}
-  onPause30={() => blockTime(30)}
-  onPause60={() => blockTime(60)}
-  onPause120={() => blockTime(120)}
-  onCustomPause={() => setShowPauseSheet(true)}
-  onResume={resumeAvailability}
+  activePauseType={activePauseType}
+  onPause30={() => {
+    setActivePauseType("30m");
+    blockTime(30, "30m");
+  }}
+  onPause60={() => {
+    setActivePauseType("1h");
+    blockTime(60, "1h");
+  }}
+  onPause120={() => {
+    setActivePauseType("2h");
+    blockTime(120, "2h");
+  }}
+  onCustomPause={() => {
+    setActivePauseType("custom");
+    setShowPauseSheet(true);
+  }}
+  onResume={async () => {
+    setActivePauseType("");
+    await resumeAvailability();
+  }}
 />
 
         <SmartSetupCard onStart={() => setShowSmartSetup(true)} />
