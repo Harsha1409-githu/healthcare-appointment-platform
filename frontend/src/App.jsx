@@ -33,6 +33,7 @@ import AuthLanding from "./pages/AuthLanding";
 import OtpLogin from "./pages/OtpLogin";
 import RootRedirect from "./pages/RootRedirect";
 import PatientProfileSelect from "./pages/PatientProfileSelect";
+import { DoctorConsultationPage } from "@/modules/consultation";
 
 import DoctorVideoConsult from "./pages/DoctorVideoConsult";
 import DoctorHub from "./pages/DoctorHub";
@@ -257,6 +258,14 @@ function App() {
           }
         >
           <Route path="dashboard" element={<DoctorDashboard />} />
+<Route
+  path="/doctor/consultation"
+  element={<DoctorConsultationPage />}
+/>
+<Route
+  path="/doctor/consultation/:appointmentId"
+  element={<DoctorConsultationPage />}
+/>
           <Route path="profile" element={<DoctorMyProfile />} />
           <Route path="appointments" element={<DoctorAppointmentsPage />} />
           <Route

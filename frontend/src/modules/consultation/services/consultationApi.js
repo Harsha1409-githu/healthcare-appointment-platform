@@ -1,4 +1,4 @@
-import api from "../../api/axios";
+import api from "@/api/axios";
 
 export async function getPatientProfile(appointmentId) {
   const res = await api.get(`/appointment/${appointmentId}/patient-profile`);
