@@ -1,0 +1,9 @@
+export enum RecommendationStatus {
+  RECOMMENDED = 'RECOMMENDED',
+  BOOKED = 'BOOKED',
+  PAID = 'PAID',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  REVIEWED = 'REVIEWED',
+  CANCELLED = 'CANCELLED',
+}

@@ -60,6 +60,7 @@ import { CheckInModule } from './check-in/check-in.module';
 import { CheckIn } from './check-in/check-in.entity';
 import { Consultation } from './consultation/consultation.entity';
 import { ConsultationModule } from './consultation/consultation.module';
+import { RecommendationModule } from './recommendation/recommendation.module';
 
 
 @Module({
@@ -97,8 +98,8 @@ import { ConsultationModule } from './consultation/consultation.module';
         MedicalRecord,
         MedicineReminder,
         LabTest,
-             LabOrder,
-LabOrderItem,
+        LabOrder,
+        LabOrderItem,
         ChatMessage,  
         FollowUp,
         DoctorLeave,
@@ -137,6 +138,7 @@ LabOrderItem,
     EmergencyProfileModule,
     CheckInModule,
     ConsultationModule,
+    RecommendationModule, 
   ],
 
   controllers: [AppController],  // ✅ FIX

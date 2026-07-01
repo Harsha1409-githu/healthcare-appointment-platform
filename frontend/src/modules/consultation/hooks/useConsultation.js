@@ -159,6 +159,20 @@ export function useConsultation() {
       });
     }
 
+    if (form.labTests.length > 0 && patient?.id) {
+  await consultationService.createLabOrder({
+    patientId: patient.id,
+    preferredDate: new Date().toISOString().split("T")[0],
+    preferredTime: "09:00",
+    address: patient?.address || patient?.city || "Patient address not available",
+    tests: form.labTests.map((testName) => ({
+      testName,
+      category: "Doctor Ordered",
+      price: 0,
+    })),
+  });
+}
+
     if (complete) {
       await consultationService.completeAppointment(appointmentId);
       toast.success("Consultation completed");

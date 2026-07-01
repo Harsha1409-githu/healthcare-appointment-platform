@@ -29,4 +29,9 @@ export const consultationService = {
       return [];
     }
   },
+
+  async createLabOrder(payload) {
+  const res = await api.post("/lab-test/order", payload);
+  return res.data;
+},
 };
