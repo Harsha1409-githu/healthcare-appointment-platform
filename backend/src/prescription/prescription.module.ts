@@ -10,12 +10,14 @@ import { Appointment } from '../appointment/appointment.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MailModule } from '../mail/mail.module';
 import { PrescriptionPdfService } from './prescription-pdf.service';
+import { MedicineReminderModule } from '../medicine-reminder/medicine-reminder.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       Prescription,
       Appointment,
+     
     ]),
 
     JwtModule.register({
@@ -26,6 +28,7 @@ import { PrescriptionPdfService } from './prescription-pdf.service';
     }),
 
     MailModule, // ← ADD THIS
+     MedicineReminderModule,
   ],
 
   controllers: [PrescriptionController],

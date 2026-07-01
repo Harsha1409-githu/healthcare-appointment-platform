@@ -8,7 +8,7 @@ import { Repository } from 'typeorm';
 import PDFDocument from 'pdfkit';
 import * as QRCode from 'qrcode';
 import { Response } from 'express';
-
+import { MedicineReminderService } from '../medicine-reminder/medicine-reminder.service';
 import { Prescription } from './prescription.entity';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import {
@@ -27,6 +27,8 @@ export class PrescriptionService {
     private appointmentRepo: Repository<Appointment>,
 
     private readonly mailService: MailService,
+
+    private readonly medicineReminderService: MedicineReminderService,
   ) {}
 
   async createPrescription(dto: CreatePrescriptionDto) {
@@ -58,6 +60,10 @@ export class PrescriptionService {
       existingPrescription.medicines = dto.medicines;
       existingPrescription.notes = dto.notes || '';
       const updated = await this.prescriptionRepo.save(existingPrescription);
+      await this.createMedicineRemindersFromPrescription(
+  appointment.patient.id,
+  dto.medicines,
+);
       return updated;
     }
 
@@ -71,6 +77,11 @@ export class PrescriptionService {
     });
 
     const savedPrescription = await this.prescriptionRepo.save(prescription);
+
+    await this.createMedicineRemindersFromPrescription(
+  appointment.patient.id,
+  dto.medicines,
+);
 
     appointment.prescriptionCompleted = true;
     await this.appointmentRepo.save(appointment);
@@ -357,4 +368,60 @@ export class PrescriptionService {
 
     doc.moveDown(0.5);
   }
+
+  private async createMedicineRemindersFromPrescription(
+  patientId: string,
+  medicinesText: string,
+) {
+  if (!patientId || !medicinesText) return;
+
+  const lines = medicinesText
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const today = new Date();
+
+  for (const line of lines) {
+    const parts = line.split('-').map((part) => part.trim());
+
+    const medicineName = parts[0] || '';
+    const dosage = parts[1] || '';
+    const timing = parts[2] || '';
+    const daysText = parts[3] || '5';
+
+    if (!medicineName) continue;
+
+    const days = Number(daysText.replace(/\D/g, '')) || 5;
+
+    const endDate = new Date(today);
+    endDate.setDate(today.getDate() + days);
+
+    const reminderTimes = this.getReminderTimesFromTiming(timing);
+
+    for (const reminderTime of reminderTimes) {
+      await this.medicineReminderService.create({
+        patientId,
+        medicineName,
+        dosage,
+        reminderTime,
+        startDate: today.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+        isActive: true,
+      });
+    }
+  }
+}
+
+private getReminderTimesFromTiming(timing: string): string[] {
+  const value = String(timing || '').toUpperCase();
+
+  if (value.includes('OD')) return ['08:00'];
+  if (value.includes('BD')) return ['08:00', '20:00'];
+  if (value.includes('TID')) return ['08:00', '14:00', '20:00'];
+  if (value.includes('QID')) return ['08:00', '12:00', '16:00', '20:00'];
+  if (value.includes('HS')) return ['21:00'];
+
+  return ['08:00'];
+}
 }
