@@ -16,8 +16,21 @@ import {
 } from "lucide-react";
 import api from "../api/axios";
 import usePullToRefresh from "../hooks/usePullToRefresh";
+import PageHeader from "@/components/PageHeader";
 
 export default function HospitalDashboard() {
+
+       const {
+  pullDistance,
+  refreshing,
+  visible,
+} = usePullToRefresh(async () => {
+  await fetchDashboardData();
+  await fetchNotificationCount();
+
+  toast.success("Dashboard refreshed");
+});
+
   const navigate = useNavigate();
 
   const hospital = JSON.parse(
@@ -98,16 +111,7 @@ export default function HospitalDashboard() {
         0
       );
 
-      const {
-  pullDistance,
-  refreshing,
-  visible,
-} = usePullToRefresh(async () => {
-  await fetchDashboardData();
-  await fetchNotificationCount();
-
-  toast.success("Dashboard refreshed");
-});
+ 
 
       setStats({
         doctors: hospitalDoctors.length,
