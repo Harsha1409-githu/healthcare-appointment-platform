@@ -34,9 +34,10 @@ import OtpLogin from "./pages/OtpLogin";
 import RootRedirect from "./pages/RootRedirect";
 import PatientProfileSelect from "./pages/PatientProfileSelect";
 import { DoctorConsultationPage } from "@/modules/consultation";
-
+import { PatientRecommendationsPage } from "@/modules/recommendation";
 import DoctorVideoConsult from "./pages/DoctorVideoConsult";
 import DoctorHub from "./pages/DoctorHub";
+import { MyCarePage } from "@/modules/my-care";
 import {
   AppointmentCalendarPage,
   AppointmentCheckInPage,
@@ -222,6 +223,7 @@ function App() {
   
   <Route index element={<Dashboard />} />
   <Route path="dashboard" element={<Dashboard />} />
+  <Route path="/patient/my-care" element={<MyCarePage />} />
   <Route path="success" element={<SuccessPage />} />
   <Route path="appointments" element={<PatientAppointmentsPage />} />
   <Route
@@ -246,6 +248,10 @@ function App() {
   <Route path="medicine-reminders" element={<MedicineReminders />} />
   <Route path="health-timeline" element={<HealthTimeline />} />
   <Route path="lab-tests" element={<LabTests />} />
+  <Route
+  path="/patient/recommendations"
+  element={<PatientRecommendationsPage />}
+/>
   <Route path="ai-health-insights" element={<AIHealthInsights />} />
   <Route path="change-password" element={<ChangePassword />} />
 </Route>

@@ -2,10 +2,10 @@ import { NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
 import {
   Home,
+  HeartPulse,
   Stethoscope,
   CalendarDays,
   User,
-  Bot,
 } from "lucide-react";
 import useHideBottomNav from "../hooks/useHideBottomNav";
 
@@ -38,34 +38,33 @@ export default function MobileBottomNav() {
 
   if (!isLoggedIn) return null;
 
-  const links = [
-  
-{
-  to: "/home",
-  label: "Home",
-  icon: Home,
-},
-    {
-      to: "/doctors",
-      label: "Doctors",
-      icon: Stethoscope,
-    },
-    {
-      to: "/patient/appointments",
-      label: "My Bookings",
-      icon: CalendarDays,
-    },
-    {
-      to: "/ai-health-assistant",
-      label: "TryDoc AI",
-      icon: Bot,
-    },
-    {
-      to: "/account",
-      label: "Account",
-      icon: User,
-    },
-  ];
+ const links = [
+  {
+    to: "/home",
+    label: "Home",
+    icon: Home,
+  },
+  {
+    to: "/patient/my-care",
+    label: "My Care",
+    icon: HeartPulse,
+  },
+  {
+    to: "/doctors",
+    label: "Doctors",
+    icon: Stethoscope,
+  },
+  {
+    to: "/patient/appointments",
+    label: "Appointments",
+    icon: CalendarDays,
+  },
+  {
+    to: "/account",
+    label: "Account",
+    icon: User,
+  },
+];
 
   return (
   <div
