@@ -8,8 +8,10 @@ import {
 } from 'typeorm';
 
 import { RecommendationItem } from './recommendation-item.entity';
+import { RecommendationCategory } from './enums/recommendation-category.enum';
+import { RecommendationPriority } from './enums/recommendation-priority.enum';
+import { RecommendationServiceType } from './enums/recommendation-service.enum';
 import { RecommendationStatus } from './enums/recommendation-status.enum';
-import { RecommendationType } from './enums/recommendation-type.enum';
 
 @Entity('recommendation')
 export class Recommendation {
@@ -27,9 +29,17 @@ export class Recommendation {
 
   @Column({
     type: 'enum',
-    enum: RecommendationType,
+    enum: RecommendationCategory,
+    default: RecommendationCategory.OTHER,
   })
-  type: RecommendationType;
+  category: RecommendationCategory;
+
+  @Column({
+    type: 'enum',
+    enum: RecommendationServiceType,
+    default: RecommendationServiceType.CUSTOM,
+  })
+  service: RecommendationServiceType;
 
   @Column()
   title: string;
@@ -37,8 +47,12 @@ export class Recommendation {
   @Column({ nullable: true })
   clinicalReason: string;
 
-  @Column({ default: 'ROUTINE' })
-  priority: string;
+  @Column({
+    type: 'enum',
+    enum: RecommendationPriority,
+    default: RecommendationPriority.ROUTINE,
+  })
+  priority: RecommendationPriority;
 
   @Column({
     type: 'enum',
@@ -49,6 +63,14 @@ export class Recommendation {
 
   @Column({ nullable: true })
   notes: string;
+
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0,
+  })
+  estimatedCost: number;
 
   @OneToMany(() => RecommendationItem, (item) => item.recommendation, {
     cascade: true,

@@ -159,16 +159,22 @@ export function useConsultation() {
       });
     }
 
-    if (form.labTests.length > 0 && patient?.id) {
-  await consultationService.createLabOrder({
+ if (form.labTests.length > 0 && patient?.id) {
+  await consultationService.createRecommendation({
+    appointmentId: Number(appointmentId),
+    doctorId,
     patientId: patient.id,
-    preferredDate: new Date().toISOString().split("T")[0],
-    preferredTime: "09:00",
-    address: patient?.address || patient?.city || "Patient address not available",
-    tests: form.labTests.map((testName) => ({
-      testName,
-      category: "Doctor Ordered",
-      price: 0,
+    category: "DIAGNOSTIC",
+    service: "LAB_TEST",
+    title: "Doctor Recommended Lab Tests",
+    clinicalReason: form.diagnosis || form.assessment || form.subjective || "",
+    priority: "ROUTINE",
+    notes: form.advice || "",
+    estimatedCost: 0,
+    items: form.labTests.map((testName) => ({
+      name: testName,
+      category: "Lab Test",
+      estimatedPrice: 0,
     })),
   });
 }

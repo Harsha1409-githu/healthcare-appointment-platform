@@ -1,4 +1,6 @@
-import { RecommendationType } from '../enums/recommendation-type.enum';
+import { RecommendationCategory } from '../enums/recommendation-category.enum';
+import { RecommendationPriority } from '../enums/recommendation-priority.enum';
+import { RecommendationServiceType } from '../enums/recommendation-service.enum';
 
 export class CreateRecommendationDto {
   appointmentId: number;
@@ -7,15 +9,19 @@ export class CreateRecommendationDto {
 
   patientId: string;
 
-  type: RecommendationType;
+  category: RecommendationCategory;
+
+  service: RecommendationServiceType;
 
   title: string;
 
   clinicalReason?: string;
 
-  priority?: string;
+  priority?: RecommendationPriority;
 
   notes?: string;
+
+  estimatedCost?: number;
 
   items: {
     name: string;

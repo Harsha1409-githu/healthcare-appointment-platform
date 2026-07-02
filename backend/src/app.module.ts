@@ -61,6 +61,8 @@ import { CheckIn } from './check-in/check-in.entity';
 import { Consultation } from './consultation/consultation.entity';
 import { ConsultationModule } from './consultation/consultation.module';
 import { RecommendationModule } from './recommendation/recommendation.module';
+import { Recommendation } from './recommendation/recommendation.entity';
+import { RecommendationItem } from './recommendation/recommendation-item.entity';
 
 
 @Module({
@@ -107,6 +109,8 @@ import { RecommendationModule } from './recommendation/recommendation.module';
         EmergencyProfile,
         CheckIn,
         Consultation,
+         Recommendation,
+  RecommendationItem,
    
       ],
 

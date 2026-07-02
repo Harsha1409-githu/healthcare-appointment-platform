@@ -30,6 +30,11 @@ export const consultationService = {
     }
   },
 
+  async createRecommendation(payload) {
+  const res = await api.post("/recommendation", payload);
+  return res.data;
+},
+
   async createLabOrder(payload) {
   const res = await api.post("/lab-test/order", payload);
   return res.data;
